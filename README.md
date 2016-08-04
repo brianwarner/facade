@@ -44,7 +44,7 @@ Remember that by default, the gitdm analysis goes from the start date up to yest
 
 facade-worker.py will not run if it thinks a previous instanace is still running.  The only times this is actually likely would be during the initial clone and building of data for large repos (like the kernel) or if you have a cron job running facade-worker.py too often.  If for some reason facade-worker.py fails, you will need to run reset-status.py before it will run again.
 
-IF facade-worker.py is taking forever to run, you should verify that your start date isn't too early.  Setting this appropriately forward can eliminate a lot of unnecessary calculations.  Facade will trim any database data that falls outside the date range, which is set in Configuration.
+If facade-worker.py is taking forever to run, you should verify that your start date isn't too early.  Setting this appropriately forward can eliminate a lot of unnecessary calculations.  Facade will trim any database data that falls outside the date range, which is set in Configuration.
 
 If you discover a bunch of (Unknown) affiliations, don't panic. This probably means you are checking a repo with domains that aren't in the stock gitdm domain mappings.  You can update the config files in gitdm and Facade will detect the changes the next time facade-worker runs.  It will also search for any historical (Unknown) affiliations that are now known, and fix them.
 
