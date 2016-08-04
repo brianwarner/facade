@@ -7,36 +7,35 @@ Facade is licensed under GPL v2.
 
 ### Server setup:
 
-1) Install Apache, PHP, Python, and Mysql. On Ubuntu 16.04, you can use install_deps.sh
-2) Make sure mod_php and mod_rewrite are enabled.
-3) Change Overrides None to Overrides All in your site configuration.
-3) Move the Facade files to your webroot.
+1. Install Apache, PHP, Python, and Mysql. On Ubuntu 16.04, you can use install_deps.sh
+2. Make sure mod_php and mod_rewrite are enabled.
+3. Change Overrides None to Overrides All in your site configuration.
+4. Move the Facade files to your webroot.
 
 ### Mysql setup:
 
-1) Create a database, a user, and grant all privileges.
-2) Copy includes/db.php.default to includes/db.php, add credentials.
-3) Run 'php create-tables.php'
-4) Copy utilities/database.py.default to utilities/database.py, add credentials.
+1. Create a database, a user, and grant all privileges.
+2. Copy includes/db.php.default to includes/db.php, add credentials.
+3. Run 'php create-tables.php'
+4. Copy utilities/database.py.default to utilities/database.py, add credentials.
 
 At this point, you should be able to access facade's web interface.
 
 ### Git repo setup:
 
-1) Choose a volume with plenty of storage.
-2) Ensure it has r/w permissions for the user account that will run the facade-worker.py script.
-3) In the web interface, go to Configure and update 'Location of git repos'.
+1. Choose a volume with plenty of storage.
+2. Ensure it has r/w permissions for the user account that will run the facade-worker.py script.
+3. In the web interface, go to Configure and update 'Location of git repos'.
 
 ### Gitdm setup:
 
-1) Clone gitdm from git://git.lwn.net/gitdm.git
-2) Move it to wherever you want to keep it on the system.
-3) In the web interface, go to Configure and update 'Location of gitdm'.
+1. Clone gitdm from git://git.lwn.net/gitdm.git
+2. Move it to wherever you want to keep it on the system.
+3. In the web interface, go to Configure and update 'Location of gitdm'.
 
 ### Worker script setup:
 
-1) Set up a cron job to run utilities/facade-worker.py daily.  It can run more or less often, and will generally Do The Right Thing.
-	Note: Cron user must have write access to git repo directory.
+1. Set up a cron job to run utilities/facade-worker.py daily.  It can run more or less often, and will generally Do The Right Thing. Cron user must have write access to git repo directory.
 
 ### Some tips and tricks
 
