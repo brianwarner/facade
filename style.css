@@ -1,0 +1,200 @@
+/*
+Copyright 2016 Brian Warner
+
+This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+*/
+
+#page-wrapper {
+	margin: 0 auto;
+	width: 1024px;
+	border: 1px solid grey;
+	padding: 10px 5px;
+	color: #333;
+}
+
+.error {
+	color: red;
+	border: 1px solid red;
+	padding: 10px 20px;
+}
+
+.info {
+	color: brown;
+	border: 1px solid brown;
+	padding: 10px 20px;
+}
+
+a:link, a:visited {
+	color: #111;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+#header-wrapper {
+
+}
+
+#header {
+	padding: 20px 0;
+	width: 100%;
+}
+
+.menu {
+	width: 1024px;
+	background-color: #EDEDED;
+	border-top: 2px solid grey;
+	border-bottom: 2px solid grey;
+}
+
+.menu a {
+	padding: 0px 10px;
+	margin-left: 10px;
+}
+
+.menu-item {
+
+}
+
+#site-title {
+	font-size: 280%;
+	font-weight: bold;
+}
+
+#site-subtitle {
+	font-size: 130%;
+}
+
+#content-wrapper {
+	border-top: 1px solid grey;
+	border-bottom: 1px solid grey;
+	min-height: 200px;
+	margin: 20px 0;
+}
+
+#content-title {
+	padding: 10px;
+}
+
+#content {
+
+	padding: 10px;
+}
+
+.content-highlight {
+	text-align: center;
+	font-size: 130%;
+}
+
+.content-block {
+	padding: 20px 0px;
+}
+
+.sub-block {
+	padding-bottom: 20px;
+}
+
+.text input {
+	width: 470px;
+}
+
+.date input {
+	width: 75px;
+}
+
+.email input {
+	width: 320px;
+}
+
+input.checkbox {
+	margin-right: 25px;
+}
+
+input.custom-input {
+	width: 230px;
+	margin-left: 5px;
+}
+
+input.hidden {
+	visibility: hidden;
+}
+
+select.select-85 {
+	width: 85px;
+}
+
+select.select-150 {
+	width: 150px;
+}
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+th {
+	padding: 10px 5px;
+	text-size: 110%;
+	text-align: left;
+	vertical-align: bottom;
+}
+
+td {
+	vertical-align: top;
+	border-top: 1px solid grey;
+	padding: 5px 5px;
+}
+
+th.half, td.half {
+	width: 50%;
+}
+
+th.quarter, td.quarter {
+	width: 25%;
+}
+
+th.eighth, td.eighth {
+	width: 12.5%;
+}
+
+td.total {
+	font-weight: bold;
+}
+
+td.grand-total {
+	font-weight: bold;
+	font-style: italic;
+}
+
+td.linked a {
+	display: block;
+}
+
+th.results-entity, td.results-entity {
+	width: 300px;
+	word-break: break-all;
+}
+
+th.results-year {
+	width: 75px;
+}
+
+th.results-total {
+	min-width: 75px;
+}
+.button {
+	float: right;
+}
+
+#footer-wrapper {
+
+}
+
+#footer {
+	font-size: 80%;
+	margin-top: 10px;
+	text-align: center;
+}
+
+
+
+

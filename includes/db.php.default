@@ -1,0 +1,103 @@
+<?php
+
+/*
+Copyright 2016 Brian Warner
+
+This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+*/
+
+function setup_db() {
+
+	// Helper function to set up the database.
+
+	// Edit this database connection info.
+	$db_name = "facade";
+	$db_host = "localhost";
+	$db_user = "facade";
+	$db_pass = "facade";
+	$db_port = "";
+	// Stop editing here.
+
+	$db_conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+
+	if ($db_conn->connect_error) {
+        	die ("Connection to database refused: " . $db_conn->connect_error);
+	}
+
+	return $db_conn;
+}
+
+function query_db($db_conn, $query, $description) {
+
+	$db_debug = FALSE;
+
+	// Helper function to execute queries.
+	$result = $db_conn->query($query);
+
+	if ($db_conn->error) {
+        	echo '<div class="error">[E] Error on query "' . $description . '": ' . $db_conn->error . "</div>\n";
+	} else {
+        	if ($db_debug) {echo '<div class="info">[I] Query "' . $description . '" completed.' . "</div>\n";}
+	}
+
+	return $result;
+
+}
+
+function multi_query_db($db_conn, $query, $description) {
+
+	$db_debug = FALSE;
+
+	// Helper function to execute queries.
+	$result = $db_conn->multi_query($query);
+
+	if ($db_conn->error) {
+        	echo '<div class="error">[E] Error on query "' . $description . '": ' . $db_conn->error . "</div>\n";
+	} else {
+        	if ($db_debug) {echo '<div class="info">[I] Query "' . $description . '" completed.' . "</div>\n";}
+	}
+
+	// Flush the results, since we are only using this to create tables and procedures.
+	while ($db_conn->next_result()) {;}
+
+}
+
+function close_db($db_conn) {
+
+	// Helper function to close the database.
+
+	$db_conn->close();
+
+}
+
+function sanitize_input($db,$post_data,$input_length) {
+
+	// Ensure that input data is the proper length and contains no badness.
+
+	$post_data = substr($post_data,0,$input_length);
+	$post_data = trim($post_data);
+	$post_data = stripslashes($post_data);
+	$post_data = htmlspecialchars($post_data);
+	$post_data = $db->real_escape_string($post_data);
+	return $post_data;
+}
+
+function get_setting($db,$setting) {
+
+	$query = "SELECT value FROM settings WHERE setting='" . $setting . "' ORDER BY last_modified DESC LIMIT 1";
+	$result = query_db($db,$query,"Getting setting for '" . $setting . "'");
+
+	$row = $result->fetch_assoc();
+
+	return $row["value"];
+
+}
+
+function edit_setting_button($setting) {
+	return '<span class="button"><form action="' . htmlspecialchars($_SERVER["PHP_SELF"]) . '" id="edit' . $setting . '" method="POST"><input type="submit" name="confirmedit" value="edit"><input type="hidden" name="setting" value="' . $setting . '"></form></span>';
+
+}
+
+
+
+?>
