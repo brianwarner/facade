@@ -417,18 +417,18 @@ for line in open(gitdm_loc + 'gitdm.config'):
 							# Grab everything up to the canonical email, since entries could be space or tab delimited
 							alias = mismatch[:mismatch.rfind(canonical)].strip()
 
-							query = "UPDATE gitdm_data SET email='" + canonical + "' WHERE email='" + alias + "'"
+							query = "UPDATE gitdm_data SET email='" + canonical.replace("'","\\'") + "' WHERE email='" + alias.replace("'","\\'") + "'"
 							cursor.execute(query)
 							db.commit()
 
 						if (configtype == 'EmailMap'):
 
-							# Grab the affiliation from the end of the string
-							domain = mismatch.split()[0]
+							# Grab the domain (or it could be a complete email) from the beginning of the string
+							domain = mismatch.split()[0].replace("'","\\'")
 
 							# Grab everything up to the affiliation, since entries could be space or tab delimited
-							affiliation = mismatch[len(domain):].strip()
-							query = 'UPDATE gitdm_data SET affiliation="' + affiliation + '" WHERE email LIKE "%' + domain + '%"' # Using double quotes because of apostrophes in affiliate names.
+							affiliation = mismatch[len(domain):].strip().replace("'","\\'")
+							query = "UPDATE gitdm_data SET affiliation='" + affiliation + "' WHERE email LIKE '%" + domain + "%'" # Using double quotes because of apostrophes in affiliate names.
 							cursor.execute(query)
 							db.commit()
 
