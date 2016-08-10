@@ -158,11 +158,11 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 	<table>
 	<tr><th class="quarter">Domain</th><th>Lines of code added</th></tr>';
 
-	$query = "SELECT domain,added FROM unknown_cache" . $project_clause . " ORDER BY added DESC LIMIT 20";
+	$query = "SELECT domain,sum(added) FROM unknown_cache" . $project_clause . " GROUP BY domain ORDER BY sum(added) DESC LIMIT 20";
 	$result = query_db($db,$query,"Getting unknown entries");
 
 	while ($row = $result->fetch_assoc()) {
-		echo '<tr><td>' . $row["domain"] . '</td><td>' . number_format($row["added"]) . '</td></tr>';
+		echo '<tr><td>' . $row["domain"] . '</td><td>' . number_format($row["sum(added)"]) . '</td></tr>';
 	}
 
 	echo '</table>
