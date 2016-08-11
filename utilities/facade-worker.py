@@ -174,17 +174,17 @@ for row in new_repos:
 	# Make sure it's ok to proceed
 	if (return_code != 0):
 		print("COULD NOT CREATE REPO DIRECTORY")
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (%i,'Failed (mkdir)')" % row["id"]
+		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Failed (mkdir)')"
 		print(query)
 		cursor.execute(query)
 		db.commit()
 		sys.exit("Could not create git repo prerequisite directories. Do you have write access?")
 
-	query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (%i,'New (cloning)')" % row["id"]
+	query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'New (cloning)')"
 	cursor.execute(query)
 	db.commit()
 
-	query = "UPDATE repos SET status='New (Initializing)',path='%s',name='%s' WHERE id=%i" % (repo_relative_path,repo_name,row["id"])
+	query = "UPDATE repos SET status='New (Initializing)',path='" + repo_relative_path + "',name='" + repo_name + "' WHERE id=" + str(row["id"])
 	cursor.execute(query)
 	db.commit()
 
@@ -192,17 +192,23 @@ for row in new_repos:
 	return_code = call("git -C "+repo_path+" clone '"+git+"' " + repo_name, shell=True)
 
 	if (return_code == 0):
-		query = "UPDATE repos SET status='Active',path='%s',name='%s' WHERE id=%i" % (repo_relative_path,repo_name,row["id"])
+		# If cloning succeeded, repo is ready for gitdm
+		query = "UPDATE repos SET status='Active',path='" + repo_relative_path + "',name='" + repo_name + "' WHERE id=" + str(row["id"])
 		cursor.execute(query)
 		db.commit()
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (%i,'Up-to-date')" % row["id"]
+
+		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Up-to-date')"
 		cursor.execute(query)
 		db.commit()
 	else:
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (%i,'Failed (%i)')" % (row["id"],return_code)
+		# If cloning failed, log it and set the status back to new
+		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Failed (" + str(return_code) + ")')"
 		cursor.execute(query)
 		db.commit()
-		print "Failed, so logging: "+query
+
+		query = "UPDATE repos SET status='New (failed)' WHERE id=" + str(row["id"])
+		cursor.execute(query)
+		db.commit()
 
 ### END REPO MAINTENANCE ###
 

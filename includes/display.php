@@ -200,7 +200,7 @@ function list_repos ($db,$project_id) {
 
 			echo '><td><a href="repositories?repo=' . $row_repo["id"] . '" class="linked">' . $row_repo["git"] . '</a></td><td>';
 
-			$query = "SELECT status FROM repos_fetch_log WHERE repos_id=" . $row_repo["id"] . " ORDER BY date_attempted DESC LIMIT 1";
+			$query = "SELECT status FROM repos_fetch_log WHERE repos_id=" . $row_repo["id"] . " ORDER BY id DESC LIMIT 1";
 			$result_repo_log = query_db($db,$query,"Select last repo status for " . $row_repo["git"]);
 
 			$row_repo_log = $result_repo_log->fetch_assoc();
@@ -214,6 +214,8 @@ function list_repos ($db,$project_id) {
 			}
 			echo '</strong>';
 
+			// Determine the last time the git repo was successfully pulled
+
 			$query = "SELECT status,date_attempted FROM repos_fetch_log WHERE repos_id=" . $row_repo["id"] . " AND status='Up-to-date' ORDER BY date_attempted DESC LIMIT 1";
 			$result_repo_log = query_db($db,$query,"Select last successful repo status for " . $row_repo["git"]);
 
@@ -223,6 +225,13 @@ function list_repos ($db,$project_id) {
 				$date_attempted = strtotime($row_repo_log["date_attempted"]);
 				echo '<br>Last successful pull at<br>' . date("H:i", $date_attempted) . ' on ' . date("M j, Y", $date_attempted);
 			}
+
+			// Determine if the repo is marked to be removed during the next facade-worker.py run
+
+			if ($row_repo['status'] == "Delete") {
+				echo '<br><span style="color:red">Marked for removal</span>';
+			}
+
 
 			echo '</td><td><span class="button"><form action="manage" id="delrepo" method="post"><input type="submit" name="confirmdelete_repo" value="delete"><input type="hidden" name="project_id" value="' . $project_id . '"><input type="hidden" name="repo_id" value="' . $row_repo["id"]. '"></form></span>';
 
