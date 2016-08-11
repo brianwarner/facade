@@ -1,9 +1,10 @@
 <?php
 
 /*
-Copyright 2016 Brian Warner
-
-This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* Copyright 2016 Brian Warner
+*
+* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* SPDX-License-Identifier:        GPL-2.0
 */
 
 $title = "Download Results";
