@@ -12,10 +12,10 @@
 <div id="menu-item-wrapper">
 
 <span class="menu-item"><a href="/">Home</a></span>
-<span class="menu-item"><a href="/projects">Projects</a></span>
-<span class="menu-item"><a href="/repositories">Repositories</a></span>
-<span class="menu-item"><a href="/tags">Tags</a></span>
-<span class="menu-item"><a href="/results">Results</a></span>
-<span class="menu-item"><a href="/configure">Configure</a></span>
+<span class="menu-item"><a href="projects">Projects</a></span>
+<span class="menu-item"><a href="repositories">Repositories</a></span>
+<span class="menu-item"><a href="tags">Tags</a></span>
+<span class="menu-item"><a href="results">Results</a></span>
+<span class="menu-item"><a href="configure">Configure</a></span>
 
 </div> <!-- #menu-item-wrapper -->
