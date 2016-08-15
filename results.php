@@ -21,13 +21,13 @@ $result = query_db($db,$query,'Checking if gitdm has been run');
 if ($result->num_rows > 0) {
 
 	echo '<div class="content-block"><h2>All Project Data</h2><table>
-	<tr><td class="quarter">All results: </td><td><a href="/results-as-csv">csv</a></td></tr>
-	<tr><td>All results, with tags: </td><td><a href="/results-as-csv?with-tags">csv</a></td></tr>
+	<tr><td class="quarter">All results: </td><td><a href="results-as-csv">csv</a></td></tr>
+	<tr><td>All results, with tags: </td><td><a href="results-as-csv?with-tags">csv</a></td></tr>
 	</table></div><!-- content-block -->';
 
 
 	echo '<div class="content-block"><h2>Filtered results</h2>
-	<form method=GET action="/results-as-csv" id="filter">
+	<form method=GET action="results-as-csv" id="filter">
 
 	<div class="sub-block">
 	<h3>Dates to include</h3>

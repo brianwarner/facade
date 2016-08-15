@@ -39,7 +39,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"Add new git repo");
 	}
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["confirmdelete_repo"]) {
 
@@ -66,7 +66,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	delete_repository($db,sanitize_input($db,$_POST["repo_id"],11));
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["confirmnew_project"]) {
 
@@ -94,7 +94,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"Insert new project");
 	}
 
-	header("Location: /projects");
+	header("Location: projects");
 
 } elseif ($_POST["confirmedit_project"]) {
 
@@ -144,7 +144,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"updating name");
 	}
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["edit_description"]) {
 
@@ -154,7 +154,7 @@ if ($_POST["confirmnew_repo"]) {
 	$query = "UPDATE projects SET description='" . sanitize_input($db,$_POST["project_description"],256) . "' WHERE id=" . $project_id;
 	query_db($db,$query,"updating description");
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["edit_website"]) {
 
@@ -164,7 +164,7 @@ if ($_POST["confirmnew_repo"]) {
 	$query = "UPDATE projects SET website='" . sanitize_input($db,$_POST["project_website"],64) . "' WHERE id=" . $project_id;
 	query_db($db,$query,"updating website");
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["confirmdelete_project"]) {
 
@@ -186,7 +186,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	delete_project ($db,sanitize_input($db,$_POST["project_id"],11));
 
-	header("Location: /projects");
+	header("Location: projects");
 } elseif ($_POST["confirmnew_excludedomain"]) {
 
 	$title = "Exclude a domain from analysis and results";
@@ -215,7 +215,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"Add new exclusion domain");
 	}
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["delete_excludedomain"]) {
 
@@ -225,7 +225,7 @@ if ($_POST["confirmnew_repo"]) {
 	$query = "DELETE FROM exclude WHERE id=" . $exclude_id;
 	query_db($db,$query,"Remove domain from exclude list");
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["confirmnew_excludeemail"]) {
 
@@ -255,7 +255,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"Add new exclusion email");
 	}
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 
 } elseif ($_POST["delete_excludeemail"]) {
@@ -266,7 +266,7 @@ if ($_POST["confirmnew_repo"]) {
 	$query = "DELETE FROM exclude WHERE id=" . $exclude_id;
 	query_db($db,$query,"Remove email from exclude list");
 
-	header("Location: /projects?id=" . $project_id);
+	header("Location: projects?id=" . $project_id);
 
 } elseif ($_POST["add_tag"]) {
 
@@ -296,7 +296,7 @@ if ($_POST["confirmnew_repo"]) {
 		echo 'incomplete';
 	}
 
-	header("Location: /tags");
+	header("Location: tags");
 
 } elseif ($_POST["delete_tag"]) {
 
@@ -307,7 +307,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$query,"Deleting custom tag.");
 	}
 
-	header("Location: /tags");
+	header("Location: tags");
 
 } else {
 	echo "Oops, what did you want to do?";

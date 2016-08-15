@@ -11,7 +11,7 @@
 
 <div id="menu-item-wrapper">
 
-<span class="menu-item"><a href="/">Home</a></span>
+<span class="menu-item"><a href="./">Home</a></span>
 <span class="menu-item"><a href="projects">Projects</a></span>
 <span class="menu-item"><a href="repositories">Repositories</a></span>
 <span class="menu-item"><a href="tags">Tags</a></span>
