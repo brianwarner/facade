@@ -53,13 +53,13 @@ function delete_repository ($db,$repo_id) {
 		echo '<div class="info">Repo "' . $name . '" removed.</div>';
 
 	} else {
-		// Need to mark the repo for deletion so the next repo_maintenance.py run removes files, and clear gitdm data
+		// Need to clear gitdm data and mark the repo for deletion so the next repo_maintenance.py run removes files
+		delete_gitdm_data($db,$repo_id,$name);
+
 		$query = "UPDATE repos SET status='Delete' WHERE id=" . $repo_id;
 		query_db($db,$query,"Marking repo for deletion with ID ". $repo_id);
 
 		echo '<div class="info">Repo "' . $name . '" marked for deletion.</div>';
-
-		delete_gitdm_data($db,$repo_id,$name);
 	}
 }
 
@@ -71,17 +71,19 @@ function delete_project ($db,$project_id) {
 	$row = $result->fetch_assoc();
 	$name = $row["name"];
 
-	$query = "DELETE FROM projects WHERE id=" . $project_id;
-	query_db($db,$query,"Deleting project with ID " . $project_id);
-
-	echo '<div class="info">Project "' . $name . '" deleted.</div>';
-
+	// First remove the repos
 	$query = "SELECT id FROM repos WHERE projects_id=" . $project_id;
 	$result = query_db($db,$query,"Getting repos for project with ID " . $project_id);
 
 	while ($row = $result->fetch_assoc()) {
 		delete_repository($db,$row["id"]);
 	}
+
+	// Then remove the project. If the delete fails (e.g., php times out), doing this last leaves a way to try again.
+	$query = "DELETE FROM projects WHERE id=" . $project_id;
+	query_db($db,$query,"Deleting project with ID " . $project_id);
+
+	echo '<div class="info">Project "' . $name . '" deleted.</div>';
 
 }
 
