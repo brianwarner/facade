@@ -98,20 +98,7 @@ if ($length_of_time->d != 1) {
 	echo 's';
 }
 
-echo '</strong>.</div> <!-- .content-block, .content-highlight -->
-<div class="content-block">
-
-<div class="sub-block">';
-
-gitdm_results_as_summary_table($db,'','','affiliation','5');
-
-echo '</div> <!-- .sub-block -->
-<div class="sub-block">';
-
-gitdm_results_as_summary_table($db,'','','email','10');
-
-echo '</div> <!-- .sub-block -->
-</div> <!-- .content-block -->';
+echo '</strong>.</div> <!-- .content-block, .content-highlight -->';
 
 include_once "includes/footer.php";
 
