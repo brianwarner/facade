@@ -96,7 +96,7 @@ foreach ($projects as $project) {
 			foreach ($tags as $tag) {
 
 				// Find tags that with a start_date before this row
-				$query = "SELECT id,end_date FROM special_tags WHERE email = '" . $row["Email"] . "' AND start_date <= '" . $row["Start Date"] . "' AND tag='" . $tag . "'";
+				$query = "SELECT id,end_date FROM special_tags WHERE email = '" . str_replace("'","\'",$row["Email"]) . "' AND start_date <= '" . $row["Start Date"] . "' AND tag='" . $tag . "'";
 				$tags_result = query_db($db, $query, 'Getting tags');
 
 				// Check if any tags have an end_date after this row, or no end_date at all.  If they do, add them
@@ -107,11 +107,11 @@ foreach ($projects as $project) {
 					}
 				}
 
-				// If the tag applies to this row, add it to the output. Otherwise, add a blank to preserve ordering in the output csv
+				// If the tag applies to this row, add it to the output. Otherwise, add a blank to preserve ordering in the output csv.  If a tag contains an escaped single quote, unescape it to look nicer in the output.
 				if ($add_tag) {
-					$row['Tag: ' . $tag] = $tag;
+					$row['Tag: ' . str_replace("\'","'",$tag)] = str_replace("\'","'",$tag);
 				} else {
-					$row['Tag: ' . $tag] = '';
+					$row['Tag: ' . str_replace("\'","'",$tag)] = '';
 				}
 
 			}
