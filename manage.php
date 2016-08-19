@@ -20,9 +20,9 @@ if ($_POST["confirmnew_repo"]) {
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
 	echo '<form action="manage" id="newrepo" method="post">
-<p><label for="git">Git repository</label><br><span class="text"><input type="text" name="git"></span></p>
-<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="new_repo" value="Add repo">
-</form>';
+	<p><label for="git">Git repository</label><br><span class="text"><input type="text" name="git"></span></p>
+	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="new_repo" value="Add repo">
+	</form>';
 
 	include_once "includes/footer.php";
 
@@ -313,21 +313,42 @@ if ($_POST["confirmnew_repo"]) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
-	$title = 'Import from cgit';
+	$title = 'Import repos from cgit';
 	include_once 'includes/header.php';
 
-	echo '<div class="content-block"><div class="sub-block"><p>cgit is a common web interface for servers hosting a large number of git repos.  It can be more efficient to import them directly from the cgit index page, with the full listing of projects.</p><p>It may take a long time to discover all of the repos on a cgit server.  Be patient.</p>
+	echo '<div class="content-block"><div class="sub-block"><p>cgit is a common web interface for servers hosting a large number of git repos.  It can be more efficient to import them directly from the cgit index page, which has the full listing of projects.</p><p>It may take a long time to discover all of the repos on a cgit server.  Be patient.</p>
 	</div><!-- .sub-block -->
 	<div class="sub-block">
-	<form action="import-cgit" id="import-cgit" method="post">
+	<form action="import" id="import" method="post">
 	<input type="hidden" name="project_id" value="' . $project_id . '">
-	<p><label for="cgit">cgit index page: </label><span class="text"><input type="text" name="cgit"></span></p>
-	<p><input type="submit" name="submit_cgit" value="import cgit index page"></p>
+	<p><label>cgit index page: </label><span class="text"><input type="text" name="cgit"></span></p>
+	<p><input type="submit" name="submit_cgit" value="Import cgit index page"></p>
 	</form></div><!-- .sub-block --></div><!-- .content-block -->';
 
 	include_once 'includes/footer.php';
 
-} elseif ($_POST["import_cgit"]) {
+} elseif ($_POST["confirmimport_github"]) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	$title = 'Import repos from github';
+	include_once 'includes/header.php';
+
+	echo '<div class="content-block"><div class="sub-block"><p>Repos on GitHub are organized by user, and sometimes by organization.  You can import repos directly from GitHub if you know either of these.</p><p>To find the user or organization, navigate to one of the repos you want to import and copy the bold text: <blockquote><pre>https://github.com/<strong>use_this</strong>/reponame</pre></blockquote></p>
+	</div><!-- .sub-block -->
+	<div class="sub-block">
+	<form action="import" id="import" method="post">
+	<input type="hidden" name="project_id" value="' . $project_id . '">
+	<table>
+	<tr><td class="quarter"><label><input type="radio" name="github" value="organization" class="select" checked="checked">Github organization: </label></td><td><span class="text"><input type="text" name="github_org"></span></td></tr>
+	<tr><td><label><input type="radio" name="github" value="user" class="select">Github user: </label></td><td><span class="text"><input type="text" name="github_user"></span></td></tr>
+	</table>
+	<p><input type="submit" name="submit_import" value="Import from GitHub"></p>
+	</form></div><!-- .sub-block --></div><!-- .content-block -->';
+
+	include_once 'includes/footer.php';
+
+} elseif ($_POST["import_repos"]) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 

@@ -14,6 +14,7 @@ function fetch_page($url) {
 	curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
 	curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($curl, CURLOPT_USERAGENT, 'PHP cURL');
 	$page = curl_exec($curl);
 	curl_close($curl);
 

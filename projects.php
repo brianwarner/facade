@@ -109,6 +109,9 @@ if ($_GET["id"]) {
 	<form action="manage" id="cgit" method="post">
 	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_cgit" value="Import from cgit">
 	</form></p>
+	<form action="manage" id="github" method="post">
+	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_github" value="Import from GitHub">
+	</form></p>
 
 	</div> <!-- .content-block -->';
 

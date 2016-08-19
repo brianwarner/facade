@@ -18,11 +18,14 @@ $db = setup_db();
 
 $project_id = sanitize_input($db,$_POST["project_id"],11);
 $url = sanitize_input($db,$_POST["cgit"],256);
+$github = sanitize_input($db,$_POST["github"],12);
+$github_org = sanitize_input($db,$_POST["github_org"],128);
+$github_user = sanitize_input($db,$_POST["github_user"],128);
 
+// If a URL is passed, we're importing from cgit. If a github project is passed, we're importing from github.
 if (($project_id) && ($url)) {
 	$title = "Import from a cgit index";
 	include_once "includes/header.php";
-
 
 	// Trim a trailing slash, if it exists
 	if (substr($url,strlen($url)-1,1) == '/') {
@@ -50,16 +53,13 @@ if (($project_id) && ($url)) {
 			$page_cgit_cells = $page_xpath->query("//div[contains(@id, 'cgit')]//table[contains(@class, 'list')]//td[@class]");
 
 			if ($page_cgit_cells) {
-
-				echo '<div class="content-block"><h2>Add new repos</h2>
-				<form action="manage" onClick="toggle_select(event)" id="import_cgit" method="post">
-				<table><tr><th class="quarter">&nbsp;</th><th>&nbsp;</th></tr>';
+				write_import_table_header();
 
 				foreach ($page_cgit_cells as $page_cgit_cell) {
 
 					// Figure out whether we're in a section header or a repo link cell
 					if ($page_cgit_cell->getAttribute('class') == 'reposection') {
-						echo '<tr><td colspan="2"><strong>' . $page_cgit_cell->nodeValue . '</strong></td></tr>';
+						write_import_table_subheader($page_cgit_cell->nodeValue);
 					} elseif (strpos($page_cgit_cell->getAttribute('class'),'-repo') > 0) {
 						$page_repo_link = $page_cgit_cell->getElementsByTagName('a');
 						$repo_name = $page_repo_link[0]->getAttribute('title');
@@ -109,31 +109,7 @@ if (($project_id) && ($url)) {
 										}
 									}
 
-									echo '<tr';
-									if ($is_already_used) {
-										echo 'class="disabled"';
-									}
-
-									echo '><td><input type="checkbox" name="repos[]" class="checkbox"';
-									if ($is_already_used) {
-										echo ' disabled="true" checked="checked" title="This repo is already in use" value="' . $repo_name . '-existing"';
-									} else {
-										echo ' value="' . $repo_name . '"';
-									}
-
-									echo '> ' . $repo_name . '</td><td>';
-
-									// Present the options, disable the rows where a git repo is already in the database
-									foreach ($git_links as $git_link) {
-										echo '<input type="radio" name="radio_' . $repo_name . '" class="select" value="' . $git_link . '" disabled="true"';
-
-										if ($is_already_used == $git_link) {
-											echo ' checked="checked" title="This repo is already in use"';
-										}
-										echo '> ' . $git_link . '<br>';
-									}
-									echo '</td></tr>';
-
+									write_import_table_row($repo_name,$git_links,$is_already_used);
 								} else {
 									echo "<p>Couldn't find any valid git repo links.</p>";
 								}
@@ -144,10 +120,7 @@ if (($project_id) && ($url)) {
 					}
 				}
 
-				echo '</table>
-				<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="import_cgit" value="Import selections"></p>
-				</div> <!-- .content-block --></form>';
-
+				write_import_table_footer($project_id);
 			} else {
 				echo "<p>This cgit appears to be empty.</p>";
 			}
@@ -160,8 +133,53 @@ if (($project_id) && ($url)) {
 
 	include_once 'includes/footer.php';
 
+} elseif (($project_id) && ((($github == 'organization') && ($github_org)) || (($github == 'user') && ($github_user)))) {
+
+	$title = 'Import from GitHub';
+	include_once 'includes/header.php';
+
+	if ($github == 'organization') {
+		$github_category = 'orgs';
+		$github_entity = $github_org;
+	} else {
+		$github_category = 'users';
+		$github_entity = $github_user;
+	}
+
+	$url = 'https://api.github.com/' . $github_category . '/' . $github_entity . '/repos?type=all';
+
+	$github_contents = json_decode(fetch_page($url));
+
+	// Make sure we got something valid
+	if ($github_contents) {
+
+		write_import_table_header();
+
+		foreach ($github_contents as $github_content) {
+			$is_already_used = '';
+			$repos = array($github_content->html_url,$github_content->git_url);
+
+			// Check to see if one of the URLs is already in use in the project
+			foreach ($repos as $repo) {
+				$query = "SELECT NULL FROM repos WHERE projects_id=" . $project_id . " AND git='" . $repo . "'";
+				$result = query_db($db,$query,'Checking for existing repos');
+
+				if ($result->num_rows > 0) {
+					$is_already_used = $repo;
+				}
+			}
+
+			write_import_table_row($github_content->name,$repos,$is_already_used);
+		}
+		write_import_table_footer($project_id);
+
+	} else {
+		echo '<p>' . $github_entity . ' appears to be an invalid GitHub ' . $github . '.</p>';
+	}
+	include_once 'includes/footer.php';
+
 } else {
-	header("Location: projects");
+	header("Location: projects?id=" . $project_id);
 }
 
 ?>

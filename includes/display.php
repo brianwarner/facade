@@ -414,4 +414,47 @@ function list_excludes($db,$project_id = NULL) {
 	echo '</div> <!-- .sub-block -->';
 }
 
+function write_import_table_header() {
+	echo '<div class="content-block"><h2>Add new repos</h2>
+	<form action="manage" onClick="toggle_select(event)" id="import_repos" method="post">
+	<table><tr><th class="quarter">&nbsp;</th><th>&nbsp;</th></tr>';
+}
+
+function write_import_table_subheader($section) {
+	echo '<tr><td colspan="2"><strong>' . $section . '</strong></td></tr>';
+}
+
+function write_import_table_row($repo_name,$git_links,$is_already_used) {
+	echo '<tr';
+	if ($is_already_used) {
+		echo 'class="disabled"';
+	}
+	echo '><td><input type="checkbox" name="repos[]" class="checkbox"';
+	if ($is_already_used) {
+		echo ' disabled="true" checked="checked" title="This repo is already in use" value="' . $repo_name . '-existing"';
+	} else {
+		echo ' value="' . $repo_name . '"';
+	}
+
+	echo '> ' . $repo_name . '</td><td>';
+
+	// Present the options, disable the rows where a git repo is already in the database
+	foreach ($git_links as $git_link) {
+		echo '<input type="radio" name="radio_' . $repo_name . '" class="select" value="' . $git_link . '" disabled="true"';
+
+		if ($is_already_used == $git_link) {
+			echo ' checked="checked" title="This repo is already in use"';
+		}
+		echo '> ' . $git_link . '<br>';
+	}
+	echo '</td></tr>';
+
+}
+
+function write_import_table_footer($project_id) {
+	echo '</table>
+	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="import_repos" value="Import selections"></p>
+	</div> <!-- .content-block --></form>';
+}
+
 ?>
