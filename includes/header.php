@@ -38,6 +38,21 @@
 			source.style.width='auto';
 		}
 	}
+
+	function toggle_select(source) {
+		radiobuttons = document.getElementsByName('radio_' + source.target.value);
+		if (source.target.checked) {
+			for(var i=0, n=radiobuttons.length;i<n;i++) {
+				radiobuttons[i].removeAttribute('disabled');
+			}
+			radiobuttons[0].checked = source.target.checked;
+		} else {
+			for(var i=0, n=radiobuttons.length;i<n;i++) {
+				radiobuttons[i].setAttribute('disabled','disabled');
+				radiobuttons[i].checked = source.target.checked;
+			}
+		}
+	}
 </script>
 
 

@@ -309,8 +309,42 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: tags");
 
+} elseif ($_POST["confirmimport_cgit"]) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	$title = 'Import from cgit';
+	include_once 'includes/header.php';
+
+	echo '<div class="content-block"><div class="sub-block"><p>cgit is a common web interface for servers hosting a large number of git repos.  It can be more efficient to import them directly from the cgit index page, with the full listing of projects.</p><p>It may take a long time to discover all of the repos on a cgit server.  Be patient.</p>
+	</div><!-- .sub-block -->
+	<div class="sub-block">
+	<form action="import-cgit" id="import-cgit" method="post">
+	<input type="hidden" name="project_id" value="' . $project_id . '">
+	<p><label for="cgit">cgit index page: </label><span class="text"><input type="text" name="cgit"></span></p>
+	<p><input type="submit" name="submit_cgit" value="import cgit index page"></p>
+	</form></div><!-- .sub-block --></div><!-- .content-block -->';
+
+	include_once 'includes/footer.php';
+
+} elseif ($_POST["import_cgit"]) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	// The names of the repos just help us cycle through the POST variable
+	foreach ($_POST["repos"] as $repo) {
+
+		$git = sanitize_input($db,$_POST["radio_" . str_replace('.','_',$repo)],256);
+
+	        // Only do something if valid input was submitted
+        	if ($git) {
+                	$query = "INSERT INTO repos (projects_id,git,status) VALUES ('" . $project_id . "','" . $git . "','New')";
+	                query_db($db,$query,"Add new git repo");
+        	}
+	}
+
 } else {
-	echo "Oops, what did you want to do?";
+	echo "Oops, what did you want to do?\n";
 }
 
 

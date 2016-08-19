@@ -106,7 +106,7 @@ a:link, a:visited {
 	width: 320px;
 }
 
-input.checkbox {
+input.checkbox,input.select {
 	margin-right: 25px;
 }
 
@@ -130,6 +130,10 @@ select.select-150 {
 table {
 	border-collapse: collapse;
 	width: 100%;
+}
+
+tr.disabled {
+	font-color: gray;
 }
 
 th {

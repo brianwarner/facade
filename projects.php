@@ -106,6 +106,10 @@ if ($_GET["id"]) {
 	echo '<form action="manage" id="newrepo" method="post">
 	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmnew_repo" value="Add a repo">
 	</form>
+	<!--<form action="manage" id="cgit" method="post">
+	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_cgit" value="Import from cgit">
+	</form></p>-->
+
 	</div> <!-- .content-block -->';
 
 } else {
@@ -146,7 +150,7 @@ if ($_GET["id"]) {
 
 	echo '<form action="manage" id="newproject" method="post">
 <p><input type="submit" name="confirmnew_project" value="Add a new project">
-</form>
+</form></p>
 </div> <!-- .content-block -->';
 
 }
