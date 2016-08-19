@@ -343,6 +343,8 @@ if ($_POST["confirmnew_repo"]) {
         	}
 	}
 
+	header("Location: projects?id=" . $project_id);
+
 } else {
 	echo "Oops, what did you want to do?\n";
 }

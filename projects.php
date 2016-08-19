@@ -106,9 +106,9 @@ if ($_GET["id"]) {
 	echo '<form action="manage" id="newrepo" method="post">
 	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmnew_repo" value="Add a repo">
 	</form>
-	<!--<form action="manage" id="cgit" method="post">
+	<form action="manage" id="cgit" method="post">
 	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_cgit" value="Import from cgit">
-	</form></p>-->
+	</form></p>
 
 	</div> <!-- .content-block -->';
 
