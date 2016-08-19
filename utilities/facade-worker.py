@@ -230,7 +230,7 @@ def gitdm(db,cursor,repo_loc,first,gitdm_loc):
 
 	last = str((datetime.datetime.strptime(first,'%Y-%m-%d') + datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
 
-	gitdmcall = 'git --git-dir '+repo_loc+' log --pretty=fuller -p -M --since='+first+' --before='+last+' --all | '+gitdm_loc+'/gitdm -b '+gitdm_loc+' -u -s -d -x '+outfile_name+'.tmp'
+	gitdmcall = 'git --git-dir '+repo_loc+' log -p -M --since='+first+' --before='+last+' --all | '+gitdm_loc+'/gitdm -b '+gitdm_loc+' -u -s -d -x '+outfile_name+'.tmp'
 
 	return_code = call(gitdmcall,shell=True)
 
