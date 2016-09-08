@@ -8,23 +8,15 @@
 
 import MySQLdb
 
-def db_setup():
+db_name="facade"
+db_user="facade"
+db_pass="facade"
+db_host="localhost"
 
-	db_name="facade"
-	db_user="facade"
-	db_pass="facade"
-	db_host="localhost"
+db=MySQLdb.connect(	host=db_host,
+			user=db_user,
+			passwd=db_pass,
+			db=db_name)
 
-	db=MySQLdb.connect(	host=db_host,
-				user=db_user,
-				passwd=db_pass,
-				db=db_name)
-
-	cursor = db.cursor(MySQLdb.cursors.DictCursor)
-
-
-	return (db,cursor)
-
-def open_cursor(db):
-	return db.cursor(MySQLdb.cursors.DictCursor)
+cursor = db.cursor(MySQLdb.cursors.DictCursor)
 

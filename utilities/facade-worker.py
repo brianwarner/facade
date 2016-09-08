@@ -2,20 +2,21 @@
 
 # Copyright 2016 Brian Warner
 #
-# This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+# This file is part of Facade, and is made available under the terms of the GNU
+# General Public License version 2.
+#
 # SPDX-License-Identifier:        GPL-2.0
 
 # Git repo maintenance
 #
-# This script is responsible for cloning new repos and keeping existing
-# repos up to date.  It is intended to be run a few times per day,
-# so that all repos are kept up to date should something unexpected
-# happen (like a network failure) right before you try to run gitdm.
+# This script is responsible for cloning new repos and keeping existing repos up
+# to date.  It is intended to be run a few times per day, so that all repos are
+# kept up to date should something unexpected happen (like a network failure)
+# right before you try to run gitdm.
 
 import sys
 import MySQLdb
-from database import db_setup,open_cursor
-(db,cursor) = db_setup()
+from database import db,cursor
 
 import HTMLParser
 html = HTMLParser.HTMLParser()
@@ -30,482 +31,591 @@ import hashlib
 hasher = hashlib.md5()
 import os
 
-# Determine if it's safe to start the script
-query = "SELECT value FROM settings WHERE setting='utility_status' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-current_status = cursor.fetchone()["value"]
+global log_level
 
-if (current_status != 'Idle'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Error','Something is already running, aborting maintenance and analysis.')"
-	cursor.execute(query)
-	db.commit()
-	sys.exit("Something is already running.  Halting until it finishes.")
 
-# Figure out how much we're going to log
-query = "SELECT value FROM settings WHERE setting='log_level' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-log_level = cursor.fetchone()["value"]
-
-# Get the location of the directory where git repos are stored; abort if not set
-query = "SELECT value FROM settings WHERE setting='repo_directory' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-repo_base_directory = cursor.fetchone()["value"]
-
-if (len(repo_base_directory) == 0):
-	sys.exit("There is no base directory. It is unsafe to continue.")
-
-### BEGIN REPO MAINTENANCE ###
-
-# Clean up any git repos that are pending deletion
-
-query = "UPDATE settings SET value='Purging deleted repos' WHERE setting='utility_status'"
-cursor.execute(query)
-db.commit()
-
-if (log_level == 'Info'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Info',	'Repo maintenance: Processing deletions')"
+def update_status(status):
+	query = ("UPDATE settings SET value='%s' WHERE setting='utility_status'"
+		% status)
 	cursor.execute(query)
 	db.commit()
 
-query = "SELECT id,projects_id,path,name FROM repos WHERE status='Delete'"
-cursor.execute(query)
+def log_activity(level,activity):
+	# Determine if something needs to be logged
 
-delete_repos = cursor.fetchall()
+	log_options = ('Error','Quiet','Info','Verbose')
 
-for row in delete_repos:
-	return_code = call("rm -rf "+repo_base_directory+str(row["projects_id"])+'/'+row["path"]+row["name"],shell=True)
-
-	query = "DELETE FROM repos WHERE id="+str(row["id"])
-	cursor.execute(query)
-	db.commit()
-
-	cleanup = str(row["projects_id"])+'/'+row["path"]+row["name"]
-
-	# Attempt to cleanup any empty parent directories
-	while (cleanup.find('/',0) > 0):
-		cleanup = cleanup[:cleanup.rfind('/',0)]
-		call("rmdir "+repo_base_directory+cleanup,shell=True)
-
-# Now we need to update existing repos
-
-query = "UPDATE settings SET value='Updating repos' WHERE setting='utility_status'"
-cursor.execute(query)
-db.commit()
-
-if (log_level == 'Info'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Info',	'Repo maintenance: Updating existing repos')"
-	cursor.execute(query)
-	db.commit()
-
-query = "SELECT id,projects_id,git,name,path FROM repos WHERE status='Active'";
-cursor.execute(query)
-
-existing_repos = cursor.fetchall()
-
-for row in existing_repos:
-	return_code = call("git -C "+repo_base_directory+str(row["projects_id"])+'/'+row["path"]+row["name"]+" pull",shell=True)
-
-	if (return_code == 0):
-		query = "INSERT INTO repos_fetch_log (repos_id,status) values ("+str(row["id"])+",'Up-to-date')"
-		cursor.execute(query)
-		db.commit()
-	else:
-		query = "INSERT INTO repos_fetch_log (repos_id,status) values ("+str(row["id"])+",'Failed ("+str(return_code)+")')"
+	if log_options.index(level) <= log_options.index(log_level):
+		query = ("INSERT INTO utility_log (level,status) VALUES ('%s','%s')"
+			% (level,activity))
 		cursor.execute(query)
 		db.commit()
 
-# Select any new git repos so we can initialize them (set up their locations on the filesystem and git clone)
-
-query = "UPDATE settings SET value='Fetching new repos' WHERE setting='utility_status'"
-cursor.execute(query)
-db.commit()
-
-if (log_level == 'Info'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Info',	'Repo maintenance: Fetching new repos')"
+def get_setting(setting):
+	query = ("SELECT value FROM settings WHERE setting='%s' ORDER BY "
+		"last_modified DESC LIMIT 1" % setting)
 	cursor.execute(query)
-	db.commit()
+	return cursor.fetchone()["value"]
 
-query = "SELECT id,projects_id,git FROM repos WHERE status LIKE 'New%'";
-cursor.execute(query)
+def git_repo_cleanup():
+	# Clean up any git repos that are pending deletion
 
-new_repos = cursor.fetchall()
+	update_status('Purging deleted repos')
+	log_activity('Info','Repo maintenance: Processing deletions')
 
-for row in new_repos:
-	print row["git"]
+	repo_base_directory = get_setting('repo_directory')
 
-	git = html.unescape(row["git"])
-
-	# Strip protocol from remote URL, if it exists, so we can set a unique path on the filesystem
-	# Storing this will allow us to find it for updates, and move the repos to a different place if needed
-	if (git.find('://',0) > 0):
-		repo_relative_path = git[git.find('://',0)+3:][:git[git.find('://',0)+3:].rfind('/',0)+1]
-	else:
-		repo_relative_path = git[:git.rfind('/',0)+1]
-
-	# Prepend the base directory and project ID to get the full path to the directory where we'll clone the repo
-	repo_path = repo_base_directory+str(row["projects_id"])+'/'+repo_relative_path
-
-	# Get the name of repo
-	repo_name = git[git.rfind('/',0)+1:]
-	if (repo_name.find('.git',0) > -1):
-		repo_name = repo_name[:repo_name.find('.git',0)]
-
-	# Check if there will be a storage path collision
-	query = "SELECT NULL FROM repos WHERE CONCAT(projects_id,'/',path,name) ='" + str(row["projects_id"]) + '/' + repo_relative_path + repo_name + "'"
+	query = "SELECT id,projects_id,path,name FROM repos WHERE status='Delete'"
 	cursor.execute(query)
-	db.commit()
 
-	# If there is a collision, attempt to append a slug to repo_name to yield a unique path
-	if (cursor.rowcount):
+	delete_repos = cursor.fetchall()
 
-		slug = 1
-		is_collision = True
-		while (is_collision):
+	for row in delete_repos:
 
-			if (os.path.isdir(repo_path + repo_name + '-' + str(slug))):
-				slug += 1
-			else:
-				is_collision = False
+		cmd = ("rm -rf %s%s/%s%s"
+			% (repo_base_directory,row["projects_id"],row["path"],row["name"]))
 
-		repo_name = repo_name + '-' + str(slug)
+		return_code = call(cmd,shell=True)
 
-	# Create the prerequisite directories
-	return_code = call('mkdir -p '+repo_path,shell=True)
-
-	# Make sure it's ok to proceed
-	if (return_code != 0):
-		print("COULD NOT CREATE REPO DIRECTORY")
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Failed (mkdir)')"
-		print(query)
-		cursor.execute(query)
-		db.commit()
-		sys.exit("Could not create git repo prerequisite directories. Do you have write access?")
-
-	query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'New (cloning)')"
-	cursor.execute(query)
-	db.commit()
-
-	query = "UPDATE repos SET status='New (Initializing)',path='" + repo_relative_path + "',name='" + repo_name + "' WHERE id=" + str(row["id"])
-	cursor.execute(query)
-	db.commit()
-
-
-	return_code = call("git -C "+repo_path+" clone '"+git+"' " + repo_name, shell=True)
-
-	if (return_code == 0):
-		# If cloning succeeded, repo is ready for gitdm
-		query = "UPDATE repos SET status='Active',path='" + repo_relative_path + "',name='" + repo_name + "' WHERE id=" + str(row["id"])
+		query = "DELETE FROM repos WHERE id=%s" % row["id"]
 		cursor.execute(query)
 		db.commit()
 
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Up-to-date')"
-		cursor.execute(query)
-		db.commit()
-	else:
-		# If cloning failed, log it and set the status back to new
-		query = "INSERT INTO repos_fetch_log (repos_id,status) VALUES (" + str(row["id"]) + ",'Failed (" + str(return_code) + ")')"
-		cursor.execute(query)
-		db.commit()
+		log_activity('Verbose','Repo maintenance: Deleted repo %s') % row["id"]
 
-		query = "UPDATE repos SET status='New (failed)' WHERE id=" + str(row["id"])
-		cursor.execute(query)
-		db.commit()
+		cleanup = '%s/%s%s' % (row["projects_id"],row["path"],row["name"])
 
-### END REPO MAINTENANCE ###
+		# Attempt to cleanup any empty parent directories
+		while (cleanup.find('/',0) > 0):
+			cleanup = cleanup[:cleanup.rfind('/',0)]
 
-### BEGIN GITDM ###
+			cmd = "rmdir %s%s" % (repo_base_directory,cleanup)
+			call(cmd,shell=True)
+			log_activity('Verbose','Repo maintenance: Attempted %s' % cmd)
 
-query = "UPDATE settings SET value='Running gitdm' WHERE setting='utility_status'"
-cursor.execute(query)
-db.commit()
+	log_activity('Info','Repo maintenance: Processing deletions (complete)')
 
-if (log_level == 'Info'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Info',	'Running gitdm')"
+def git_repo_updates():
+	# Now we need to update existing repos
+
+	update_status('Updating repos')
+	log_activity('Info','Repo maintenance: Updating existing repos')
+
+	repo_base_directory = get_setting('repo_directory')
+
+	query = ("SELECT id,projects_id,git,name,path FROM repos WHERE "
+		"status='Active'");
 	cursor.execute(query)
-	db.commit()
 
-def gitdm(db,cursor,repo_loc,first,gitdm_loc):
+	existing_repos = cursor.fetchall()
 
-	outfile_name = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(32))
+	for row in existing_repos:
 
-	last = str((datetime.datetime.strptime(first,'%Y-%m-%d') + datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
+		cmd = ("git -C %s%s/%s%s pull"
+			% (repo_base_directory,row["projects_id"],row["path"],row["name"]))
+		return_code = call(cmd,shell=True)
 
-	gitdmcall = 'git --git-dir '+repo_loc+' log -p -M --since='+first+' --before='+last+' --all | '+gitdm_loc+'/gitdm -b '+gitdm_loc+' -u -s -d -x '+outfile_name+'.tmp'
+		if return_code == 0:
+			query = ("INSERT INTO repos_fetch_log (repos_id,status) values "
+				"(%s,'Up-to-date')" % row["id"])
+			cursor.execute(query)
+			db.commit()
+			log_activity('Verbose','Repo maintenance: Updated %s' % row["git"])
+		else:
+			query = ("INSERT INTO repos_fetch_log (repos_id,status) values "
+				"(%s,'Failed (%s)')" % (row["id"],return_code))
 
-	return_code = call(gitdmcall,shell=True)
+			cursor.execute(query)
+			db.commit()
+			log_activity('Error','Repo maintenance: Could not update %s' % git)
+	log_activity('Info','Repo maintenance: Updating existing repos (complete)')
 
-	return (outfile_name+'.tmp')
+def git_repo_initialize():
+	# Select any new git repos so we can set up their locations and git clone)
 
-query = "SELECT value FROM settings WHERE setting='gitdm' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-gitdm_loc = cursor.fetchone()["value"]
+	update_status('Fetching new repos')
+	log_activity('Info','Repo maintenance: Fetching new repos')
 
-
-# First we need to determine which dates need to be analyzed (if any)
-query = "SELECT value FROM settings WHERE setting='start_date' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-start_date = cursor.fetchone()["value"]
-
-query = "SELECT value FROM settings WHERE setting='end_date' ORDER BY last_modified DESC LIMIT 1"
-cursor.execute(query)
-end_date = cursor.fetchone()["value"]
-
-if (end_date == 'yesterday'):
-	end_date = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-
-# Create a temporary table with all dates that should have data
-# in order to determine if any need to be backfilled
-
-query = "CALL make_cal_table('"+start_date+"','"+end_date+"')";
-cursor.execute(query)
-db.commit()
-
-# Iterate over all repos and mark any dates that don't have a log
-# entry as "Pending" so we know which data needs to be calculated.
-
-query = "SELECT id FROM repos WHERE status='Active'";
-cursor.execute(query)
-repos = cursor.fetchall()
-
-for repo in repos:
-
-	query = """SELECT cal_table.date FROM cal_table LEFT JOIN
-			(SELECT * FROM gitdm_master WHERE repos_id="""+str(repo["id"])+""") repo
-			ON cal_table.date = repo.start_date
-			WHERE repo.start_date IS NULL"""
-
+	query = "SELECT id,projects_id,git FROM repos WHERE status LIKE 'New%'";
 	cursor.execute(query)
-	missing_dates = cursor.fetchall()
 
-	for date in missing_dates:
+	new_repos = cursor.fetchall()
 
-		query = """INSERT INTO gitdm_master (repos_id,status,start_date) VALUES
-			("""+str(repo["id"])+""",
-			'Pending',
-			'"""+str(date["date"])+"""')"""
+	for row in new_repos:
+		print row["git"]
+
+		git = html.unescape(row["git"])
+
+		# Strip protocol from remote URL, set a unique path on the filesystem
+		if git.find('://',0) > 0:
+			repo_relative_path = git[git.find('://',0)+3:][:git[git.find('://',0)+3:].rfind('/',0)+1]
+		else:
+			repo_relative_path = git[:git.rfind('/',0)+1]
+
+		# Get the full path to the directory where we'll clone the repo
+		repo_path = ('%s%s/%s' %
+			(repo_base_directory,row["projects_id"],repo_relative_path))
+
+		# Get the name of repo
+		repo_name = git[git.rfind('/',0)+1:]
+		if repo_name.find('.git',0) > -1:
+			repo_name = repo_name[:repo_name.find('.git',0)]
+
+		# Check if there will be a storage path collision
+		query = ("SELECT NULL FROM repos WHERE CONCAT(projects_id,'/',path,name) "
+			"='%s/%s%s'" % (row["projects_id"],repo_relative_path,repo_name))
+		cursor.execute(query)
+		db.commit()
+
+		# If there is a collision, append a slug to repo_name to yield a unique path
+		if cursor.rowcount:
+
+			slug = 1
+			is_collision = True
+			while is_collision:
+
+				if os.path.isdir('%s%s-%s' % (repo_path,repo_name,slug)):
+					slug += 1
+				else:
+					is_collision = False
+
+			repo_name = '%s-%s' % (repo_name,slug)
+
+			log_activity('Verbose','Identical repo detected, storing %s in %s' %
+				(git,repo_name))
+
+		# Create the prerequisite directories
+		return_code = call('mkdir -p %s' % repo_path,shell=True)
+
+		# Make sure it's ok to proceed
+		if return_code != 0:
+			print("COULD NOT CREATE REPO DIRECTORY")
+			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES "
+				"(%s,'Failed (mkdir %s)')" % (row["id"],repo_path))
+			print(query)
+			cursor.execute(query)
+			db.commit()
+			update_status('Failed (mkdir %s)' % repo_path)
+			log_activity('Error','Could not create repo directory: %s' %
+				repo_path)
+			sys.exit("Could not create git repo prerequisite directories. "
+				" Do you have write access?")
+
+		query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
+			"'New (cloning)')" % row["id"])
+		cursor.execute(query)
+		db.commit()
+
+		query = ("UPDATE repos SET status='New (Initializing)', path='%s', "
+			"name='%s' WHERE id=%s"	% (repo_relative_path,repo_name,row["id"]))
 
 		cursor.execute(query)
 		db.commit()
 
-# Locate the repositories, get all of the "Pending" dates, and run gitdm
+		cmd = "git -C %s clone '%s' %s" % (repo_path,git,repo_name)
 
-query = "SELECT * FROM gitdm_master WHERE status='Pending'"
-cursor.execute(query)
-repos = cursor.fetchall()
+		return_code = call(cmd, shell=True)
 
-for repo in repos:
-	# May want to update status to "working" in gitdm_master
+		if (return_code == 0):
+			# If cloning succeeded, repo is ready for gitdm
+			query = ("UPDATE repos SET status='Active',path='%s', name='%s'' "
+				"WHERE id=%s" % (repo_relative_path,repo_name,row["id"]))
 
-	query = "SELECT projects_id,path,name FROM repos WHERE id="+str(repo["repos_id"])
-	cursor.execute(query)
-	repo_detail = cursor.fetchone()
-
-	outfile = gitdm(db,cursor,repo_base_directory+str(repo_detail["projects_id"])+'/'+repo_detail["path"]+repo_detail["name"]+'/.git',repo["start_date"],gitdm_loc)
-
-	# Now we need to shuffle this stuff into the gitdm_results table in the db.
-
-	with open(outfile,"r") as file:
-		reader = csv.reader(file,delimiter=',')
-
-		# First we verify that the temp file matches what we expected
-
-		header = next(reader)
-		if (','.join(header) == 'Name,Email,Affliation,Date,Added,Removed,Changesets'):
-
-			for row in reader:
-				name = row[0].replace("'","\\'")
-				email = row[1].replace("'","\\'")
-				affiliation = row[2].replace("'","\\'")
-				added = row[4]
-				removed = row[5]
-				changesets = row[6]
-
-				query = """INSERT INTO gitdm_data (gitdm_master_id,name,email,affiliation,added,removed,changesets)
-					VALUES ("""+str(repo["id"])+""",
-					'"""+name+"""',
-					'"""+email+"""',
-					'"""+affiliation+"""',
-					"""+str(added)+""",
-					"""+str(removed)+""",
-					"""+str(changesets)+""")"""
-
-				cursor.execute(query)
-				db.commit()
-
-			query = """UPDATE gitdm_master SET status='Complete' WHERE id="""+str(repo["id"])
 			cursor.execute(query)
 			db.commit()
 
-			call('rm '+outfile,shell=True)
+			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
+				"'Up-to-date')" % row["id"])
 
-### END GITDM ***
+			cursor.execute(query)
+			db.commit()
+			log_activity('Info','Repo maintenance: Cloned %s' % git)
 
-### BEGIN DUMPING OLD DATA IF START DATE CHANGED ###
+		else:
+			# If cloning failed, log it and set the status back to new
+			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
+				"'Failed (%s)')" % (row["id"],return_code))
 
-query = "DELETE m,d FROM gitdm_master m LEFT JOIN gitdm_data d ON m.id=d.gitdm_master_id WHERE m.start_date < '" + start_date + "' OR m.start_date > '" + end_date + "'"
-cursor.execute(query)
-db.commit()
+			cursor.execute(query)
+			db.commit()
 
-### END DUMPING OLD DATA IF START DATE CHANGED ###
+			query = ("UPDATE repos SET status='New (failed)' WHERE id=%s"
+				% row["id"])
 
-### BEGIN AFFILIATION CORRECTIONS ###
-for line in open(gitdm_loc + 'gitdm.config'):
+			cursor.execute(query)
+			db.commit()
 
-	# Find all lines which are not commented and not empty
-	if not (line.strip().startswith('#') or len(line.strip()) == 0):
-		(configtype,configfile) = line.strip().split()
+			log_activity('Error','Repo maintenance: Could not clone %s' % git)
 
-		# There are only certain configs that are relevant, we can ignore the rest
-		if ((configtype == 'EmailAliases') or (configtype == 'EmailMap')):
+	log_activity('Info', 'Repo maintenance: Fetching new repos (complete)')
 
-			with open (gitdm_loc + configfile, 'rb') as file:
-				hasher.update(file.read())
+def gitdm_analysis():
 
-				# Determine if the last entry for this file matches the current md5
-				query = "SELECT NULL FROM gitdm_configs WHERE configfile = '" + configfile + "' AND md5sum = '" + hasher.hexdigest() + "' ORDER BY last_modified DESC";
+	update_status('Running gitdm')
+	log_activity('Info','gitdm: Running analysis')
+
+	gitdm_loc = get_setting('gitdm')
+	start_date = get_setting('start_date')
+	end_date = get_setting('end_date')
+
+	if end_date == 'yesterday':
+		end_date = (datetime.date.today() -
+			datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+	# Create temporary table with missing dates to find any backfills
+
+	query = "CALL make_cal_table('%s','%s')" % (start_date, end_date);
+	cursor.execute(query)
+	db.commit()
+
+	# Iterate over all repos and mark any dates that don't have a log entry as
+	# "Pending" so we know which data needs to be calculated.
+
+	query = "SELECT id FROM repos WHERE status='Active'";
+	cursor.execute(query)
+	repos = cursor.fetchall()
+
+	for repo in repos:
+
+		query = ("SELECT cal_table.date FROM cal_table LEFT JOIN "
+				"(SELECT * FROM gitdm_master WHERE repos_id=%s) repo "
+				"ON cal_table.date = repo.start_date "
+				"WHERE repo.start_date IS NULL" % repo["id"])
+
+		cursor.execute(query)
+		missing_dates = cursor.fetchall()
+
+		for date in missing_dates:
+
+			query = ("INSERT INTO gitdm_master (repos_id,status,start_date) "
+				"VALUES	(%s, 'Pending', '%s')" % (repo["id"],date["date"]))
+
+			cursor.execute(query)
+			db.commit()
+
+	# Locate the repositories, get all of the "Pending" dates, and run gitdm
+
+	query = "SELECT * FROM gitdm_master WHERE status='Pending'"
+	cursor.execute(query)
+	repos = cursor.fetchall()
+
+	for repo in repos:
+		# May want to update status to "working" in gitdm_master
+
+		query = ("SELECT projects_id,path,name FROM repos WHERE id=%s"
+			% repo["repos_id"])
+
+		cursor.execute(query)
+		repo_detail = cursor.fetchone()
+
+		repo_loc = ('%s%s/%s%s/.git' % (repo_base_directory,
+			repo_detail["projects_id"], repo_detail["path"],
+			repo_detail["name"]))
+
+		outfile = 'gitdm_results.tmp'
+
+		end_date = str((datetime.datetime.strptime(repo["start_date"],'%Y-%m-%d')
+			+ datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
+
+		gitdmcall = ('git --git-dir %s log -p -M --since=%s --before=%s --all '
+			'| %s/gitdm -b %s -u -s -d -x %s' % (repo_loc, repo["start_date"],
+			end_date, gitdm_loc, gitdm_loc, outfile))
+
+
+		return_code = call(gitdmcall,shell=True)
+
+		# Insert results into the gitdm_results table in the db.
+
+		with open(outfile,"r") as file:
+			reader = csv.reader(file,delimiter=',')
+
+			# First we verify that the temp file matches what we expected
+
+			header = next(reader)
+			if ','.join(header) == 'Name,Email,Affliation,Date,Added,Removed,Changesets':
+
+				for row in reader:
+					name = row[0].replace("'","\\'")
+					email = row[1].replace("'","\\'")
+					affiliation = row[2].replace("'","\\'")
+					added = row[4]
+					removed = row[5]
+					changesets = row[6]
+
+					query = ("INSERT INTO gitdm_data (gitdm_master_id, name, "
+							"email, affiliation, added, removed, changesets)"
+						"VALUES (%s,'%s','%s','%s',%s,%s,%s)" % (repo["id"],
+						name, email, affiliation, added, removed, changesets))
+
+					cursor.execute(query)
+					db.commit()
+
+				query = ("UPDATE gitdm_master SET status='Complete' WHERE id=%s"
+					% repo["id"])
 
 				cursor.execute(query)
 				db.commit()
 
-				if not (cursor.rowcount):
-					# No match was found, so we need to process the new file for differences
+				call('rm %s' % outfile,shell=True)
 
-					mismatches = []
-					cached_configfile = 'cached-configs/' + configfile.replace('/','.') + '.cache'
+	log_activity('Info','Running gitdm analysis (complete)')
 
-					# First, let's find out if the file is even cached, so we can save some work.
+def purge_old_gitdm_data():
+	# Trim data outside of the current start/end dates
 
-					if os.path.isfile(cached_configfile):
+	update_status('Trimming out-of-bounds data')
+	log_activity('Info','Trimming out-of-bounds data')
 
-						# File is cached, so walk through the config file to figure out what is different
-						for line_config in open(gitdm_loc + configfile):
+	start_date = get_setting('start_date')
+	end_date = get_setting('end_date')
 
-							if not (line_config.strip().startswith('#') or len(line_config.strip()) == 0):
+	query = ("DELETE m,d FROM gitdm_master m "
+		"LEFT JOIN gitdm_data d "
+		"ON m.id=d.gitdm_master_id "
+		"WHERE m.start_date < '%s' "
+			"OR m.start_date > '%s'" % (start_date, end_date))
 
-								line_match = False
+	cursor.execute(query)
+	db.commit()
 
-								for line_cache in open(cached_configfile):
+	log_activity('Info','Trimming out-of-bounds data (complete)')
 
-									if (line_config == line_cache):
-										line_match = True
+def correct_modified_gitdm_affiliations():
+	# Watch for changes in the gitdm config files that would change results
 
-								if not (line_match):
-									# Store the mis-matches so we can process them.
+	update_status('Updating affiliations')
+	log_activity('Info','Updating affiliations')
 
-									if (line_config.find('#')):
+	gitdm_loc = get_setting('gitdm')
+
+	for line in open('%sgitdm.config' % gitdm_loc):
+
+		# Find all lines which are not commented and not empty
+		if not line.strip().startswith('#') and not len(line.strip()) == 0:
+			(configtype,configfile) = line.strip().split()
+
+			# There are only certain configs that are relevant, we can ignore the rest
+			if configtype == 'EmailAliases' or configtype == 'EmailMap':
+
+				with open ('%s%s' % (gitdm_loc, configfile), 'rb') as file:
+					hasher.update(file.read())
+
+					# Determine if the file matches the current md5
+					query = ("SELECT NULL FROM gitdm_configs "
+						"WHERE configfile = '%s' "
+						"AND md5sum = '%s' ORDER BY last_modified DESC"
+						% (configfile,hasher.hexdigest()))
+
+					cursor.execute(query)
+					db.commit()
+
+					if not cursor.rowcount:
+						# No match found, process the file for differences
+
+						mismatches = []
+						cached_configfile = ('cached-configs/%s.cache'
+							% configfile.replace('/','.'))
+
+						# Only diff if file is already cached
+						if os.path.isfile(cached_configfile):
+
+							# Walk through file to figure out what is different
+							for line_config in open(gitdm_loc + configfile):
+
+								if not line_config.strip().startswith('#') and not len(line_config.strip()) == 0:
+
+									line_match = False
+
+									for line_cache in open(cached_configfile):
+
+										if line_config == line_cache:
+											line_match = True
+
+									if not line_match:
+										# Store mis-matches so we can process them.
+
+										if line_config.find('#'):
+											# Strip any comments in the line
+											line_config = line_config[:line_config.find('#')]
+
+										mismatches.append(line_config)
+
+						else:
+
+							# File isn't cached, so all of it must be stored
+
+							for line_config in open('%s%s' % (gitdm_loc,configfile)):
+								if not line_config.strip().startswith('#') and not len(line_config.strip()) == 0:
+									# Store all entries in the file
+
+									if line_config.find('#'):
 										# Strip any comments in the line
 										line_config = line_config[:line_config.find('#')]
 
 									mismatches.append(line_config)
 
-					else:
+						# Now it's time to process the mismatches
+						for mismatch in mismatches:
 
-						# File isn't cached, so all of it must be stored (without comments) for processing
+							if configtype == 'EmailAliases':
 
-						for line_config in open(gitdm_loc + configfile):
-							if not (line_config.strip().startswith('#') or len(line_config.strip()) == 0):
-								# Store all entries in the file so we can process them
+								# Grab the canonical email from the end of the string
+								canonical = mismatch.split()[-1]
 
-								if (line_config.find('#')):
-									# Strip any comments in the line
-									line_config = line_config[:line_config.find('#')]
+								# Grab everything up to the canonical email
+								alias = mismatch[:mismatch.rfind(canonical)].strip()
 
-								mismatches.append(line_config)
+								query = ("UPDATE gitdm_data SET email='%s' "
+									"WHERE email='%s'"
+									% (canonical.replace("'","\\'"),
+									alias.replace("'","\\'")))
 
+								cursor.execute(query)
+								db.commit()
 
-					# Now it's time to process the mismatches
-					for mismatch in mismatches:
+							if configtype == 'EmailMap':
 
-						if (configtype == 'EmailAliases'):
+								# Grab the domain or email from beginning of the string
+								domain = mismatch.split()[0].replace("'","\\'")
 
-							# Grab the canonical email from the end of the string
-							canonical = mismatch.split()[-1]
+								# Grab everything up to the affiliation
+								affiliation = mismatch[len(domain):].strip().replace("'","\\'")
+								query = ("UPDATE gitdm_data "
+									"SET affiliation='%s' "
+									"WHERE email LIKE '%%%s%%'"
+									% (affiliation, domain))
 
-							# Grab everything up to the canonical email, since entries could be space or tab delimited
-							alias = mismatch[:mismatch.rfind(canonical)].strip()
+								cursor.execute(query)
+								db.commit()
 
-							query = "UPDATE gitdm_data SET email='" + canonical.replace("'","\\'") + "' WHERE email='" + alias.replace("'","\\'") + "'"
-							cursor.execute(query)
-							db.commit()
+						# Cache the file
+						cmd = "cp %s%s %s" % (gitdm_loc, configfile,
+							cached_configfile)
 
-						if (configtype == 'EmailMap'):
+						return_code = call(cmd, shell=True)
 
-							# Grab the domain (or it could be a complete email) from the beginning of the string
-							domain = mismatch.split()[0].replace("'","\\'")
+						if return_code == 0:
+							# Update hash so unchanged files can be ignored.
+							hashstatus = "Complete"
+						else:
+							# Log as an error.
+							hashstatus = "Incomplete"
 
-							# Grab everything up to the affiliation, since entries could be space or tab delimited
-							affiliation = mismatch[len(domain):].strip().replace("'","\\'")
-							query = "UPDATE gitdm_data SET affiliation='" + affiliation + "' WHERE email LIKE '%" + domain + "%'" # Using double quotes because of apostrophes in affiliate names.
-							cursor.execute(query)
-							db.commit()
+						query = ("INSERT INTO gitdm_configs "
+							"(configfile,configtype,md5sum,status) "
+							"VALUES ('%s','%s','%s','%s')"
+							% (configfile, configtype, hasher.hexdigest(),
+							hashstatus))
 
-					# Cache the file
-					return_code = call("cp " + gitdm_loc + configfile + "  " + cached_configfile, shell=True)
-
-					if (return_code == 0):
-						# Update database with new md5 hash so unchanged files can be ignored.
-						query = "INSERT INTO gitdm_configs (configfile,configtype,md5sum,status) VALUES ('" + configfile + "','" + configtype + "','" + hasher.hexdigest() + "','Complete')"
 						cursor.execute(query)
 						db.commit()
 
-					else:
-						# Log as an error.
-						query = "INSERT INTO gitdm_configs (configfile,configtype,md5sum,status) VALUES ('" + configfile + "','" + configtype + "','" + hasher.hexdigest() + "','Incomplete')"
-						cursor.execute(query)
-						db.commit()
+	log_activity('Info','Updating affiliations (complete)')
 
-### END AFFILITION CORRECTIONS ###
+def fix_funky_emails():
+	# Some emails have two @, fix those
 
-### BEGIN FIX FUNKY EMAILS ###
+	update_status('Fixing funky emails')
+	log_activity('Info','Fixing funky emails')
 
-query = "SELECT id,email FROM gitdm_data WHERE email LIKE '%@%@%'"
-cursor.execute(query)
-funky_emails = cursor.fetchall()
+	query = "SELECT id,email FROM gitdm_data WHERE email LIKE '%@%@%'"
+	cursor.execute(query)
+	funky_emails = cursor.fetchall()
 
-for funky_email in funky_emails:
+	for funky_email in funky_emails:
 
-	# Trim everything to the right of the second @
-	fixed_email = funky_email["email"][:funky_email["email"].rfind('@')]
+		# Trim everything to the right of the second @
+		fixed_email = funky_email["email"][:funky_email["email"].rfind('@')]
 
-	query = "UPDATE gitdm_data SET email='" + fixed_email + "' WHERE id='" + str(funky_email["id"]) + "'"
+		query = ("UPDATE gitdm_data "
+			"SET email='%s' "
+			"WHERE id='%s'" % (fixed_email, funky_email["id"]))
+
+		cursor.execute(query)
+		db.commit()
+
+	log_activity('Info','Fixing funky emails (complete)')
+
+def build_unknown_affiliation_cache():
+
+	update_status('Caching unknown affiliations')
+	log_activity('Info','Caching unknown affiliations')
+
+	query = "DROP TABLE IF EXISTS unknown_cache"
+	cursor.execute(query)
+	unknowns = cursor.fetchall()
+
+	query = ("CREATE TABLE unknown_cache "
+		"(id INT AUTO_INCREMENT PRIMARY KEY, "
+		"projects_id INT NOT NULL, "
+		"email VARCHAR(64) NOT NULL, "
+		"domain VARCHAR(64), "
+		"added INT NOT NULL)")
+
 	cursor.execute(query)
 	db.commit()
 
-### END FIX FUNKY EMAILS ###
+	query = ("SELECT r.projects_id AS projects_id,d.email AS email,SUM(d.added) "
+		"FROM repos r "
+		"RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
+		"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
+		"WHERE d.affiliation = '(Unknown)' "
+		"GROUP BY r.projects_id,d.email")
 
-### BEGIN BUILDING UNKNOWN AFFILIATION CACHE ###
-
-query = "DROP TABLE IF EXISTS unknown_cache"
-cursor.execute(query)
-unknowns = cursor.fetchall()
-
-query = "CREATE TABLE unknown_cache (id INT AUTO_INCREMENT PRIMARY KEY, projects_id INT NOT NULL, email VARCHAR(64) NOT NULL, domain VARCHAR(64), added INT NOT NULL)"
-cursor.execute(query)
-db.commit()
-
-query = "SELECT r.projects_id AS projects_id, d.email AS email, SUM(d.added) FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id WHERE d.affiliation = '(Unknown)' GROUP BY r.projects_id,d.email"
-cursor.execute(query)
-unknowns = cursor.fetchall()
-
-unknown_cache = {}
-
-for unknown in unknowns:
-
-	# Isolate the domain name, and add the lines of code associated with it
-	query = "INSERT INTO unknown_cache (projects_id,email,domain,added) VALUES (" + str(unknown["projects_id"]) + ",'" + unknown["email"] + "','" + unknown["email"][unknown["email"].find('@') + 1:] + "'," + str(unknown["SUM(d.added)"]) + ")"
 	cursor.execute(query)
-	db.commit()
+	unknowns = cursor.fetchall()
 
-### END BUILDING UNKNOWN AFFILIATION CACHE ###
+	unknown_cache = {}
 
-query = "UPDATE settings SET value='Idle' WHERE setting='utility_status'"
-cursor.execute(query)
-db.commit()
+	for unknown in unknowns:
 
-if (log_level == 'Info'):
-	query = "INSERT INTO utility_log (level,status) VALUES ('Info',	'Script complete')"
-	cursor.execute(query)
-	db.commit()
+		# Isolate the domain name, and add the lines of code associated with it
+		query = ("INSERT INTO unknown_cache (projects_id,email,domain,added) "
+			"VALUES (%s,'%s','%s',%s)" % (unknown["projects_id"],
+			unknown["email"], unknown["email"][unknown["email"].find('@') + 1:],
+			unknown["SUM(d.added)"]))
+
+		cursor.execute(query)
+		db.commit()
+
+	log_activity('Info','Caching unknown affiliations (complete)')
+
+
+### The real program starts here ###
+
+# Figure out how much we're going to log
+log_level = get_setting('log_level')
+log_activity('Quiet','facade-worker.py is about to start')
+
+# Get the location of the directory where git repos are stored
+repo_base_directory = get_setting('repo_directory')
+
+# Determine if it's safe to start the script
+current_status = get_setting('utility_status')
+
+if current_status != 'Idle':
+	log_activity('Error','Already running, aborting maintenance and analysis.')
+	sys.exit("Something is already running.  It is unsafe to continue.")
+
+if len(repo_base_directory) == 0:
+	log_activity('Error','No base directory. It is unsafe to continue.')
+	update_status('Failed: No base directory')
+	log_activity('Error','No base directory defined.')
+	sys.exit("No base directory. It is unsafe to continue.")
+
+# Begin working
+git_repo_cleanup()
+git_repo_updates()
+git_repo_initialize()
+gitdm_analysis()
+purge_old_gitdm_data()
+correct_modified_gitdm_affiliations()
+fix_funky_emails()
+build_unknown_affiliation_cache()
+# All done
+
+update_status('Idle')
+log_activity('Quiet','facade-worker.py completed')
 
 cursor.close()
 db.close()

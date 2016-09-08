@@ -3,7 +3,8 @@
 /*
 * Copyright 2016 Brian Warner
 *
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
@@ -20,9 +21,11 @@ if ($_POST["confirmnew_repo"]) {
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
 	echo '<form action="manage" id="newrepo" method="post">
-	<p><label for="git">Git repository</label><br><span class="text"><input type="text" name="git"></span></p>
-	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="new_repo" value="Add repo">
-	</form>';
+		<p><label for="git">Git repository</label><br><span class="text">
+		<input type="text" name="git"></span></p>
+		<p><input type="hidden" name="project_id" value="' . $project_id .
+		'"><input type="submit" name="new_repo" value="Add repo">
+		</form>';
 
 	include_once "includes/footer.php";
 
@@ -35,7 +38,8 @@ if ($_POST["confirmnew_repo"]) {
 
 	// Only do something if valid input was submitted
 	if ($git) {
-		$query = "INSERT INTO repos (projects_id,git,status) VALUES ('" . $project_id . "','" . $git . "','New')";  
+		$query = "INSERT INTO repos (projects_id,git,status) VALUES ('" .
+			$project_id . "','" . $git . "','New')";
 		query_db($db,$query,"Add new git repo");
 	}
 
@@ -56,7 +60,13 @@ if ($_POST["confirmnew_repo"]) {
 	$row = $result->fetch_assoc();
 	$git = $row["git"];
 
-	echo '<p>You are about to delete all data for "' . $git . '" (including all contribution statistics).</p><p><strong>Are you sure?</strong></p><p><form action="manage" id="delete" method="post"><input type="submit" name="delete_repo" value="Delete it"><input type="hidden" name="project_id" value="' . $project_id . '"><input type="hidden" name="repo_id" value="' . $repo_id . '"></form></p>';
+	echo '<p>You are about to delete all data for "' . $git . '" (including all
+		contribution statistics).</p><p><strong>Are you sure?</strong></p>
+		<p><form action="manage" id="delete" method="post">
+		<input type="submit" name="delete_repo" value="Delete it">
+		<input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="hidden" name="repo_id" value="' . $repo_id . '">
+		</form></p>';
 
 	include_once "includes/footer.php";
 
@@ -74,12 +84,16 @@ if ($_POST["confirmnew_repo"]) {
 	include_once "includes/header.php";
 
 	echo '<form action="manage" id="newproject" method="post">
-<p><label for="project_name">Project name:</label><br><span class="text"><input type="text" name="project_name"></span></p>
-<p><label for="project_url">Project website:</label><br><span class="text"><input type="text" name="project_website"></span></p>
-<p><label for="project_description">Project description:</label><br><textarea name="project_description" form="newproject" cols=64 rows=4 maxlength=256 ></textarea></p>
+		<p><label>Project name:</label><br>
+		<span class="text"><input type="text" name="project_name"></span></p>
+		<p><label>Project website:</label><br>
+		<span class="text"><input type="text" name="project_website"></span></p>
+		<p><label>Project description:</label><br>
+		<textarea name="project_description" form="newproject" cols=64 rows=4
+		maxlength=256 ></textarea></p>
 
-<p><input type="submit" name="new_project" value="Add project">
-</form>';
+		<p><input type="submit" name="new_project" value="Add project">
+		</form>';
 
 	include_once "includes/footer.php";
 
@@ -90,7 +104,11 @@ if ($_POST["confirmnew_repo"]) {
 	$project_description = sanitize_input($db,$_POST["project_description"],256);
 
 	if ($project_name) {
-		$query = "INSERT INTO projects (name,website,description) VALUES ('" . $project_name . "','" . $project_website . "','" . $project_description . "')";
+
+		$query = "INSERT INTO projects (name,website,description)
+		VALUES ('" . $project_name . "','" . $project_website . "',
+		'" . $project_description . "')";
+
 		query_db($db,$query,"Insert new project");
 	}
 
@@ -100,7 +118,8 @@ if ($_POST["confirmnew_repo"]) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
-	$query = "SELECT name,description,website FROM projects WHERE id=" . $project_id;
+	$query = "SELECT name,description,website FROM projects
+		WHERE id=" . $project_id;
 	$result = query_db($db,$query,"Getting name, description, and website");
 
 	$project = $result->fetch_assoc();
@@ -109,28 +128,32 @@ if ($_POST["confirmnew_repo"]) {
 	include_once "includes/header.php";
 
 	echo '<div class="content-block"><h2>Name</h2>
-	<form id="editname" action="manage" method="post">
-	<p><span class="text"><input type="text" name="project_name" value="' . $project["name"] . '"></span></p>
-	<input type="hidden" name="id" value="' . $project_id . '">
-	<p><input type="submit" name="edit_name" value="edit name"></p>
-	</form>
-	</div> <!-- .content-block -->
+		<form id="editname" action="manage" method="post">
+		<p><span class="text"><input type="text" name="project_name" value="' .
+		$project["name"] . '"></span></p>
+		<input type="hidden" name="id" value="' . $project_id . '">
+		<p><input type="submit" name="edit_name" value="edit name"></p>
+		</form>
+		</div> <!-- .content-block -->
 
-	<div class="content-block"><h2>Description</h2>
-	<form id="editdescription" action="manage" method="post">
-	<p><textarea name="project_description" form="editdescription" cols=64 rows=4 maxlength=256>' . $project["description"] . '</textarea></p>
-	<input type="hidden" name="id" value="' . $project_id . '">
-	<p><input type="submit" name="edit_description" value="edit description"></p>
-	</form>
-	</div> <!-- .content-block> -->
+		<div class="content-block"><h2>Description</h2>
+		<form id="editdescription" action="manage" method="post">
+		<p><textarea name="project_description" form="editdescription" cols=64
+		rows=4 maxlength=256>' . $project["description"] . '</textarea></p>
+		<input type="hidden" name="id" value="' . $project_id . '">
+		<p><input type="submit" name="edit_description"
+		value="edit description"></p>
+		</form>
+		</div> <!-- .content-block> -->
 
-	<div class="content-block"><h2>Website</h2>
-	<form id="editwebsite" action="manage" method="post">
-	<p><span class="text"><input type="text" name="project_website" value="' . $project["website"] . '"></span></p>
-	<input type="hidden" name="id" value="' . $project_id . '">
-	<p><input type="submit" name="edit_website" value="edit website"></p>
-	</form>
-	</div> <!-- .content-block -->';
+		<div class="content-block"><h2>Website</h2>
+		<form id="editwebsite" action="manage" method="post">
+		<p><span class="text"><input type="text" name="project_website"
+		value="'. $project["website"] . '"></span></p>
+		<input type="hidden" name="id" value="' . $project_id . '">
+		<p><input type="submit" name="edit_website" value="edit website"></p>
+		</form>
+		</div> <!-- .content-block -->';
 
 	include_once "includes/footer.php";
 
@@ -140,8 +163,13 @@ if ($_POST["confirmnew_repo"]) {
 
 	// Don't allow an empty name
 	if (trim($_POST["project_name"])) {
-		$query = "UPDATE projects SET name='" . sanitize_input($db,$_POST["project_name"],64) . "' WHERE id=" . $project_id;
+
+		$query = "UPDATE projects
+			SET name='" . sanitize_input($db,$_POST["project_name"],64) . "'
+				WHERE id=" . $project_id;
+
 		query_db($db,$query,"updating name");
+
 	}
 
 	header("Location: projects?id=" . $project_id);
@@ -151,7 +179,10 @@ if ($_POST["confirmnew_repo"]) {
 	$project_id = sanitize_input($db,$_POST["id"],11);
 
 	// An empty description is fine
-	$query = "UPDATE projects SET description='" . sanitize_input($db,$_POST["project_description"],256) . "' WHERE id=" . $project_id;
+	$query = "UPDATE projects
+		SET description='" . sanitize_input($db,$_POST["project_description"],256) ."'
+		WHERE id=" . $project_id;
+
 	query_db($db,$query,"updating description");
 
 	header("Location: projects?id=" . $project_id);
@@ -161,7 +192,10 @@ if ($_POST["confirmnew_repo"]) {
 	$project_id = sanitize_input($db,$_POST["id"],11);
 
 	// An empty website is fine
-	$query = "UPDATE projects SET website='" . sanitize_input($db,$_POST["project_website"],64) . "' WHERE id=" . $project_id;
+	$query = "UPDATE projects
+		SET website='" . sanitize_input($db,$_POST["project_website"],64) . "'
+		WHERE id=" . $project_id;
+
 	query_db($db,$query,"updating website");
 
 	header("Location: projects?id=" . $project_id);
@@ -179,7 +213,13 @@ if ($_POST["confirmnew_repo"]) {
 	$row = $result->fetch_assoc();
 	$name = $row["name"];
 
-	echo '<p>You are about to delete all data for "' . $name . '" (including repositories and all contribution statistics).</p><p><strong>Are you sure?</strong></p><p><form action="manage" id="delete" method="post"><input type="submit" name="delete_project" value="Delete it"><input type="hidden" value="' . $project_id . '" name="project_id"></form></p>';
+	echo '<p>You are about to delete all data for "' . $name . '" (including
+		repositories and all contribution statistics).</p><p><strong>Are you
+		sure?</strong></p>
+		<p><form action="manage" id="delete" method="post">
+		<input type="submit" name="delete_project" value="Delete it">
+		<input type="hidden" value="' . $project_id . '" name="project_id">
+		</form></p>';
 
 
 } elseif ($_POST["delete_project"]) {
@@ -187,6 +227,7 @@ if ($_POST["confirmnew_repo"]) {
 	delete_project ($db,sanitize_input($db,$_POST["project_id"],11));
 
 	header("Location: projects");
+
 } elseif ($_POST["confirmnew_excludedomain"]) {
 
 	$title = "Exclude a domain from analysis and results";
@@ -196,9 +237,13 @@ if ($_POST["confirmnew_repo"]) {
 	$project_name = sanitize_input($db,$_POST["project_name"],64);
 
 	echo '<form action="manage" id="new_excludedomain" method="post">
-<p><label for="domain">Domain</label><br><span class="text"><input type="text" name="domain"></span></p>
-<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="new_excludedomain" value="Exclude this domain from ' . $project_name . '">
-</form>';
+
+		<p><label>Domain<br><span class="text">
+		<input type="text" name="domain"></span></label></p>
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="new_excludedomain"
+		value="Exclude this domain from ' . $project_name . '">
+		</form>';
 
 	include_once "includes/footer.php";
 
@@ -211,8 +256,12 @@ if ($_POST["confirmnew_repo"]) {
 
 	// Only do something if valid input was submitted
 	if ($domain) {
-		$query = "INSERT INTO exclude (projects_id,domain) VALUES ('" . $project_id . "','" . $domain . "')";  
+
+		$query = "INSERT INTO exclude (projects_id,domain)
+			VALUES ('" . $project_id . "','" . $domain . "')";
+
 		query_db($db,$query,"Add new exclusion domain");
+
 	}
 
 	header("Location: projects?id=" . $project_id);
@@ -236,9 +285,12 @@ if ($_POST["confirmnew_repo"]) {
 	$project_name = sanitize_input($db,$_POST["project_name"],64);
 
 	echo '<form action="manage" id="new_excludeemail" method="post">
-<p><label for="email">Email</label><br><span class="text"><input type="text" name="email"></span></p>
-<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="new_excludeemail" value="Exclude this email from ' . $project_name . '">
-</form>';
+		<p><label>Email<br><span class="text">
+		<input type="text" name="email"></span></label></p>
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="new_excludeemail" 
+		value="Exclude this email from ' . $project_name . '">
+		</form>';
 
 	include_once "includes/footer.php";
 
@@ -251,12 +303,15 @@ if ($_POST["confirmnew_repo"]) {
 
 	// Only do something if valid input was submitted
 	if ($email) {
-		$query = "INSERT INTO exclude (projects_id,email) VALUES ('" . $project_id . "','" . $email . "')";  
+
+		$query = "INSERT INTO exclude (projects_id,email)
+			VALUES ('" . $project_id . "','" . $email . "')";
+
 		query_db($db,$query,"Add new exclusion email");
+
 	}
 
 	header("Location: projects?id=" . $project_id);
-
 
 } elseif ($_POST["delete_excludeemail"]) {
 
@@ -282,14 +337,28 @@ if ($_POST["confirmnew_repo"]) {
 		$end_date = sanitize_input($db,$_POST["custom_end"],10);
 	}
 
-	if (($tag) && ($start_date) && ($end_date) && ($email) && ($start_date <= $end_date)) {
+	if ($tag &&
+	$start_date &&
+	$end_date &&
+	$email &&
+	$start_date <= $end_date) {
+
 		// Tag that ends on a specific date
-		$query = "INSERT INTO special_tags (tag,start_date,end_date,email) VALUES ('" . $tag . "','" . $start_date . "','" . $end_date . "','" . $email . "')";
+		$query = "INSERT INTO special_tags (tag,start_date,end_date,email)
+			VALUES ('" . $tag . "','" . $start_date . "','" . $end_date . "',
+			'" . $email . "')";
+
 		query_db($db,$query,"inserting custom tag");
 
-	} elseif (($tag) && ($start_date) && ($email) && !($end_date)) {
+	} elseif ($tag &&
+	$start_date &&
+	$email &&
+	!$end_date) {
+
 		// Tag that doesn't end on a specific date
-		$query = "INSERT INTO special_tags (tag,start_date,email) VALUES ('" . $tag . "','" . $start_date . "','" . $email . "')";
+		$query = "INSERT INTO special_tags (tag,start_date,email)
+			VALUES ('" . $tag . "','" . $start_date . "','" . $email . "')";
+
 		query_db($db,$query,"inserting custom tag without end date");
 
 	} else {
@@ -316,14 +385,19 @@ if ($_POST["confirmnew_repo"]) {
 	$title = 'Import repos from cgit';
 	include_once 'includes/header.php';
 
-	echo '<div class="content-block"><div class="sub-block"><p>cgit is a common web interface for servers hosting a large number of git repos.  It can be more efficient to import them directly from the cgit index page, which has the full listing of projects.</p><p>It may take a long time to discover all of the repos on a cgit server.  Be patient.</p>
-	</div><!-- .sub-block -->
-	<div class="sub-block">
-	<form action="import" id="import" method="post">
-	<input type="hidden" name="project_id" value="' . $project_id . '">
-	<p><label>cgit index page: </label><span class="text"><input type="text" name="cgit"></span></p>
-	<p><input type="submit" name="submit_cgit" value="Import cgit index page"></p>
-	</form></div><!-- .sub-block --></div><!-- .content-block -->';
+	echo '<div class="content-block"><div class="sub-block"><p>cgit is a common
+		web interface for servers hosting a large number of git repos.  It can
+		be more efficient to import them directly from the cgit index page,
+		which has the full listing of projects.</p><p>It may take a long time to
+		discover all of the repos on a cgit server.  Be patient.</p>
+		</div><!-- .sub-block -->
+		<div class="sub-block">
+		<form action="import" id="import" method="post">
+		<input type="hidden" name="project_id" value="' . $project_id . '">
+		<p><label>cgit index page: </label><span class="text">
+		<input type="text" name="cgit"></span></p>
+		<p><input type="submit" name="submit_cgit" value="Import cgit index page"></p>
+		</form></div><!-- .sub-block --></div><!-- .content-block -->';
 
 	include_once 'includes/footer.php';
 
@@ -334,17 +408,38 @@ if ($_POST["confirmnew_repo"]) {
 	$title = 'Import repos from github';
 	include_once 'includes/header.php';
 
-	echo '<div class="content-block"><div class="sub-block"><p>Repos on GitHub are organized by user, and sometimes by organization.  You can import repos directly from GitHub if you know either of these.</p><p>To find the user or organization, navigate to one of the repos you want to import and copy the bold text: <blockquote><pre>https://github.com/<strong>use_this</strong>/reponame</pre></blockquote></p>
-	</div><!-- .sub-block -->
-	<div class="sub-block">
-	<form action="import" id="import" method="post">
-	<input type="hidden" name="project_id" value="' . $project_id . '">
-	<table>
-	<tr><td class="quarter"><label><input type="radio" name="github" value="organization" class="select" checked="checked">Github organization: </label></td><td><span class="text"><input type="text" name="github_org"></span></td></tr>
-	<tr><td><label><input type="radio" name="github" value="user" class="select">Github user: </label></td><td><span class="text"><input type="text" name="github_user"></span></td></tr>
-	</table>
-	<p><input type="submit" name="submit_import" value="Import from GitHub"></p>
-	</form></div><!-- .sub-block --></div><!-- .content-block -->';
+	echo '<div class="content-block"><div class="sub-block">
+		<p>Repos on GitHub are organized by user, and sometimes by organization.
+		You can import repos directly from GitHub if you know either of
+		these.</p>
+		<p>To find the user or organization, navigate to one of the repos you
+		want to import and copy the bold text:
+		<blockquote>
+		<pre>https://github.com/<strong>use_this</strong>/reponame</pre>
+		</blockquote></p>
+		</div><!-- .sub-block -->
+		<div class="sub-block">
+		<form action="import" id="import" method="post">
+		<input type="hidden" name="project_id" value="' . $project_id . '">
+		<table>
+		<tr>
+		<td class="quarter">
+		<label><input type="radio" name="github" value="organization"
+		class="select" checked="checked">Github organization: </label></td>
+		<td><span class="text">
+		<input type="text" name="github_org"></span></td>
+		</tr>
+
+		<tr>
+		<td><label><input type="radio" name="github" value="user"
+		class="select">Github user: </label></td>
+		<td><span class="text"><input type="text" name="github_user"></span></td>
+		</tr>
+		</table>
+
+		<p><input type="submit" name="submit_import"
+		value="Import from GitHub"></p>
+		</form></div><!-- .sub-block --></div><!-- .content-block -->';
 
 	include_once 'includes/footer.php';
 
@@ -357,11 +452,15 @@ if ($_POST["confirmnew_repo"]) {
 
 		$git = sanitize_input($db,$_POST["radio_" . str_replace('.','_',$repo)],256);
 
-	        // Only do something if valid input was submitted
-        	if ($git) {
-                	$query = "INSERT INTO repos (projects_id,git,status) VALUES ('" . $project_id . "','" . $git . "','New')";
-	                query_db($db,$query,"Add new git repo");
-        	}
+		// Only do something if valid input was submitted
+		if ($git) {
+
+			$query = "INSERT INTO repos (projects_id,git,status)
+				VALUES ('" . $project_id . "','" . $git . "','New')";
+
+			query_db($db,$query,"Add new git repo");
+
+		}
 	}
 
 	header("Location: projects?id=" . $project_id);
@@ -369,7 +468,6 @@ if ($_POST["confirmnew_repo"]) {
 } else {
 	echo "Oops, what did you want to do?\n";
 }
-
 
 close_db($db);
 

@@ -3,7 +3,8 @@
 /*
 * Copyright 2016 Brian Warner
 *
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
@@ -28,7 +29,8 @@ if ($_GET["id"]) {
 
 	include_once "includes/header.php";
 
-	$query = "SELECT description,website FROM projects WHERE id=" . $project_id;
+	$query = "SELECT description,website FROM projects
+		WHERE id=" . $project_id;
 	$result = query_db($db,$query,"Getting project description");
 
 	while ($row = $result->fetch_assoc()){
@@ -40,18 +42,22 @@ if ($_GET["id"]) {
 
 		// If there's a non-empty website, show it
 		if (trim($row["website"])) {
-			echo '<p><a href="' . $row["website"] . '">' . $row["website"] . '</a></p>';
+			echo '<p><a href="' . $row["website"] . '">' . $row["website"] .
+				'</a></p>';
 		}
 	}
 
 	// Verify that there's data to show. If not, suppress the report displays.
 
-	$query = "SELECT NULL FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id WHERE m.status = 'Complete' AND r.projects_id=" . $project_id;
+	$query = "SELECT NULL FROM repos r
+		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+		WHERE m.status = 'Complete'
+		AND r.projects_id=" . $project_id;
 	$result = query_db($db,$query,"Figure out if there's anything to display.");
 
 	if ($result->num_rows > 0) {
 
-		// If a detailed listing was requested, show all the results. Otherwise limit for readibility.
+		// Show all if requested, otherwise limit for readability
 		if ($_GET["detail"]) {
 
 			$detail = sanitize_input($db,$_GET["detail"],16);
@@ -83,14 +89,14 @@ if ($_GET["id"]) {
 
 		// Only show unknown contributors if some are unknown
 
-		$query = "SELECT NULL FROM unknown_cache WHERE projects_id=" . $project_id;
-		$unknown_result = query_db($db,$query,"Finding if there are any unknown contributors");
+		$query = "SELECT NULL FROM unknown_cache
+			WHERE projects_id=" . $project_id;
+		$unknown_result = query_db($db,$query,"Find unknown contributors");
 
 		if ($unknown_result->num_rows > 0 ) {
 
 			echo '<div class="content-block">
-
-			<h2>Top unknown contributors</h2>';
+				<h2>Top unknown contributors</h2>';
 
 			unknown_results_as_table($db,$project_id);
 
@@ -99,21 +105,24 @@ if ($_GET["id"]) {
 	}
 
 	echo '<div class="content-block">
-	<h2>Current repositories</h2>';
+		<h2>Current repositories</h2>';
 
 	list_repos($db,$project_id);
 
 	echo '<form action="manage" id="newrepo" method="post">
-	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmnew_repo" value="Add a repo">
-	</form>
-	<form action="manage" id="cgit" method="post">
-	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_cgit" value="Import from cgit">
-	</form></p>
-	<form action="manage" id="github" method="post">
-	<p><input type="hidden" name="project_id" value="' . $project_id . '"><input type="submit" name="confirmimport_github" value="Import from GitHub">
-	</form></p>
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="confirmnew_repo" value="Add a repo">
+		</form>
+		<form action="manage" id="cgit" method="post">
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="confirmimport_cgit" value="Import from cgit">
+		</form></p>
+		<form action="manage" id="github" method="post">
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="confirmimport_github" value="Import from GitHub">
+		</form></p>
 
-	</div> <!-- .content-block -->';
+		</div> <!-- .content-block -->';
 
 } else {
 
@@ -134,13 +143,18 @@ if ($_GET["id"]) {
 		<table>';
 
 		while($row = $result->fetch_assoc()) {
-			echo '<tr><td class="linked quarter"><a href="projects?id=' . $row["id"] . '">' . stripslashes($row["name"]) . '</a></td><td>';
+			echo '<tr>
+				<td class="linked quarter">
+				<a href="projects?id=' . $row["id"] . '">' .
+				stripslashes($row["name"]) . '</a></td>
+				<td>';
 
 			if (stripslashes($row["description"])) {
 				echo stripslashes($row["description"]) . "<br><br>";
 			}
 			if (stripslashes($row["website"])) {
-				echo '<a href="' . stripslashes($row["website"]) . '">' . stripslashes($row["website"]) . '</a>';
+				echo '<a href="' . stripslashes($row["website"]) . '">' .
+					stripslashes($row["website"]) . '</a>';
 			}
 			echo '</td></tr>';
 		}
@@ -173,8 +187,14 @@ echo '</div> <!-- .content-block -->';
 if ($_GET["id"]) {
 	echo '<div class="content-block">
 	<h2>Manage</h2>
-	<p><form action="manage" id="editdelproject" method="post"><input type="submit" name="confirmedit_project" value="edit this project\'s name and description"><input type="hidden" name="project_id" value="' . $project_id . '"></p>
-	<p><form action="manage" id="editdelproject" method="post"><input type="submit" name="confirmdelete_project" value="delete this project and all its data"><input type="hidden" name="project_id" value="' . $project_id . '"></form></p>
+	<p><form action="manage" id="editdelproject" method="post">
+	<input type="submit" name="confirmedit_project"
+	value="edit this project\'s name and description">
+	<input type="hidden" name="project_id" value="' . $project_id . '"></p>
+	<p><form action="manage" id="editdelproject" method="post">
+	<input type="submit" name="confirmdelete_project"
+	value="delete this project and all its data">
+	<input type="hidden" name="project_id" value="' . $project_id . '"></form></p>
 
 	</div> <!-- .content-block -->';
 }

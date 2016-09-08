@@ -2,9 +2,10 @@
 
 /*
 * Copyright 2016 Brian Warner
-* 
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
-* SPDX-License-Identifier:        GPL-2.0
+*
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
+* SPDX-License-Identifier:		GPL-2.0
 */
 
 function setup_db() {
@@ -22,7 +23,7 @@ function setup_db() {
 	$db_conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 
 	if ($db_conn->connect_error) {
-        	die ("Connection to database refused: " . $db_conn->connect_error);
+		die ("Connection to database refused: " . $db_conn->connect_error);
 	}
 
 	return $db_conn;
@@ -36,9 +37,13 @@ function query_db($db_conn, $query, $description) {
 	$result = $db_conn->query($query);
 
 	if ($db_conn->error) {
-        	echo '<div class="error">[E] Error on query "' . $description . '": ' . $db_conn->error . "</div>\n";
+	echo '<div class="error">[E] Error on query "' . $description . '": ' .
+		$db_conn->error . "</div>\n";
 	} else {
-        	if ($db_debug) {echo '<div class="info">[I] Query "' . $description . '" completed.' . "</div>\n";}
+		if ($db_debug) {
+			echo '<div class="info">[I] Query "' . $description . '" completed.'
+				. "</div>\n";
+		}
 	}
 
 	return $result;
@@ -53,12 +58,15 @@ function multi_query_db($db_conn, $query, $description) {
 	$result = $db_conn->multi_query($query);
 
 	if ($db_conn->error) {
-        	echo '<div class="error">[E] Error on query "' . $description . '": ' . $db_conn->error . "</div>\n";
+		echo '<div class="error">[E] Error on query "' . $description . '": ' .
+			$db_conn->error . "</div>\n";
 	} else {
-        	if ($db_debug) {echo '<div class="info">[I] Query "' . $description . '" completed.' . "</div>\n";}
+		if ($db_debug) {
+			echo '<div class="info">[I] Query "' . $description . '" completed.'
+				. "</div>\n";}
 	}
 
-	// Flush the results, since we are only using this to create tables and procedures.
+	// Flush results, since we are only using this to create tables and procedures.
 	while ($db_conn->next_result()) {;}
 
 }

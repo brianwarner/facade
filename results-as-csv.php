@@ -3,7 +3,8 @@
 /*
 * Copyright 2016 Brian Warner
 *
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
@@ -24,8 +25,10 @@ if ($_GET["end"] == 'custom') {
 	$date_clause = $date_clause . " AND m.start_date <= '" . $end_date . "'";
 }
 
-// If dates are actually out of order, reset the clause and just return everything
-if ((isset($_GET["start"])) && (isset($_GET["end"])) && ($start_date > $end_date)) {
+// If dates are actually out of order, reset the clause and return everything
+if (isset($_GET["start"]) &&
+isset($_GET["end"]) &&
+$start_date > $end_date) {
 	$date_clause = "";
 }
 
@@ -81,33 +84,45 @@ foreach ($projects as $project) {
 		RIGHT JOIN repos r ON p.id = r.projects_id
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-		LEFT JOIN exclude e ON (d.email = e.email AND (r.projects_id = e.projects_id OR e.projects_id = 0))
-		OR (d.email LIKE CONCAT('%',e.domain) AND (r.projects_id = e.projects_id OR e.projects_id = 0))
+		LEFT JOIN exclude e ON (d.email = e.email
+			AND (r.projects_id = e.projects_id
+			OR e.projects_id = 0))
+		OR (d.email LIKE CONCAT('%',e.domain)
+			AND (r.projects_id = e.projects_id
+			OR e.projects_id = 0))
 		WHERE r.projects_id = $project
 		AND e.email IS NULL
 		AND e.domain IS NULL" . $date_clause;
+
 	$result = query_db($db,$query,'Fetching project data');
 
 	// Write the project-specific data
 	while ($row = $result->fetch_assoc()) {
 
 		// Find any tags that match this row and apply them.
-		if ((isset($_GET["tags"])) || (isset($_GET["with-tags"]))) {
+		if (isset($_GET["tags"]) ||
+		isset($_GET["with-tags"])) {
 			foreach ($tags as $tag) {
 
 				// Find tags that with a start_date before this row
-				$query = "SELECT id,end_date FROM special_tags WHERE email = '" . str_replace("'","\'",$row["Email"]) . "' AND start_date <= '" . $row["Start Date"] . "' AND tag='" . $tag . "'";
+				$query = "SELECT id,end_date FROM special_tags
+					WHERE email = '" . str_replace("'","\'",$row["Email"]) . "'
+					AND start_date <= '" . $row["Start Date"] . "'
+					AND tag='" . $tag . "'";
+
 				$tags_result = query_db($db, $query, 'Getting tags');
 
-				// Check if any tags have an end_date after this row, or no end_date at all.  If they do, add them
+				// Add any tags with an end_date after this row, or no end_date.
 				$add_tag = FALSE;
 				while ($tags_row = $tags_result->fetch_assoc()) {
-					if (($tags_row["end_date"] >= $row["Start Date"]) || ($tags_row["end_date"] == NULL)) {
+					if ($tags_row["end_date"] >= $row["Start Date"] ||
+					$tags_row["end_date"] == NULL) {
 						$add_tag = TRUE;
 					}
 				}
 
-				// If the tag applies to this row, add it to the output. Otherwise, add a blank to preserve ordering in the output csv.  If a tag contains an escaped single quote, unescape it to look nicer in the output.
+				// Add matched tag to output, or a blank to preserve ordering.
+				// Escape single quotes in tags.
 				if ($add_tag) {
 					$row['Tag: ' . str_replace("\'","'",$tag)] = str_replace("\'","'",$tag);
 				} else {
@@ -117,7 +132,7 @@ foreach ($projects as $project) {
 			}
 		}
 
-		// Write the headers if they haven't already been done, including the names of any tag columns
+		// Write the headers and tag columns if they haven't already been done.
 		if ($header) {
 			fputcsv($f, array_keys($row), ',');
 			$header=FALSE;

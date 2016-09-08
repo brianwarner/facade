@@ -3,7 +3,8 @@
 /*
 * Copyright 2016 Brian Warner
 *
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
@@ -29,12 +30,16 @@ if ($_GET["repo"]) {
 
 	// First, verify that there's data to show. If not, suppress the report displays.
 
-	$query = "SELECT NULL FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id WHERE m.status = 'Complete' AND r.id=" . $repo_id;
-	$result = query_db($db,$query,"Figure out if there's anything to display.");
+	$query = "SELECT NULL FROM repos r
+		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+		WHERE m.status = 'Complete'
+		AND r.id=" . $repo_id;
+
+	$result = query_db($db,$query,"Check whether to display.");
 
 	if ($result->num_rows > 0) {
 
-		// If a detailed listing was requested, show all the results. Otherwise limit for readibility.
+		// Show all results if details requested. Otherwise limit for readability
 		if ($_GET["detail"]) {
 
 			$detail = sanitize_input($db,$_GET["detail"],16);

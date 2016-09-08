@@ -2,8 +2,9 @@
 
 /*
 * Copyright 2016 Brian Warner
-* 
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+*
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
@@ -27,7 +28,8 @@ $query = "SELECT SUM(added) FROM gitdm_data";
 $result_added = query_db($db,$query,'Getting lines of code');
 $added = $result_added->fetch_assoc();
 
-$query = "SELECT DISTINCT affiliation FROM gitdm_data WHERE affiliation != '(Unknown)'";
+$query = "SELECT DISTINCT affiliation FROM gitdm_data
+	WHERE affiliation != '(Unknown)'";
 $result_affiliations = query_db($db,$query,'Getting affiliations');
 
 $start_date = new DateTime(get_setting($db,'start_date'));
@@ -41,29 +43,43 @@ if ($end_date == 'yesterday') {
 
 $length_of_time = $start_date->diff($end_date);
 
-echo '
-<div class="content-block content-highlight">
+echo '<div class="content-block content-highlight">
 
-<p>You are currently tracking <strong>' . number_format($added['SUM(added)']) .' line';
+	<p>You are currently tracking <strong>' .
+	number_format($added['SUM(added)']) . ' line';
+
 if ($added['SUM(added)'] != 1) {
 	echo 's';
 }
-echo ' of code</strong>, committed by <strong>' . number_format($result_email->num_rows) . ' developer';
+
+echo ' of code</strong>, committed by <strong>' .
+	number_format($result_email->num_rows) . ' developer';
+
 if ($result_email->num_rows != 1) {
 	echo 's';
 }
-echo '</strong>,<br>from <strong>' . number_format($result_affiliations->num_rows) . ' known organization';
+
+echo '</strong>,<br>from <strong>' .
+	number_format($result_affiliations->num_rows) . ' known organization';
+
 if ($result_affiliations->num_rows != 1) {
 	echo 's';
 }
-echo '</strong>, working in <strong>' . number_format($result_repos->num_rows) . ' repo';
+
+echo '</strong>, working in <strong>' . number_format($result_repos->num_rows)
+	. ' repo';
+
 if ($result_repos->num_rows != 1) {
 	echo 's';
 }
-echo '</strong>, on <strong>' . number_format($result_projects->num_rows) . ' project';
+
+echo '</strong>, on <strong>' . number_format($result_projects->num_rows) .
+	' project';
+
 if ($result_projects->num_rows != 1) {
 	echo 's';
 }
+
 echo '</strong><br>over ';
 
 if (get_setting($db,'end_date') == 'yesterday') {
