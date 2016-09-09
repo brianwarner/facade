@@ -161,7 +161,7 @@ $query = "DROP TABLE IF EXISTS gitdm_master;
 	CREATE TABLE gitdm_master (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
 	repos_id INT NOT NULL,
-	status VARCHAR(16) NOT NULL,
+	status VARCHAR(128) NOT NULL,
 	date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	start_date VARCHAR(10)
 )";
