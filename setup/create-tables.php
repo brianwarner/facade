@@ -3,16 +3,27 @@
 /*
 * Copyright 2016 Brian Warner
 *
-* This file is part of Facade, and is made available under the terms of the GNU General Public License version 2.
+* This file is part of Facade, and is made available under the terms of the GNU
+* General Public License version 2.
 * SPDX-License-Identifier:        GPL-2.0
 */
 
 // Create all tables, and initialize the settings table with default values.
 
+// First make sure the database file has been setup
+
+if (!file_exists("../includes/db.php")) {
+	exit("\nIt appears you haven't configured db.php yet. Please do this.\n\n");
+}
+
 include_once "../includes/db.php";
 $db = setup_db();
 
-echo "\n========== Initializing database tables ==========\n\nThis will set up your database, and will clear any existing data.\n\nAre you sure you want to do this? (yes/no) ";
+echo "\n========== Initializing database tables ==========\n
+This will set up your database, and will clear any existing data.
+
+Are you sure you want to do this? (yes/no) ";
+
 $input = fgets(STDIN);
 if (strtolower(trim($input)) != 'yes') {
 	echo "\nExiting without doing anything.\n\n";
