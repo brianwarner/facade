@@ -16,7 +16,13 @@
 
 import sys
 import MySQLdb
-from database import db,cursor
+import imp
+
+try:
+	imp.find_module('database')
+	from database import db,cursor
+except:
+	sys.exit("Can't find database.py. Have you created it?")
 
 import HTMLParser
 html = HTMLParser.HTMLParser()
