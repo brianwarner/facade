@@ -81,7 +81,7 @@ def git_repo_cleanup():
 		cursor.execute(query)
 		db.commit()
 
-		log_activity('Verbose','Repo maintenance: Deleted repo %s') % row["id"]
+		log_activity('Verbose','Repo maintenance: Deleted repo %s' % row["id"])
 
 		cleanup = '%s/%s%s' % (row["projects_id"],row["path"],row["name"])
 
@@ -218,7 +218,7 @@ def git_repo_initialize():
 
 		if (return_code == 0):
 			# If cloning succeeded, repo is ready for gitdm
-			query = ("UPDATE repos SET status='Active',path='%s', name='%s'' "
+			query = ("UPDATE repos SET status='Active',path='%s', name='%s' "
 				"WHERE id=%s" % (repo_relative_path,repo_name,row["id"]))
 
 			cursor.execute(query)
