@@ -1,0 +1,254 @@
+commit 1b90a2f22532114955b09da02fad6d264cd92dfb
+Author: Brian Warner <brian@bdwarner.com>
+Date:   Thu Aug 25 21:01:14 2016 -0400
+
+    Capture and use committer info; fix certain issues with GitHub repos.
+    
+    Add two flags to gitdm.  -m tells gitdm to calculate stats using committer info
+    instead of author info. -g fixes two common issues when analyzing GitHub repos:
+      1) When importing a new project, GitHub replaces the author info with 'GitHub
+    	Importer <>'. Because there is no email address, gitdm would classify it as
+    	unknown@hacker. However, the person doing the commit is preserved in the
+    	committer data. "-g" adds a check for this specific line, and swaps in
+    	committer data so it can be used in the analysis.
+      2) When merging a pull request, GitHub replaces the committer info with
+    	'Github <noreply@github.com'. If analyzing commiter data with the new -m
+    	flag, this can impact gitdm's results. -g detects this, and swaps in the
+    	author info instead.
+    
+    Signed-off-by: Brian Warner <brian@bdwarner.com>
+
+diff --git a/README b/README
+index e60285d..c8742a6 100644
+--- a/README
++++ b/README
+@@ -44,6 +44,10 @@ be:
+ 	    happnened with the previous ones. This option is suitable for
+ 	    feeding to a tool like gnuplot.
+ 
++    -g Attempt to rebuild author/committer data that is changed by GitHub
++        when importing a project or accepting a pull request. Requires
++        --pretty=fuller when running git log.
++
+ 	-h file	Generate HTML output to the given file
+ 
+     -H file Export individual developer raw data as CSV. These data could be
+@@ -51,6 +55,11 @@ be:
+ 
+ 	-l num	Only list the top <num> entries in each report.
+ 
++    -m Collect data by Committer instead of by Author. This is useful when
++        analyzing github repos, which leave the Author name ambiguous
++        and email blank for the initial commit. Requires --pretty=fuller
++        when running git log.
++
+     -n  Use --numstat instead of generated patches to get the statistics.
+ 
+ 	-o file	Write text output to the given file (default is stdout).
+diff --git a/gitdm b/gitdm
+index 61318ad..40b9b81 100755
+--- a/gitdm
++++ b/gitdm
+@@ -27,6 +27,11 @@ Today = datetime.date.today()
+ GripedAuthorNames = [ ]
+ 
+ #
++# Collect grievances and sulk until gitdm finishes.
++#
++Grumbles = [ ]
++
++#
+ # Control options.
+ #
+ MapUnknown = 0
+@@ -47,6 +52,8 @@ ReportByFileType = 0
+ ReportUnknowns = False
+ CompanyFilter = None
+ FileReport = None
++CommitterNotAuthor = 0
++FixGitHub = 0
+ #
+ # Options:
+ #
+@@ -57,9 +64,11 @@ FileReport = None
+ # -d		Output individual developer stats
+ # -D		Output date statistics
+ # -f file	Write touched-files report to <file>
++# -g        Recognize and fix when GitHub inserts author/committer info
+ # -h hfile	HTML output to hfile
+ # -H file   Export individual developer raw data as CSV
+ # -l count	Maximum length for output lists
++# -m		Use Committer instead of Author
+ # -n        Use numstats instead of generated patch from git log
+ # -o file	File for text output
+ # -p prefix Prefix for CSV output
+@@ -78,8 +87,10 @@ def ParseOpts():
+     global CFName, CSVFile, CSVPrefix,DirName, Aggregate, Numstat
+     global ReportByFileType, ReportUnknowns, CompanyFilter, FileReport
+     global HackersCSV
++    global CommitterNotAuthor
++    global FixGitHub
+ 
+-    opts, rest = getopt.getopt(sys.argv[1:], 'ab:dC:c:Df:H:h:l:no:p:r:stUuwx:yz')
++    opts, rest = getopt.getopt(sys.argv[1:], 'ab:dC:c:Df:gH:h:l:mno:p:r:stUuwx:yz')
+     for opt in opts:
+         if opt[0] == '-a':
+             AkpmOverLt = 1
+@@ -95,12 +106,16 @@ def ParseOpts():
+             DateStats = 1
+         elif opt[0] == '-f':
+             FileReport = opt[1]
++        elif opt[0] == '-g':
++            FixGitHub = 1;
+         elif opt[0] == '-h':
+             reports.SetHTMLOutput(open(opt[1], 'w'))
+         elif opt[0] == '-H':
+             HackersCSV = open (opt[1], 'w')
+         elif opt[0] == '-l':
+             reports.SetMaxList(int(opt[1]))
++        elif opt[0] == '-m':
++            CommitterNotAuthor = 1
+         elif opt[0] == '-n':
+             Numstat = 1
+         elif opt[0] == '-o':
+@@ -266,10 +281,19 @@ def grabpatch(logpatch):
+         return None
+ 
+     p = patch(m.group(1))
++    p.FixGitHubImportCommitter = 0
+     ignore = (FileFilter is not None)
+     need_bline = False
+     for Line in logpatch[1:]:
+         #
++        # Check to see if it's a GitHub import commit, which modifies author
++        # info. If so, skip on the author and attempt to swap in the committer
++        # info instead. After the committer info is found, go back to using
++        # author data.
++        #
++        if Line.find('Import Committer <>') >= 0:
++            p.FixGitHubImportCommitter = 1
++        #
+         # Maybe it's an author line?
+         #
+         m = patterns['author'].match(Line)
+@@ -278,6 +302,15 @@ def grabpatch(logpatch):
+             p.author = LookupStoreHacker(m.group(1), p.email)
+             continue
+         #
++        # Maybe it's a committer line? If we're fixing a GitHub import commit,
++        # replace the author info.
++        #
++        m = patterns['committer'].match(Line)
++        if m:
++            p.emailCommitter = database.RemapEmail(m.group(2))
++            p.committer = LookupStoreHacker(m.group(1), p.emailCommitter)
++            continue
++        #
+         # Could be a signed-off-by:
+         #
+         m = patterns['signed-off-by'].match(Line)
+@@ -336,6 +369,17 @@ def grabpatch(logpatch):
+                 sys.stderr.write('Funky date: %s\n' % p.date)
+                 p.date = Today
+             continue
++        #
++        # See if it's the committer date.
++        #
++        m = patterns['commitdate'].match(Line)
++        if m:
++            dt = rfc822.parsedate(m.group(2))
++            p.dateCommitter = datetime.date(dt[0], dt[1], dt[2])
++            if p.dateCommitter > Today:
++                sys.stderr.write('Funky date: %s\n' % p.date)
++                p.dateCommitter = Today
++            continue
+         if not Numstat:
+             #
+             # If we have a file filter, check for file lines.
+@@ -391,6 +435,11 @@ def GripeAboutAuthorName(name):
+     GripedAuthorNames.append(name)
+     print '%s is an author name, probably not what you want' % (name)
+ 
++def grumble(grievance):
++    if grievance in Grumbles:
++        return
++    Grumbles.append(grievance)
++
+ def ApplyFileFilter(line, ignore):
+     #
+     # If this is the first file line (--- a/), set ignore one way
+@@ -486,6 +535,48 @@ for logpatch in patches:
+ #    if p.added > 100000 or p.removed > 100000:
+ #        print 'Skipping massive add', p.commit
+ #        continue
++    #
++    # Determine if GitHub has inserted itself as a committer, and repair data by
++    # swapping in author data.
++    #
++    if hasattr(p, 'committer'):
++        if p.committer.name == 'GitHub' and p.emailCommitter == 'noreply@github.com':
++            if FixGitHub:
++                p.emailCommitter = p.email
++                p.committer = p.author
++                p.dateCommitter = p.date
++            else:
++                grumble("It seems a GitHub pull request has overwritten\n"
++                    "committer data. Try running gitdm with -g to fix it.")
++    else:
++        if FixGitHub:
++            print ("The gitdm options you chose rely upon committer data, but\n"
++            "gitdm can't find any. You need to run gitdm again, but with\n"
++            "'git log --pretty=fuller'\n")
++            sys.exit(1)
++    #
++    # If analyzing committer data instead of authors, or if this is an import
++    # commit where GitHub has replaced author data with 'Import Committer <>',
++    # swap in committer data. If the user forgot to provide commit data and it
++    # was needed, grumble.
++    #
++    if CommitterNotAuthor or (FixGitHub and p.FixGitHubImportCommitter):
++        if hasattr(p, 'committer'):
++            print p.email
++            print p.author.name
++            print p.date
++
++            p.email = p.emailCommitter
++            p.author = p.committer
++            p.date = p.dateCommitter
++        else:
++            print ("The gitdm options you chose rely upon committer data, but\n"
++            "gitdm can't find any. You need to run gitdm again, but with\n"
++            "'git log --pretty=fuller'\n")
++            sys.exit(1)
++    elif p.FixGitHubImportCommitter:
++        grumble("It appears the GitHub importer has changed author data. Try\n"
++            "running gitdm with -g to fix it.")
+     if FileFilter and p.added == 0 and p.removed == 0:
+         continue
+     #
+@@ -578,3 +669,6 @@ if ReportByFileType and Numstat:
+ 
+ if FileReport:
+     reports.FileAccessReport(FileReport, FileAccesses, CSCount)
++
++if Grumbles:
++    print '\n%s\n' % ('\n'.join(Grumbles))
+diff --git a/patterns.py b/patterns.py
+index db36873..3b3d24b 100644
+--- a/patterns.py
++++ b/patterns.py
+@@ -24,11 +24,13 @@ patterns = {
+     'tagcommit': re.compile (r'^commit ([\da-f]+) .*tag: (v[23]\.\d(\.\d\d?)?)'),
+     'commit': re.compile (r'^commit ([0-9a-f ]+)'),
+     'author': re.compile (r'^Author:' + _pemail + '$'),
++    'committer': re.compile (r'^Commit:' + _pemail + '$'),
+     'signed-off-by': re.compile (r'^\s+signed-off-by:' + _pemail + '.*$', re.I),
+     'merge': re.compile (r'^Merge:.*$'),
+     'add': re.compile (r'^\+[^+].*$'),
+     'rem': re.compile (r'^-[^-].*$'),
+-    'date': re.compile (r'^(Commit)?Date:\s+(.*)$'),
++    'date': re.compile (r'^(Author)?Date:\s+(.*)$'),
++    'commitdate': re.compile (r'^(Commit)?Date:\s+(.*)$'),
+     # filea, fileb are used only in 'parche mode' (-p)
+     'filea': re.compile (r'^---\s+(.*)$'),
+     'fileb': re.compile (r'^\+\+\+\s+(.*)$'),
