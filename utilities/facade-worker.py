@@ -421,8 +421,9 @@ def correct_modified_gitdm_affiliations():
 						mismatches = []
 						config_contents = []
 						captured_domains = []
-						cached_configfile = ('cached-configs/%s.cache'
-							% configfile.replace('/','.'))
+						cached_configfile = ('%s/cached-configs/%s.cache'
+							% (os.path.dirname(os.path.realpath(sys.argv[0])),
+							configfile.replace('/','.')))
 
 						# Only diff if file is already cached
 						if os.path.isfile(cached_configfile):
@@ -625,7 +626,8 @@ def build_unknown_affiliation_cache():
 		# Isolate the domain name, and add the lines of code associated with it
 		query = ("INSERT INTO unknown_cache (projects_id,email,domain,added) "
 			"VALUES (%s,'%s','%s',%s)" % (unknown["projects_id"],
-			unknown["email"], unknown["email"][unknown["email"].find('@') + 1:],
+			unknown["email"].replace("'","\\'"),
+			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
 			unknown["SUM(d.added)"]))
 
 		cursor.execute(query)
@@ -657,11 +659,11 @@ if len(repo_base_directory) == 0:
 	sys.exit("No base directory. It is unsafe to continue.")
 
 # Begin working
-git_repo_cleanup()
-git_repo_updates()
-git_repo_initialize()
-gitdm_analysis()
-purge_old_gitdm_data()
+#git_repo_cleanup()
+#git_repo_updates()
+#git_repo_initialize()
+#gitdm_analysis()
+#purge_old_gitdm_data()
 correct_modified_gitdm_affiliations()
 fix_funky_emails()
 build_unknown_affiliation_cache()
