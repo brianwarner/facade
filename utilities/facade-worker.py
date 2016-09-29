@@ -399,7 +399,7 @@ def correct_modified_gitdm_affiliations():
 		# Find all lines which are not commented and not empty
 		if not line.strip().startswith('#') and not len(line.strip()) == 0:
 			(configtype,configfile) = line.strip().split()
-
+			print configfile
 			# There are only certain configs that are relevant, we can ignore the rest
 			if configtype == 'EmailAliases' or configtype == 'EmailMap':
 
@@ -659,11 +659,11 @@ if len(repo_base_directory) == 0:
 	sys.exit("No base directory. It is unsafe to continue.")
 
 # Begin working
-#git_repo_cleanup()
-#git_repo_updates()
-#git_repo_initialize()
-#gitdm_analysis()
-#purge_old_gitdm_data()
+git_repo_cleanup()
+git_repo_updates()
+git_repo_initialize()
+gitdm_analysis()
+purge_old_gitdm_data()
 correct_modified_gitdm_affiliations()
 fix_funky_emails()
 build_unknown_affiliation_cache()
