@@ -413,6 +413,8 @@ def correct_modified_gitdm_affiliations():
 						# No match found, process the file for differences
 
 						mismatches = []
+						config_contents = []
+						captured_domains = []
 						cached_configfile = ('cached-configs/%s.cache'
 							% configfile.replace('/','.'))
 
@@ -426,18 +428,29 @@ def correct_modified_gitdm_affiliations():
 
 									line_match = False
 
+									# Strip any comments in the line
+									if line_config.find('#'):
+										line_config_content = line_config[:line_config.find('#')]
+									else:
+										line_config_content = line_config
+
+									# Storing for possible date constraints
+									config_contents.append(line_config_content)
+
 									for line_cache in open(cached_configfile):
 
-										if line_config == line_cache:
+										# Strip any comments in the line
+										if line_cache.find('#'):
+											line_cache_content = line_cache[:line_cache.find('#')]
+										else:
+											line_cache_content = line_cache
+
+										# Look for a match in cached file
+										if line_config_content == line_cache_content:
 											line_match = True
 
 									if not line_match:
 										# Store mis-matches so we can process them.
-
-										if line_config.find('#'):
-											# Strip any comments in the line
-											line_config = line_config[:line_config.find('#')]
-
 										mismatches.append(line_config)
 
 						else:
@@ -475,18 +488,52 @@ def correct_modified_gitdm_affiliations():
 
 							if configtype == 'EmailMap':
 
+								date_overlaps = []
+								is_current = 0
+
 								# Grab the domain or email from beginning of the string
 								domain = mismatch.split()[0].replace("'","\\'")
 
-								# Grab everything up to the affiliation
-								affiliation = mismatch[len(domain):].strip().replace("'","\\'")
-								query = ("UPDATE gitdm_data "
-									"SET affiliation='%s' "
-									"WHERE email LIKE '%%%s%%'"
-									% (affiliation, domain))
+								if domain not in captured_domains:
 
-								cursor.execute(query)
-								db.commit()
+									# Find any date overlaps that affect this change
+									for configfile_line in config_contents:
+
+										config_domain = configfile_line.split()[0].replace("'","\\'")
+
+										if config_domain == domain:
+											config_remainder = configfile_line[len(config_domain):].strip().replace("'","\\'").split("<")
+
+											# Capture date, if it exists
+											if len(config_remainder) == 2:
+												(affiliation,end_date) = map(str.strip,config_remainder)
+												if datetime.datetime.strptime(end_date,"%Y-%m-%d") > datetime.datetime.today():
+													is_current = 1
+											else:
+												affiliation = config_remainder[0]
+												end_date = time.strftime("%Y-%m-%d")
+												is_current = 1
+
+											date_overlaps.append([end_date,domain,affiliation])
+
+								# If no current entry, fill with (Unknown)
+								if not is_current:
+									date_overlaps.append([time.strftime("%Y-%m-%d"),domain,'(Unknown)'])
+
+								for overlap in sorted(date_overlaps,reverse=1):
+
+									query = ("UPDATE gitdm_data d "
+										"LEFT JOIN gitdm_master m "
+										"ON m.id=d.gitdm_master_id "
+										"SET d.affiliation = '%s'"
+										"WHERE m.start_date < '%s' "
+										"AND d.email LIKE '%%%s%%' "
+										% (overlap[2],overlap[0],overlap[1]))
+
+									cursor.execute(query)
+									db.commit()
+
+								captured_domains.append(domain)
 
 						# Cache the file
 						cmd = "cp %s%s %s" % (gitdm_loc, configfile,
