@@ -399,7 +399,6 @@ def correct_modified_gitdm_affiliations():
 		# Find all lines which are not commented and not empty
 		if not line.strip().startswith('#') and not len(line.strip()) == 0:
 			(configtype,configfile) = line.strip().split()
-			print configfile
 			# There are only certain configs that are relevant, we can ignore the rest
 			if configtype == 'EmailAliases' or configtype == 'EmailMap':
 
@@ -407,15 +406,15 @@ def correct_modified_gitdm_affiliations():
 					hasher.update(file.read())
 
 					# Determine if the file matches the current md5
-					query = ("SELECT NULL FROM gitdm_configs "
+					query = ("SELECT md5sum FROM gitdm_configs "
 						"WHERE configfile = '%s' "
-						"AND md5sum = '%s' ORDER BY last_modified DESC"
-						% (configfile,hasher.hexdigest()))
+						"ORDER BY last_modified DESC LIMIT 1"
+						% configfile)
 
 					cursor.execute(query)
-					db.commit()
+					md5sum = cursor.fetchone()
 
-					if not cursor.rowcount:
+					if not hasher.hexdigest() == md5sum["md5sum"]:
 						# No match found, process the file for differences
 
 						mismatches = []
