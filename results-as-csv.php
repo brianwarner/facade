@@ -26,8 +26,8 @@ if ($_GET["end"] == 'custom') {
 }
 
 // If dates are actually out of order, reset the clause and return everything
-if (isset($_GET["start"]) &&
-isset($_GET["end"]) &&
+if ($_GET["start"] == 'custom' &&
+$_GET["end"] == 'custom' &&
 $start_date > $end_date) {
 	$date_clause = "";
 }
