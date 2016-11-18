@@ -80,7 +80,7 @@ if ($result->num_rows > 0) {
 		class="checkbox">All projects</th>
 		</tr>';
 
-	$query = "SELECT id,name FROM projects";
+	$query = "SELECT id,name FROM projects ORDER BY name ASC";
 	$result = query_db($db,$query,"Getting project names");
 
 	while($row = $result->fetch_assoc()) {

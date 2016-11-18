@@ -47,7 +47,7 @@ if ($_GET["repo"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table ($db,'repo',$repo_id,$detail,'All');
+			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All','All');
 
 		} else {
 
@@ -56,13 +56,13 @@ if ($_GET["repo"]) {
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table ($db,'repo',$repo_id,'affiliation',5);
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,'All');
 
 			echo '</div> <!-- .sub-block -->
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table ($db,'repo',$repo_id,'email',10);
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,'All');
 
 			echo '</div> <!-- .sub-block -->
 
@@ -77,7 +77,7 @@ if ($_GET["repo"]) {
 
 	echo '<div class="content-block"><h2>All repositories</h2>';
 
-	$query = "SELECT name,id FROM projects";
+	$query = "SELECT name,id FROM projects ORDER BY name ASC";
 	$result = query_db($db,$query,"Select project names.");
 
 	if ($result->num_rows > 0) {

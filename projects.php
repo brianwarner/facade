@@ -65,7 +65,7 @@ if ($_GET["id"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table ($db,'project',$project_id,$detail,'All');
+			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All','All');
 
 		} else {
 
@@ -74,13 +74,13 @@ if ($_GET["id"]) {
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table ($db,'project',$project_id,'affiliation',5);
+			gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,'All');
 
 			echo '</div> <!-- .sub-block -->
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table ($db,'project',$project_id,'email',10);
+			gitdm_results_as_summary_table($db,'project',$project_id,'email',10,'All');
 
 			echo '</div> <!-- .sub-block -->
 
@@ -134,7 +134,7 @@ if ($_GET["id"]) {
 	$title = "Tracked Projects";
 	include_once "includes/header.php";
 
-	$query = "SELECT * FROM projects";
+	$query = "SELECT * FROM projects ORDER BY name ASC";
 
 	$result = query_db($db,$query,"Get projects");
 
