@@ -46,16 +46,17 @@ def update_status(status):
 	cursor.execute(query)
 	db.commit()
 
-def log_activity(level,activity):
+def log_activity(level,status):
 	# Determine if something needs to be logged
 
 	log_options = ('Error','Quiet','Info','Verbose')
 
 	if log_options.index(level) <= log_options.index(log_level):
 		query = ("INSERT INTO utility_log (level,status) VALUES ('%s','%s')"
-			% (level,activity))
+			% (level,status))
 		cursor.execute(query)
 		db.commit()
+		sys.stderr.write("%s\n" % status)
 
 def get_setting(setting):
 	query = ("SELECT value FROM settings WHERE setting='%s' ORDER BY "
@@ -67,7 +68,7 @@ def git_repo_cleanup():
 	# Clean up any git repos that are pending deletion
 
 	update_status('Purging deleted repos')
-	log_activity('Info','Repo maintenance: Processing deletions')
+	log_activity('Info','Purging deleted repos')
 
 	repo_base_directory = get_setting('repo_directory')
 
@@ -87,7 +88,7 @@ def git_repo_cleanup():
 		cursor.execute(query)
 		db.commit()
 
-		log_activity('Verbose','Repo maintenance: Deleted repo %s' % row["id"])
+		log_activity('Verbose','Deleted repo %s' % row["id"])
 
 		cleanup = '%s/%s%s' % (row["projects_id"],row["path"],row["name"])
 
@@ -97,15 +98,15 @@ def git_repo_cleanup():
 
 			cmd = "rmdir %s%s" % (repo_base_directory,cleanup)
 			call(cmd,shell=True)
-			log_activity('Verbose','Repo maintenance: Attempted %s' % cmd)
+			log_activity('Verbose','Attempted %s' % cmd)
 
-	log_activity('Info','Repo maintenance: Processing deletions (complete)')
+	log_activity('Info','Processing deletions (complete)')
 
 def git_repo_updates():
 	# Now we need to update existing repos
 
 	update_status('Updating repos')
-	log_activity('Info','Repo maintenance: Updating existing repos')
+	log_activity('Info','Updating existing repos')
 
 	repo_base_directory = get_setting('repo_directory')
 
@@ -117,8 +118,11 @@ def git_repo_updates():
 
 	for row in existing_repos:
 
+		log_activity('Verbose','Attempting to update %s' % row["git"])
+
 		cmd = ("git -C %s%s/%s%s pull"
 			% (repo_base_directory,row["projects_id"],row["path"],row["name"]))
+
 		return_code = call(cmd,shell=True)
 
 		if return_code == 0:
@@ -126,21 +130,21 @@ def git_repo_updates():
 				"(%s,'Up-to-date')" % row["id"])
 			cursor.execute(query)
 			db.commit()
-			log_activity('Verbose','Repo maintenance: Updated %s' % row["git"])
+			log_activity('Verbose','Updated %s' % row["git"])
 		else:
 			query = ("INSERT INTO repos_fetch_log (repos_id,status) values "
 				"(%s,'Failed (%s)')" % (row["id"],return_code))
 
 			cursor.execute(query)
 			db.commit()
-			log_activity('Error','Repo maintenance: Could not update %s' % git)
-	log_activity('Info','Repo maintenance: Updating existing repos (complete)')
+			log_activity('Error','Could not update %s' % row["git"])
+	log_activity('Info','Updating existing repos (complete)')
 
 def git_repo_initialize():
 	# Select any new git repos so we can set up their locations and git clone)
 
 	update_status('Fetching new repos')
-	log_activity('Info','Repo maintenance: Fetching new repos')
+	log_activity('Info','Fetching new repos')
 
 	query = "SELECT id,projects_id,git FROM repos WHERE status LIKE 'New%'";
 	cursor.execute(query)
@@ -204,7 +208,7 @@ def git_repo_initialize():
 			update_status('Failed (mkdir %s)' % repo_path)
 			log_activity('Error','Could not create repo directory: %s' %
 				repo_path)
-			sys.exit("Could not create git repo prerequisite directories. "
+			sys.exit("Could not create git repo's prerequisite directories. "
 				" Do you have write access?")
 
 		query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
@@ -218,8 +222,8 @@ def git_repo_initialize():
 		cursor.execute(query)
 		db.commit()
 
+		log_activity('Verbose','Cloning: %s' % git)
 		cmd = "git -C %s clone '%s' %s" % (repo_path,git,repo_name)
-
 		return_code = call(cmd, shell=True)
 
 		if (return_code == 0):
@@ -235,7 +239,7 @@ def git_repo_initialize():
 
 			cursor.execute(query)
 			db.commit()
-			log_activity('Info','Repo maintenance: Cloned %s' % git)
+			log_activity('Info','Cloned %s' % git)
 
 		else:
 			# If cloning failed, log it and set the status back to new
@@ -251,14 +255,14 @@ def git_repo_initialize():
 			cursor.execute(query)
 			db.commit()
 
-			log_activity('Error','Repo maintenance: Could not clone %s' % git)
+			log_activity('Error','Could not clone %s' % git)
 
-	log_activity('Info', 'Repo maintenance: Fetching new repos (complete)')
+	log_activity('Info', 'Fetching new repos (complete)')
 
 def gitdm_analysis():
 
 	update_status('Running gitdm')
-	log_activity('Info','gitdm: Running analysis')
+	log_activity('Info','Running gitdm analysis')
 
 	gitdm_loc = get_setting('gitdm')
 	start_date = get_setting('start_date')
@@ -270,6 +274,7 @@ def gitdm_analysis():
 
 	# Create temporary table with missing dates to find any backfills
 
+	log_activity('Verbose','Determining which repos are missing gitdm data')
 	query = "CALL make_cal_table('%s','%s')" % (start_date, end_date);
 	cursor.execute(query)
 	db.commit()
@@ -304,9 +309,9 @@ def gitdm_analysis():
 	query = "SELECT * FROM gitdm_master WHERE status='Pending'"
 	cursor.execute(query)
 	repos = cursor.fetchall()
+	log_activity('Verbose','Analyzing all repos with missing gitdm data')
 
 	for repo in repos:
-		# May want to update status to "working" in gitdm_master
 
 		query = ("SELECT projects_id,path,name FROM repos WHERE id=%s"
 			% repo["repos_id"])
@@ -639,7 +644,7 @@ def build_unknown_affiliation_cache():
 
 # Figure out how much we're going to log
 log_level = get_setting('log_level')
-log_activity('Quiet','facade-worker.py is about to start')
+log_activity('Quiet','Running facade-worker.py')
 
 # Get the location of the directory where git repos are stored
 repo_base_directory = get_setting('repo_directory')
@@ -648,14 +653,14 @@ repo_base_directory = get_setting('repo_directory')
 current_status = get_setting('utility_status')
 
 if current_status != 'Idle':
-	log_activity('Error','Already running, aborting maintenance and analysis.')
-	sys.exit("Something is already running.  It is unsafe to continue.")
+	log_activity('Error','Something is already running, aborting maintenance '
+		'and analysis.\nIt is unsafe to continue.')
+	sys.exit(1)
 
 if len(repo_base_directory) == 0:
 	log_activity('Error','No base directory. It is unsafe to continue.')
 	update_status('Failed: No base directory')
-	log_activity('Error','No base directory defined.')
-	sys.exit("No base directory. It is unsafe to continue.")
+	sys.exit(1)
 
 # Begin working
 git_repo_cleanup()
