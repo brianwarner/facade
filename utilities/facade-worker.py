@@ -36,6 +36,7 @@ import csv
 import hashlib
 hasher = hashlib.md5()
 import os
+import getopt
 
 global log_level
 
@@ -644,7 +645,66 @@ def build_unknown_affiliation_cache():
 
 # Figure out how much we're going to log
 log_level = get_setting('log_level')
-log_activity('Quiet','Running facade-worker.py')
+
+# Figure out what we need to do
+limited_run = 0
+delete_marked_repos = 0
+pull_repos = 0
+clone_repos = 0
+run_gitdm = 0
+trim_data = 0
+fix_affiliations = 0
+funky_emails = 0
+rebuild_unknown_affiliations = 0
+
+opts,args = getopt.getopt(sys.argv[1:],'hdpcgtafu')
+for opt in opts:
+	if opt[0] == '-h':
+		print("\nfacade-worker.py does everything by default, unless invoked\n"
+				"with one of these options. In that case, it will only do what\n"
+				"you have selected.\n\n"
+				"Options:\n"
+				"	-d	Delete marked repos\n"
+				"	-p	Run 'git pull' on repos\n"
+				"	-c	Run 'git clone' on new repos\n"
+				"	-g	Run gitdm\n"
+				"	-t	Trim out-of-bounds data if date range changed\n"
+				"	-a	Fix affiliations when config files change\n"
+				"	-f	Fix funky emails (two '@', for example\n"
+				"	-u	Rebuild unknown affiliation cache\n\n")
+		sys.exit(0)
+	elif opt[0] == '-d':
+		delete_marked_repos = 1
+		limited_run = 1
+		log_activity('Info','Option set: delete marked repos.')
+	elif opt[0] == '-p':
+		pull_repos = 1
+		limited_run = 1
+		log_activity('Info','Option set: update repos.')
+	elif opt[0] == '-c':
+		clone_repos = 1
+		limited_run = 1
+		log_activity('Info','Option set: clone new repos.')
+	elif opt[0] == '-g':
+		run_gitdm = 1
+		limited_run = 1
+		log_activity('Info','Option set: running gitdm analysis.')
+	elif opt[0] == '-t':
+		trim_data = 1
+		limited_run = 1
+		log_activity('Info','Option set: trimming out-of-bounds data.')
+	elif opt[0] == '-a':
+		fix_affiliations = 1
+		limited_run = 1
+		log_activity('Info','Option set: fixing affiliations.')
+	elif opt[0] == '-f':
+		funky_emails = 1
+		limited_run = 1
+		log_activity('Info','Option set: fixing funky emails.')
+	elif opt[0] == '-u':
+		rebuild_unknown_affiliations = 1
+		limited_run = 1
+		log_activity('Info','Option set: rebuilding unknown cache.')
 
 # Get the location of the directory where git repos are stored
 repo_base_directory = get_setting('repo_directory')
@@ -663,14 +723,30 @@ if len(repo_base_directory) == 0:
 	sys.exit(1)
 
 # Begin working
-git_repo_cleanup()
-git_repo_updates()
-git_repo_initialize()
-gitdm_analysis()
-purge_old_gitdm_data()
-correct_modified_gitdm_affiliations()
-fix_funky_emails()
-build_unknown_affiliation_cache()
+log_activity('Quiet','Running facade-worker.py')
+if not limited_run or (limited_run and delete_marked_repos):
+	git_repo_cleanup()
+
+if not limited_run or (limited_run and pull_repos):
+	git_repo_updates()
+
+if not limited_run or (limited_run and clone_repos):
+	git_repo_initialize()
+
+if not limited_run or (limited_run and run_gitdm):
+	gitdm_analysis()
+
+if not limited_run or (limited_run and trim_data):
+	purge_old_gitdm_data()
+
+if not limited_run or (limited_run and fix_affiliations):
+	correct_modified_gitdm_affiliations()
+
+if not limited_run or (limited_run and funky_emails):
+	fix_funky_emails()
+
+if not limited_run or (limited_run and rebuild_unknown_affiliations):
+	build_unknown_affiliation_cache()
 # All done
 
 update_status('Idle')
