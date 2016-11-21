@@ -8,7 +8,7 @@
 * SPDX-License-Identifier:        GPL-2.0
 */
 
-function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
+function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$year) {
 
 	if ($scope == 'project') {
 		$scope_clause = "r.projects_id=" . $id . " AND ";
@@ -22,8 +22,18 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 		$results_clause = " LIMIT " . $number_results;
 	}
 
+	if ($year == 'All') {
+		$period = 'YEAR(m.start_date)';
+		$year_clause = '';
+	} else {
+		$period = 'MONTH(m.start_date)';
+		$year_clause = "YEAR(m.start_date) = " . $year . " AND ";
+	}
+
 	// Fetch the data
-	$query = "SELECT d." . $type . " AS " . $type . ", sum(d.added) AS added, YEAR(m.start_date) AS year
+	$query = "SELECT d." . $type . " AS " . $type . ",
+			sum(d.added) AS added,
+			" . $period . " AS period
 			FROM repos r
 			RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 			RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
@@ -34,19 +44,18 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 			OR (d.email LIKE CONCAT('%',e.domain)
 				AND (r.projects_id = e.projects_id
 					OR e.projects_id = 0))
-			WHERE " . $scope_clause . "
+			WHERE " . $scope_clause . $year_clause . "
 			e.email IS NULL
 			AND e.domain IS NULL
-			GROUP BY d." . $type . ", YEAR(m.start_date)";
+			GROUP BY d." . $type . ", " . $period;
 
 	$result = query_db($db,$query,"Fetching result data");
 
-
 	// Stash data by entity and year so it's easier to access later
 	while ($data = $result->fetch_assoc()) {
-		$summary[$data[$type]][$data["year"]] = $data["added"];
+		$summary[$data[$type]][$data["period"]] = $data["added"];
 		$summary[$data[$type]]["Total"] += $data["added"];
-		$summary["Total"][$data["year"]] += $data["added"];
+		$summary["Total"][$data["period"]] += $data["added"];
 		$summary["Grand total"] += $data["added"];
 	}
 
@@ -73,8 +82,9 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 		}
 		echo ', by ' . $type . '</h3>';
 
+// this also needs the constraints, and the go from year to period
 		// Get the range of years
-		$query = "SELECT YEAR(m.start_date) AS year
+		$query = "SELECT " . $period . " AS period
 				FROM repos r
 				RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 				RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
@@ -84,13 +94,13 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 				OR (d.email LIKE CONCAT('%',e.domain)
 					AND (r.projects_id = e.projects_id
 						OR e.projects_id = 0))
-				WHERE " . $scope_clause . "
+				WHERE " . $scope_clause . $year_clause . "
 				e.email IS NULL
 				AND e.domain IS NULL
-				GROUP BY YEAR(m.start_date)
-				ORDER BY YEAR(m.start_date) ASC";
+				GROUP BY " . $period . "
+				ORDER BY " . $period . " ASC";
 
-		$result_years = query_db($db,$query,"Finding out how many years are in the dataset.");
+		$result_period = query_db($db,$query,"Finding out how many years are in the dataset.");
 
 		// Entity names in descending order of LoC added to build results table.
 
@@ -104,7 +114,7 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 				OR (d.email LIKE CONCAT('%',e.domain)
 					AND (r.projects_id = e.projects_id
 						OR e.projects_id = 0))
-				WHERE " . $scope_clause . "
+				WHERE " . $scope_clause . $year_clause . "
 				e.email IS NULL
 				AND e.domain IS NULL
 				GROUP BY d." . $type . "
@@ -117,37 +127,46 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results) {
 			<tr>
 			<th class="results-entity"></th>';
 
-		while ($year = $result_years->fetch_assoc()) {
-			echo '<th class="results-year">' . $year["year"] . '</th>';
+		while ($period = $result_period->fetch_assoc()) {
+			echo '<th class="results-period">';
+			if ($year == 'All') {
+				echo '<a href="' . $_SERVER['REQUEST_URI'] . '&year='. 
+				$period["period"] . '">' . $period["period"] . '</a>';
+
+			} else {
+				$month = DateTime::createFromFormat('!m',$period["period"]);
+				echo $month->format('M');
+			}
+			echo '</th>';
 		}
 
 		echo '<th class="results-total">Total</th>
 			</tr>';
 
-		$result_years->data_seek(0);
+		$result_period->data_seek(0);
 
 		while ($entity = $result_entity->fetch_assoc()) {
 			echo '<tr>
 				<td class="results-entity">' . $entity[$type] . '</td>';
-			while ($year = $result_years->fetch_assoc()) {
+			while ($period = $result_period->fetch_assoc()) {
 				echo '<td class="added">' .
-					number_format($summary[$entity[$type]][$year["year"]]) .
+					number_format($summary[$entity[$type]][$period["period"]]) .
 					'</td>';
 			}
 			echo '<td class="total">' .
 				number_format($summary[$entity[$type]]["Total"])  .'</td>
 				</tr>';
-			$result_years->data_seek(0);
+			$result_period->data_seek(0);
 		}
 
 		echo '<tr>
 			<td class="total">Total from all contributors</td>';
 
-		$result_years->data_seek(0);
+		$result_period->data_seek(0);
 
-		while ($year = $result_years->fetch_assoc()) {
+		while ($period = $result_period->fetch_assoc()) {
 			echo '<td class="total">' .
-				number_format($summary["Total"][$year["year"]]) . '</td>';
+				number_format($summary["Total"][$period["period"]]) . '</td>';
 		}
 
 		echo '<td class="grand-total">' . number_format($summary["Grand total"])

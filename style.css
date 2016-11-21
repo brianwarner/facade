@@ -7,7 +7,7 @@
 
 #page-wrapper {
 	margin: 0 auto;
-	width: 1024px;
+	width: 1280px;
 	border: 1px solid grey;
 	padding: 10px 5px;
 	color: #333;
@@ -41,7 +41,7 @@ a:link, a:visited {
 }
 
 .menu {
-	width: 1024px;
+	width: 1280px;
 	background-color: #EDEDED;
 	border-top: 2px solid grey;
 	border-bottom: 2px solid grey;
@@ -176,10 +176,9 @@ td.linked a {
 
 th.results-entity, td.results-entity {
 	width: 300px;
-	word-break: break-all;
 }
 
-th.results-year {
+th.results-period {
 	width: 75px;
 }
 

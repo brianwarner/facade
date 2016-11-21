@@ -47,12 +47,20 @@ if ($_GET["id"]) {
 		}
 	}
 
+	// Determine if a year was requested.
+	$year = 'All';
+	if ($_GET["year"]) {
+		$year = sanitize_input($db,$_GET["year"],4);
+		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
+	}
+
 	// Verify that there's data to show. If not, suppress the report displays.
 
 	$query = "SELECT NULL FROM repos r
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 		WHERE m.status = 'Complete'
-		AND r.projects_id=" . $project_id;
+		AND r.projects_id=" . $project_id .
+		$year_clause;
 	$result = query_db($db,$query,"Figure out if there's anything to display.");
 
 	if ($result->num_rows > 0) {
@@ -65,7 +73,7 @@ if ($_GET["id"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All','All');
+			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year);
 
 		} else {
 
@@ -74,13 +82,13 @@ if ($_GET["id"]) {
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,'All');
+			gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year);
 
 			echo '</div> <!-- .sub-block -->
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,'email',10,'All');
+			gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year);
 
 			echo '</div> <!-- .sub-block -->
 
