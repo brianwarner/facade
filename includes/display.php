@@ -177,13 +177,8 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 		if ($number_results != 'All' &&
 		$number_results < $result->num_rows) {
 
-			if ($scope == 'project') {
-				echo '<p><a href="projects?id=' . $id . '&detail=' . $type .
-					'">View all</a></p>';
-			} elseif ($scope == 'repo') {
-				echo '<p><a href="repositories?repo=' . $id . '&detail=' . $type
-					. '">View all</a></p>';
-			}
+			echo '</p><a href="' . $_SERVER['REQUEST_URI'] . '&detail=' .
+			$type . '">View all</a></p>';
 		}
 
 	} else {
