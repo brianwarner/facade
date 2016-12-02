@@ -8,7 +8,7 @@
 * SPDX-License-Identifier:        GPL-2.0
 */
 
-function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$year) {
+function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,$affiliation,$email) {
 
 	if ($scope == 'project') {
 		$scope_clause = "r.projects_id=" . $id . " AND ";
@@ -18,8 +18,8 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 		$scope_clause = "";
 	}
 
-	if ($number_results != 'All') {
-		$results_clause = " LIMIT " . $number_results;
+	if ($max_results != 'All') {
+		$results_clause = " LIMIT " . $max_results;
 	}
 
 	if ($year == 'All') {
@@ -28,6 +28,14 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 	} else {
 		$period = 'MONTH(m.start_date)';
 		$year_clause = "YEAR(m.start_date) = " . $year . " AND ";
+	}
+
+	if ($affiliation != 'All') {
+		$affiliation_clause = "d.affiliation = '" . $affiliation . "' AND ";
+	}
+
+	if ($email != 'All') {
+		$email_clause = "d.email = '" . $email . "' AND ";
 	}
 
 	// Fetch the data
@@ -44,7 +52,8 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 			OR (d.email LIKE CONCAT('%',e.domain)
 				AND (r.projects_id = e.projects_id
 					OR e.projects_id = 0))
-			WHERE " . $scope_clause . $year_clause . "
+			WHERE " . $scope_clause . $year_clause .
+			$affiliation_clause . $email_clause . "
 			e.email IS NULL
 			AND e.domain IS NULL
 			GROUP BY d." . $type . ", " . $period;
@@ -59,28 +68,64 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 		$summary["Grand total"] += $data["added"];
 	}
 
+	// Figure out if there are more entities that could be shown
+	$query = "SELECT NULL
+		FROM repos r
+		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
+		LEFT JOIN exclude e ON (d.email = e.email
+			AND (r.projects_id = e.projects_id
+				OR e.projects_id = 0))
+				OR (d.email LIKE CONCAT('%',e.domain)
+			AND (r.projects_id = e.projects_id
+				OR e.projects_id = 0))
+		WHERE " . $year_clause . $scope_clause .
+		$affiliation_clause . $email_clause . "
+		e.email IS NULL
+		AND e.domain IS NULL
+		GROUP BY d." . $type;
+
+	$result_total = query_db($db,$query,"Finding out how many entities are in the dataset.");
+	$total_entities = $result_total->num_rows;
+
 	if ($summary) {
 		// If there's data for the table, proceed
 
 		echo '<h3>Lines of code added by ';
 
-		if ($number_results != 'All' &&
-		$number_results <= $result->num_rows) {
+		if ($email != 'All') {
+			echo $email;
 
-			echo 'the top ';
-			if ($number_results > 1) {
-				echo $number_results . ' ';
-
-			}
 		} else {
-			echo 'all ';
+
+			if ($max_results != 'All' &&
+			$max_results <= $total_entities) {
+
+				echo 'the top ';
+				if ($max_results > 1) {
+					echo $max_results . ' ';
+				}
+			} else {
+				echo 'all ';
+			}
+
+			echo 'contributor';
+			if ($max_results != 1) {
+				echo 's';
+			}
 		}
 
-		echo 'contributor';
-		if ($number_results != 1) {
-			echo 's';
+		if ($affiliation != 'All') {
+			echo ' from ' . $affiliation;
 		}
-		echo ', by ' . $type . '</h3>';
+
+		if ($year != 'All') {
+			echo ' in ' . $year;
+		}
+
+		if (($affiliation == 'All') && ($email == 'All')) {
+			echo ', by ' . $type . '</h3>';
+		}
 
 // this also needs the constraints, and the go from year to period
 		// Get the range of years
@@ -94,7 +139,8 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 				OR (d.email LIKE CONCAT('%',e.domain)
 					AND (r.projects_id = e.projects_id
 						OR e.projects_id = 0))
-				WHERE " . $scope_clause . $year_clause . "
+				WHERE " . $scope_clause . $year_clause .
+				$affiliation_clause . $email_clause . "
 				e.email IS NULL
 				AND e.domain IS NULL
 				GROUP BY " . $period . "
@@ -114,13 +160,15 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 				OR (d.email LIKE CONCAT('%',e.domain)
 					AND (r.projects_id = e.projects_id
 						OR e.projects_id = 0))
-				WHERE " . $scope_clause . $year_clause . "
+				WHERE " . $scope_clause . $year_clause .
+				$affiliation_clause . $email_clause . "
 				e.email IS NULL
 				AND e.domain IS NULL
 				GROUP BY d." . $type . "
 				ORDER BY sum(d.added) DESC" . $results_clause;
 
 		$result_entity = query_db($db,$query,"Finding out which entities are in the dataset.");
+		$number_entities = $result_entity->num_rows;
 
 		// Create the summary table
 		echo '<table>
@@ -130,7 +178,7 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 		while ($period = $result_period->fetch_assoc()) {
 			echo '<th class="results-period">';
 			if ($year == 'All') {
-				echo '<a href="' . $_SERVER['REQUEST_URI'] . '&year='. 
+				echo '<a href="' . $_SERVER['REQUEST_URI'] . '&year='.
 				$period["period"] . '">' . $period["period"] . '</a>';
 
 			} else {
@@ -147,7 +195,15 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 
 		while ($entity = $result_entity->fetch_assoc()) {
 			echo '<tr>
-				<td class="results-entity">' . $entity[$type] . '</td>';
+				<td class="results-entity">';
+				if (($email == 'All') || ($affiliation == 'All')) {
+					echo '<a href="' . $_SERVER['REQUEST_URI'] .
+						'&' . $type . '=' . rawurlencode($entity[$type]) . '">'
+						. $entity[$type] . '</a>';
+				} else {
+					echo $entity[$type];
+				}
+			echo '</td>';
 			while ($period = $result_period->fetch_assoc()) {
 				echo '<td class="added">' .
 					number_format($summary[$entity[$type]][$period["period"]]) .
@@ -159,23 +215,27 @@ function gitdm_results_as_summary_table ($db,$scope,$id,$type,$number_results,$y
 			$result_period->data_seek(0);
 		}
 
-		echo '<tr>
-			<td class="total">Total from all contributors</td>';
+		if ((($email == 'All') && ($affiliation == 'All')) || ($number_entities > 1)) {
 
-		$result_period->data_seek(0);
+			echo '<tr>
+				<td class="total">Total from all contributors</td>';
 
-		while ($period = $result_period->fetch_assoc()) {
-			echo '<td class="total">' .
-				number_format($summary["Total"][$period["period"]]) . '</td>';
+			$result_period->data_seek(0);
+
+			while ($period = $result_period->fetch_assoc()) {
+				echo '<td class="total">' .
+					number_format($summary["Total"][$period["period"]]) . '</td>';
+			}
+
+			echo '<td class="grand-total">' . number_format($summary["Grand total"])
+				. '</td>
+				</tr>';
 		}
+		echo '</table>';
 
-		echo '<td class="grand-total">' . number_format($summary["Grand total"])
-			. '</td>
-			</tr>
-			</table>';
-
-		if ($number_results != 'All' &&
-		$number_results < $result->num_rows) {
+		// If there are more results to show, add "View all" link
+		if ($max_results != 'All' &&
+		$max_results < $total_entities ) {
 
 			echo '</p><a href="' . $_SERVER['REQUEST_URI'] . '&detail=' .
 			$type . '">View all</a></p>';
@@ -230,8 +290,8 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 		<th>Lines of code added</th>
 		</tr>';
 
-	$query = "SELECT email,added FROM unknown_cache" 
-		. $project_clause . " 
+	$query = "SELECT email,added FROM unknown_cache"
+		. $project_clause . "
 		ORDER BY added DESC LIMIT 20";
 
 	$result = query_db($db,$query,"Getting unknown entries");

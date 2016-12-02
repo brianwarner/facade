@@ -54,13 +54,28 @@ if ($_GET["id"]) {
 		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
 	}
 
+	// Determine if a specific affiliation was requested.
+	$affiliation = 'All';
+	if ($_GET["affiliation"]) {
+		$affiliation = sanitize_input($db,rawurldecode($_GET["affiliation"]),64);
+		$affiliation_clause = " AND d.affiliation = '" . $affiliation . "'";
+	}
+
+	// Determine if a specific email was requested.
+	$email = 'All';
+	if ($_GET["email"]) {
+		$email = sanitize_input($db,rawurldecode($_GET["email"]),64);
+		$email_clause = " AND d.email = '" . $email . "'";
+	}
+
 	// Verify that there's data to show. If not, suppress the report displays.
 
 	$query = "SELECT NULL FROM repos r
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
 		WHERE m.status = 'Complete'
 		AND r.projects_id=" . $project_id .
-		$year_clause;
+		$year_clause . $affiliation_clause . $email_clause;
 	$result = query_db($db,$query,"Figure out if there's anything to display.");
 
 	if ($result->num_rows > 0) {
@@ -73,26 +88,32 @@ if ($_GET["id"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year);
+			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email);
 
 		} else {
 
 			echo '<div class="content-block">
-			<h2>Contributor summary</h2>
+			<h2>Contributor summary</h2>';
 
-			<div class="sub-block">';
+//			if ($affiliation == 'All') {
+			if (($affiliation == 'All') || (($affiliation == 'All') && ($email != 'All'))) {
+				echo '<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year);
+				gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year,$affiliation,$email);
 
-			echo '</div> <!-- .sub-block -->
+				echo '</div> <!-- .sub-block -->';
+			}
 
-			<div class="sub-block">';
+//			if (($email == 'All') || (($email != 'All') && ($affiliation != 'All'))) {
+			if (($email == 'All') || ($affiliation != 'All')) {
 
-			gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year);
+				echo '<div class="sub-block">';
 
-			echo '</div> <!-- .sub-block -->
+				gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year,$affiliation,$email);
 
-			</div> <!-- .content-block -->';
+				echo '</div> <!-- .sub-block -->';
+			}
+			echo '</div> <!-- .content-block -->';
 		}
 
 		// Only show unknown contributors if some are unknown

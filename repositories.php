@@ -28,12 +28,35 @@ if ($_GET["repo"]) {
 
 	include_once "includes/header.php";
 
+	// Determine if a year was requested.
+	$year = 'All';
+	if ($_GET["year"]) {
+		$year = sanitize_input($db,$_GET["year"],4);
+		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
+	}
+
+	// Determine if a specific affiliation was requested.
+	$affiliation = 'All';
+	if ($_GET["affiliation"]) {
+		$affiliation = sanitize_input($db,rawurldecode($_GET["affiliation"]),64);
+		$affiliation_clause = " AND d.affiliation = '" . $affiliation . "'";
+	}
+
+	// Determine if a specific email was requested.
+	$email = 'All';
+	if ($_GET["email"]) {
+		$email = sanitize_input($db,rawurldecode($_GET["email"]),64);
+		$email_clause = " AND d.email = '" . $email . "'";
+	}
+
 	// First, verify that there's data to show. If not, suppress the report displays.
 
 	$query = "SELECT NULL FROM repos r
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
 		WHERE m.status = 'Complete'
-		AND r.id=" . $repo_id;
+		AND r.id=" . $repo_id .
+		$year_clause . $affiliation_clause . $email_clause;
 
 	$result = query_db($db,$query,"Check whether to display.");
 
@@ -47,7 +70,7 @@ if ($_GET["repo"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All','All');
+			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All',$year,$affiliation,$email);
 
 		} else {
 
@@ -56,13 +79,13 @@ if ($_GET["repo"]) {
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,'All');
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email);
 
 			echo '</div> <!-- .sub-block -->
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,'All');
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email);
 
 			echo '</div> <!-- .sub-block -->
 
