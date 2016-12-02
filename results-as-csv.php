@@ -13,6 +13,7 @@ $db = setup_db();
 
 $project = array();
 $tags = array();
+$affiliations = array();
 
 // Handle custom dates
 if ($_GET["start"] == 'custom') {
@@ -61,6 +62,17 @@ if (isset($_GET["with-tags"])) {
 	}
 }
 
+// Figure out which affiliations we need to attach
+if (isset($_GET["affiliations"])) {
+
+	foreach ($_GET["affiliations"] as $affiliation) {
+		$affiliations[] = sanitize_input($db,$affiliation,64);
+	}
+
+	$affiliations_clause = " AND (Affiliation='" .
+		join("' OR Affiliation='",$affiliations) . "')";
+}
+
 // Get ready for export
 $header=TRUE;
 header('Content-Type: application/csv');
@@ -92,8 +104,10 @@ foreach ($projects as $project) {
 			OR e.projects_id = 0))
 		WHERE r.projects_id = $project
 		AND e.email IS NULL
-		AND e.domain IS NULL" . $date_clause;
-
+		AND e.domain IS NULL" .
+		$date_clause .
+		$affiliations_clause;
+print $query;
 	$result = query_db($db,$query,'Fetching project data');
 
 	// Write the project-specific data

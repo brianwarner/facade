@@ -30,6 +30,13 @@
 		}
 	}
 
+	function toggle_affiliations(source) {
+		checkboxes = document.getElementsByName('affiliations[]');
+		for(var i=0, n=checkboxes.length;i<n;i++) {
+			checkboxes[i].checked = source.checked;
+		}
+	}
+
 	function custom_input(source,input_id,width) {
 		if (source.value=='custom') {
 			document.getElementById(input_id).style.visibility='visible';

@@ -36,7 +36,7 @@ if ($result->num_rows > 0) {
 
 
 	echo '<div class="content-block">
-		<h2>Filtered results</h2>
+		<h2>Filter results</h2>
 		<form method=GET action="results-as-csv" id="filter">
 
 		<div class="sub-block">
@@ -74,10 +74,11 @@ if ($result->num_rows > 0) {
 
 		<div class="sub-block">
 		<h3>Projects to include</h3>
+		<p>Limit the results to these projects.</p>
 		<table>
 		<tr>
 		<th><input type="checkbox" onClick="toggle_projects(this)"
-		class="checkbox">All projects</th>
+		class="checkbox">&nbsp;</th>
 		</tr>';
 
 	$query = "SELECT id,name FROM projects ORDER BY name ASC";
@@ -85,33 +86,63 @@ if ($result->num_rows > 0) {
 
 	while($row = $result->fetch_assoc()) {
 		echo '<tr>
-			<td><input type="checkbox" name="projects[]" value="' . $row["id"] .
-			'" class="checkbox">' . $row["name"] .
-			'</td>';
+			<td><label><input type="checkbox" name="projects[]" value="' .
+			$row["id"] . '" class="checkbox">' . $row["name"] .
+			'</label></td>';
 	}
 
 	echo '</table>
-		</div><!-- .sub-block -->
+		</div> <!-- .sub-block -->
 
 		<div class="sub-block">
-		<h3>Additional tags</h3>
+		<h3>Affilitations</h3>
+		<p>Limit results to these affiliations:</p>
 
 		<table>
 		<tr>
-		<th><input type="checkbox" onClick="toggle_tags(this)"
-		class="checkbox">Include all tags</th></tr>';
+		<th><input type="checkbox" onClick="toggle_affiliations(this)"
+		class="checkbox">&nbsp;</th></tr>
+		</table>
+		<div id="affiliation-list">
+		<table>';
+
+		$query = "SELECT DISTINCT affiliation FROM gitdm_data
+			ORDER BY affiliation";
+		$result = query_db($db,$query,"Getting affiliations");
+
+	while($row = $result->fetch_assoc()) {
+		echo '<tr>
+			<td><label><input type="checkbox" name="affiliations[]"
+			value="' . $row["affiliation"] . '"
+			class="checkbox">' . $row["affiliation"] . '</label></td>';
+	}
+
+	echo '</table>
+
+	</div> <!-- #affiliation-list -->
+	</div> <!-- .sub-block -->
+
+	<div class="sub-block">
+	<h3>Special tags</h3>
+
+	<p>Apply these tags to the results.</p>
+	<table>
+	<tr>
+	<th><input type="checkbox" onClick="toggle_tags(this)"
+		class="checkbox">&nbsp;</th></tr>';
 
 	$query = "SELECT DISTINCT tag FROM special_tags";
 	$result = query_db($db,$query,"Getting tags");
 
 	while($row = $result->fetch_assoc()) {
 		echo '<tr>
-			<td><input type="checkbox" name="tags[]" value="' . $row["tag"] . '"
-			class="checkbox">' . $row["tag"] . '</td>';
+			<td><label><input type="checkbox" name="tags[]" value="' .
+			$row["tag"] . '" class="checkbox">' . $row["tag"] .
+			'</label></td>';
 	}
-
 	echo '</table>
-	</div> <!-- .sub-block -->
+	</div><!-- .sub-block -->
+
 	<div class="sub-block">
 	<input type="submit" name="filter" value="get filtered results as csv">
 

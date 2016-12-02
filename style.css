@@ -189,6 +189,11 @@ th.results-total {
 	float: right;
 }
 
+#affiliation-list {
+	overflow: scroll;
+	max-height: 300px;
+}
+
 #footer-wrapper {
 
 }
