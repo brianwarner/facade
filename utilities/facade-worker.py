@@ -333,7 +333,6 @@ def gitdm_analysis():
 			'| %s/gitdm -b %s -u -s -d -x %s' % (repo_loc, repo["start_date"],
 			end_date, gitdm_loc, gitdm_loc, outfile))
 
-
 		return_code = call(gitdmcall,shell=True)
 
 		# Insert results into the gitdm_results table in the db.
@@ -421,8 +420,11 @@ def correct_modified_gitdm_affiliations():
 					md5sum = cursor.fetchone()
 
 					if not hasher.hexdigest() == md5sum["md5sum"]:
+
 						# No match found, process the file for differences
 
+						log_activity('Info','Config file change detected (%s)' %
+							configfile)
 						mismatches = []
 						config_contents = []
 						captured_domains = []
@@ -528,19 +530,26 @@ def correct_modified_gitdm_affiliations():
 
 											date_overlaps.append([end_date,domain,affiliation])
 
-								# If no current entry, fill with (Unknown)
-								if not is_current:
-									date_overlaps.append([time.strftime("%Y-%m-%d"),domain,'(Unknown)'])
+									# If no current entry, fill with (Unknown)
+									if not is_current:
+										date_overlaps.append([time.strftime("%Y-%m-%d"),domain,'(Unknown)'])
+										log_activity('Info','Backfilling with '
+											'(Unknown) affiliation for %s. This'
+											' is bad.' % domain)
 
 								for overlap in sorted(date_overlaps,reverse=1):
 
 									query = ("UPDATE gitdm_data d "
 										"LEFT JOIN gitdm_master m "
 										"ON m.id=d.gitdm_master_id "
-										"SET d.affiliation = '%s'"
+										"SET d.affiliation = '%s' "
 										"WHERE m.start_date < '%s' "
 										"AND d.email LIKE '%%%s%%' "
 										% (overlap[2],overlap[0],overlap[1]))
+
+									log_activity('Verbose','Updating '
+										'affiliation: %s, %s until %s' %
+										(overlap[1],overlap[2],overlap[0]))
 
 									cursor.execute(query)
 									db.commit()
