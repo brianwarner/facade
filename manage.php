@@ -20,12 +20,22 @@ if ($_POST["confirmnew_repo"]) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
-	echo '<form action="manage" id="newrepo" method="post">
-		<p><label for="git">Git repository</label><br><span class="text">
-		<input type="text" name="git"></span></p>
+	echo '<div class="content-block"><div class="sub-block"><p>Add a single git
+		repository by URL. Authentication is not supported, so use anonymous
+		git repo links.</p>
+		</div> <!-- .sub-block -->
+		<div class="sub-block">
+		<form action="manage" id="newrepo" method="post">
+		<table>
+		<tr class="quarter">
+		<td><label for="git">Git repository</label></td>
+		<td><span class="text"><input type="text" name="git"></span></td>
+		</tr>
+		</table>
 		<p><input type="hidden" name="project_id" value="' . $project_id .
 		'"><input type="submit" name="new_repo" value="Add repo">
-		</form>';
+		</form>
+		</div> <!-- .sub-block -->';
 
 	include_once "includes/footer.php";
 
@@ -394,9 +404,72 @@ if ($_POST["confirmnew_repo"]) {
 		<div class="sub-block">
 		<form action="import" id="import" method="post">
 		<input type="hidden" name="project_id" value="' . $project_id . '">
-		<p><label>cgit index page: </label><span class="text">
-		<input type="text" name="cgit"></span></p>
-		<p><input type="submit" name="submit_cgit" value="Import cgit index page"></p>
+		<input type="hidden" name="input_type" value="cgit">
+		<table>
+		<tr>
+		<td class="quarter"><label>cgit index page: </label></td>
+		<td><span class="text">
+		<input type="text" name="url"></span></td>
+		</tr>
+		</table>
+		<p><input type="submit" name="submit_cgit" value="Discover repos from cgit"></p>
+		</form></div><!-- .sub-block --></div><!-- .content-block -->';
+
+	include_once 'includes/footer.php';
+
+} elseif ($_POST["confirmimport_gerrit"]) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	$title = 'Import repos from Gerrit';
+	include_once 'includes/header.php';
+
+	echo '<div class="content-block"><div class="sub-block"><p>Gerrit is a
+		commonly used tool to manage repositories.  It can take a while to
+		navigate large instances manually, since every repo address is on a
+		different page.  Facade can attempt to discover all of the repos in a
+		Gerrit instance.</p>
+		<p>At minimum, you will need the base URL for the Gerrit instance. This
+		is everything that appears to the left of the &quot;#&quot; symbol
+		when you visit a project page:</p>
+		<blockquote>
+		<pre><strong>https://gerrit.project.org/...</strong>/#/...</pre>
+		</blockquote>
+
+		<p>If the Gerrit instance uses a different base URL for	anonymous
+		cloning, you can set that as well.  This can be checked on any
+		project page, under the General tab.  You should copy
+		everything to the left of the Project name:
+		<blockquote>
+		<h3>Project project/name</h3>
+		<pre><strong>https://anongit.project.org/.../</strong>project/name</pre>
+		</blockquote>
+		<p>If the anonymous git URL is not set, repos will be cloned with
+		the same base URL as the Gerrit instance. This should work fine in
+		most cases.  If your repos can\'t be cloned though, you probably
+		needed to set this and should just import them again.</p>
+		</div><!-- .sub-block -->
+		<div class="sub-block">
+		<form action="import" id="import" method="post">
+		<input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="hidden" name="input_type" value="gerrit">
+		<table>
+		<tr>
+		<td class="quarter">
+		<label>Gerrit URL:</td>
+		<td><span class="text">
+		<input type="text" name="url"></span></td>
+		</tr>
+
+		<tr>
+		<td><label>Anonymous git repo base URL: (optional) </label></td>
+		<td><span class="text">
+		<input type="text" name="anongit"></span></td>
+		</tr>
+		</table>
+
+		<p><input type="submit" name="submit_gerrit"
+		value="Discover repos from Gerrit"></p>
 		</form></div><!-- .sub-block --></div><!-- .content-block -->';
 
 	include_once 'includes/footer.php';
@@ -421,6 +494,7 @@ if ($_POST["confirmnew_repo"]) {
 		<div class="sub-block">
 		<form action="import" id="import" method="post">
 		<input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="hidden" name="input_type" value="github">
 		<table>
 		<tr>
 		<td class="quarter">
@@ -438,7 +512,7 @@ if ($_POST["confirmnew_repo"]) {
 		</table>
 
 		<p><input type="submit" name="submit_import"
-		value="Import from GitHub"></p>
+		value="Discover repos from GitHub"></p>
 		</form></div><!-- .sub-block --></div><!-- .content-block -->';
 
 	include_once 'includes/footer.php';

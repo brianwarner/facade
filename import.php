@@ -18,13 +18,15 @@ include_once "includes/db.php";
 $db = setup_db();
 
 $project_id = sanitize_input($db,$_POST["project_id"],11);
-$url = sanitize_input($db,$_POST["cgit"],256);
+$url = sanitize_input($db,$_POST["url"],256);
+$type = sanitize_input($db,$_POST["input_type"],6);
 $github = sanitize_input($db,$_POST["github"],12);
 $github_org = sanitize_input($db,$_POST["github_org"],128);
 $github_user = sanitize_input($db,$_POST["github_user"],128);
+$anongit = sanitize_input($db,$_POST["anongit"],128);
 
-// If passed a URL, we're importing from cgit.
-if ($project_id && $url) {
+// Importing from cgit.
+if ($project_id && $type == 'cgit' && $url) {
 	$title = "Import from a cgit index";
 	include_once "includes/header.php";
 
@@ -147,7 +149,7 @@ if ($project_id && $url) {
 
 	include_once 'includes/footer.php';
 
-} elseif ($project_id &&
+} elseif ($project_id && $type == 'github' &&
 	(($github == 'organization' && $github_org) ||
 	($github == 'user' && $github_user))) {
 
@@ -200,6 +202,78 @@ if ($project_id && $url) {
 
 	include_once 'includes/footer.php';
 
+} elseif ($project_id && $type == 'gerrit' && $url) {
+
+	$title = "Import repos from Gerrit";
+	include_once "includes/header.php";
+
+	// Trim a trailing slash, if it exists
+	if (substr($url,strlen($url)-1,1) == '/') {
+		$url = substr($url,0,strlen($url)-1);
+	}
+
+	$raw_gerrit_list = fetch_page($url . '/projects/?d');
+
+	// Make sure we actually got something back
+	if ($raw_gerrit_list) {
+
+		// If an anonymous git url wasn't provided, try using gerrit's
+		if (!$anongit) {
+			$anongit = $url;
+		}
+
+		// Detect Gerrit's magic anti-xssi line
+		if (strpos($raw_gerrit_list,")]}'") == 0) {
+
+			// Strip Gerrit's magic anti-xssi line
+			$gerrit_list = json_decode(substr($raw_gerrit_list,strpos($raw_gerrit_list,"\n")),true);
+
+			// Make sure we have the project list
+			if (array_key_exists('All-Users',$gerrit_list)) {
+
+				// Get rid of the default projects
+				unset($gerrit_list['All-Users']);
+				unset($gerrit_list['All-Projects']);
+
+				if (count($gerrit_list) > 0) {
+
+					write_import_table_header();
+
+					foreach ($gerrit_list as $key => $val) {
+
+						$git_links = array();
+						$is_already_used = '';
+
+						$git_links[] = $anongit . '/' . $key;
+
+						// Check to see if repo is already known
+						$query = "SELECT NULL FROM repos
+							WHERE projects_id=" . $project_id . "
+							AND git='" . $git_links[0] . "'";
+
+						$result = query_db($db,$query,'Looking for a match with existing repos');
+
+						if ($result->num_rows > 0) {
+							$is_already_used = $git_links[0];
+						}
+
+					write_import_table_row($key,$git_links,$is_already_used);
+
+					}
+
+					write_import_table_footer($project_id);
+
+				}
+			} else {
+				echo '<p>It appears there are no Gerrit projects defined.</p>';
+			}
+
+		} else {
+			echo '<p>This does not appear to be a valid project listing from Gerrit.</p>';
+		}
+	} else {
+		echo '<p>Something went wrong fetching the page. Is the URL correct?</p>';
+	}
 } else {
 	header("Location: projects?id=" . $project_id);
 }

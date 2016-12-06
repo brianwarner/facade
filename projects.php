@@ -140,11 +140,15 @@ if ($_GET["id"]) {
 
 	echo '<form action="manage" id="newrepo" method="post">
 		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="confirmnew_repo" value="Add a repo">
+		<input type="submit" name="confirmnew_repo" value="Add a single repo">
 		</form>
 		<form action="manage" id="cgit" method="post">
 		<p><input type="hidden" name="project_id" value="' . $project_id . '">
 		<input type="submit" name="confirmimport_cgit" value="Import from cgit">
+		</form></p>
+		<form action="manage" id="gerrit" method="post">
+		<p><input type="hidden" name="project_id" value="' . $project_id . '">
+		<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
 		</form></p>
 		<form action="manage" id="github" method="post">
 		<p><input type="hidden" name="project_id" value="' . $project_id . '">
