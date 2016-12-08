@@ -8,7 +8,7 @@
 * SPDX-License-Identifier:        GPL-2.0
 */
 
-function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,$affiliation,$email) {
+function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,$affiliation,$email,$stat) {
 
 	if ($scope == 'project') {
 		$scope_clause = "r.projects_id=" . $id . " AND ";
@@ -38,9 +38,19 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 		$email_clause = "d.email = '" . $email . "' AND ";
 	}
 
+	if ($stat == 'contributors') {
+		$stat_clause = "COUNT(DISTINCT(d.email))";
+	} elseif ($stat == 'patches') {
+		$stat_clause = "SUM(d.changesets)";
+	} elseif ($stat == 'removed') {
+		$stat_clause = "SUM(d.removed)";
+	} else {
+		$stat_clause = "sum(d.added)";
+	}
+
 	// Fetch the data
 	$query = "SELECT d." . $type . " AS " . $type . ",
-			sum(d.added) AS added,
+			" . $stat_clause . " AS added,
 			" . $period . " AS period
 			FROM repos r
 			RIGHT JOIN gitdm_master m ON r.id = m.repos_id
@@ -63,9 +73,13 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 	// Stash data by entity and year so it's easier to access later
 	while ($data = $result->fetch_assoc()) {
 		$summary[$data[$type]][$data["period"]] = $data["added"];
-		$summary[$data[$type]]["Total"] += $data["added"];
 		$summary["Total"][$data["period"]] += $data["added"];
-		$summary["Grand total"] += $data["added"];
+
+		// Cumulative contributor stats by company don't make sense
+		if ($stat != 'contributors') {
+			$summary[$data[$type]]["Total"] += $data["added"];
+			$summary["Grand total"] += $data["added"];
+		}
 	}
 
 	// Figure out if there are more entities that could be shown
@@ -91,27 +105,37 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 	if ($summary) {
 		// If there's data for the table, proceed
 
-		echo '<h3>Lines of code added by ';
-
-		if ($email != 'All') {
-			echo $email;
-
+		if ($stat == 'contributors') {
+			echo '<h3>Unique contributor emails';
 		} else {
-
-			if ($max_results != 'All' &&
-			$max_results <= $total_entities) {
-
-				echo 'the top ';
-				if ($max_results > 1) {
-					echo $max_results . ' ';
-				}
+			if ($stat == 'removed') {
+				echo '<h3>Lines of code removed by ';
+			} elseif ($stat == 'patches') {
+				echo '<h3>Patched landed by ';
 			} else {
-				echo 'all ';
+				echo '<h3>Lines of code added by ';
 			}
 
-			echo 'contributor';
-			if ($max_results != 1) {
-				echo 's';
+			if ($email != 'All') {
+				echo $email;
+
+			} else {
+
+				if ($max_results != 'All' &&
+				$max_results <= $total_entities) {
+
+					echo 'the top ';
+					if ($max_results > 1) {
+						echo $max_results . ' ';
+					}
+				} else {
+					echo 'all ';
+				}
+
+				echo 'contributor';
+				if ($max_results != 1) {
+					echo 's';
+				}
 			}
 		}
 
@@ -165,7 +189,7 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 				e.email IS NULL
 				AND e.domain IS NULL
 				GROUP BY d." . $type . "
-				ORDER BY sum(d.added) DESC" . $results_clause;
+				ORDER BY " . $stat_clause . " DESC" . $results_clause;
 
 		$result_entity = query_db($db,$query,"Finding out which entities are in the dataset.");
 		$number_entities = $result_entity->num_rows;
@@ -194,6 +218,35 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 		$result_period->data_seek(0);
 
 		while ($entity = $result_entity->fetch_assoc()) {
+
+			// Collect cumulative contributor stats by company that do make sense
+			if ($stat == 'contributors') {
+				$query = "SELECT d." . $type . " AS " . $type . ",
+					" . $stat_clause . " AS added
+					FROM repos r
+					RIGHT JOIN gitdm_master m ON r.id = m.repos_id
+					RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
+					LEFT JOIN exclude e
+					ON (d.email = e.email
+						AND (r.projects_id = e.projects_id
+							OR e.projects_id = 0))
+					OR (d.email LIKE CONCAT('%',e.domain)
+						AND (r.projects_id = e.projects_id
+							OR e.projects_id = 0))
+					WHERE " . $scope_clause . $year_clause .
+					$affiliation_clause . $email_clause . "
+					e.email IS NULL
+					AND e.domain IS NULL
+					AND d." . $type . " = '" . $entity[$type] . "'
+					GROUP BY d." . $type;
+
+				$result_contrib_total = query_db($db,$query,"Fetching result data");
+
+				$contrib_total = $result_contrib_total->fetch_assoc();
+				$summary[$entity[$type]]["Total"] = $contrib_total["added"];
+				$summary["Grand total"] += $contrib_total["added"];
+			}
+
 			echo '<tr>
 				<td class="results-entity">';
 				if (($email == 'All') || ($affiliation == 'All')) {
@@ -210,8 +263,8 @@ function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,
 					'</td>';
 			}
 			echo '<td class="total">' .
-				number_format($summary[$entity[$type]]["Total"])  .'</td>
-				</tr>';
+			number_format($summary[$entity[$type]]["Total"]) .
+			'</td></tr>';
 			$result_period->data_seek(0);
 		}
 
@@ -478,7 +531,7 @@ function list_excludes($db,$project_id = NULL) {
 		// Get the number of lines of code affected by each exclude
 		while ($row = $result->fetch_assoc()) {
 
-			$query = "SELECT sum(d.added) AS added
+			$query = "SELECT " . $stat_clause . " AS added
 				FROM gitdm_master m
 				RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
 				LEFT JOIN repos r ON m.repos_id = r.id
@@ -566,7 +619,7 @@ function list_excludes($db,$project_id = NULL) {
 		// Get the number of lines of code affected by each exclude
 		while ($row = $result->fetch_assoc()) {
 
-			$query = "SELECT sum(d.added) AS added
+			$query = "SELECT " . $stat_clause . " AS added
 				FROM gitdm_master m
 				RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
 				LEFT JOIN repos r ON m.repos_id = r.id
@@ -688,6 +741,47 @@ function write_import_table_footer($project_id) {
 	<input type="hidden" name="project_id" value="' . $project_id . '">
 	<input type="submit" name="import_repos" value="Import selections"></p>
 	</div> <!-- .content-block --></form>';
+}
+
+function write_stat_selector_submenu($raw_uri,$stat) {
+	// Strip out existing stat parameter from URL, write submenu
+
+	if (strpos($raw_uri,'&stat=')) {
+		$prefix = substr($raw_uri,0,strpos($raw_uri,'&stat='));
+		$suffix = substr($raw_uri,strpos($raw_uri,'&',strpos($raw_uri,'&stat=')+1));
+
+		if (strlen($raw_uri) == strlen($suffix)) {
+			$clean_uri = $prefix;
+		} else {
+			$clean_uri = $prefix . $suffix;
+		}
+	} else {
+		$clean_uri = $raw_uri;
+	}
+
+	echo '<h2>Metric</h2><div id="stat-selector">
+	<span class="first item';
+	if ($stat == '') {
+		echo ' active';
+	}
+	echo '"><a href="' . $clean_uri . '">Lines added</a></span>
+	<span class="item';
+	if ($stat == 'removed') {
+		echo ' active';
+	}
+	echo '"><a href="' . $clean_uri. '&stat=removed">Lines removed</a></span>
+	<span class="item';
+	if ($stat == 'patches') {
+		echo ' active';
+	}
+	echo '"><a href="' . $clean_uri . '&stat=patches">Patches</a></span>
+	<span class="item';
+	if ($stat == 'contributors') {
+		echo ' active';
+	}
+	echo '"><a href="' . $clean_uri . '&stat=contributors">Unique contributors</a></span>
+	</div> <!-- #stat-selector -->';
+
 }
 
 ?>

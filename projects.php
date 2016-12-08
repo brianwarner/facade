@@ -68,8 +68,16 @@ if ($_GET["id"]) {
 		$email_clause = " AND d.email = '" . $email . "'";
 	}
 
-	// Verify that there's data to show. If not, suppress the report displays.
+	// Determine if a specific stat was requested.
+	$stat = '';
+	if ($_GET["stat"]) {
+		$stat = sanitize_input($db,$_GET["stat"],12);
+	}
 
+	write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
+
+	// Verify that there's data to show. If not, suppress the report displays.
+// add a clause to check by the stat requested
 	$query = "SELECT NULL FROM repos r
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
@@ -88,28 +96,26 @@ if ($_GET["id"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email);
+			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email,$stat);
 
 		} else {
 
 			echo '<div class="content-block">
 			<h2>Contributor summary</h2>';
 
-//			if ($affiliation == 'All') {
 			if (($affiliation == 'All') || (($affiliation == 'All') && ($email != 'All'))) {
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year,$affiliation,$email);
+				gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
 			}
 
-//			if (($email == 'All') || (($email != 'All') && ($affiliation != 'All'))) {
 			if (($email == 'All') || ($affiliation != 'All')) {
 
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year,$affiliation,$email);
+				gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
 			}

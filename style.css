@@ -189,6 +189,18 @@ th.results-total {
 	float: right;
 }
 
+#stat-selector {
+	font-size: 100%;
+}
+
+#stat-selector span.item {
+	padding-right: 20px;
+}
+
+#stat-selector span.active {
+	text-decoration: underline;
+}
+
 #affiliation-list {
 	overflow: scroll;
 	max-height: 300px;

@@ -49,8 +49,15 @@ if ($_GET["repo"]) {
 		$email_clause = " AND d.email = '" . $email . "'";
 	}
 
-	// First, verify that there's data to show. If not, suppress the report displays.
+	// Determine if a specific stat was requested.
+	$stat = '';
+	if ($_GET["stat"]) {
+		$stat = sanitize_input($db,$_GET["stat"],12);
+	}
 
+	write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
+
+	// First, verify that there's data to show. If not, suppress the report displays.
 	$query = "SELECT NULL FROM repos r
 		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
 		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
@@ -70,7 +77,7 @@ if ($_GET["repo"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All',$year,$affiliation,$email);
+			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All',$year,$affiliation,$email,$stat);
 
 		} else {
 
@@ -79,13 +86,13 @@ if ($_GET["repo"]) {
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email);
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email,$stat);
 
 			echo '</div> <!-- .sub-block -->
 
 			<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email);
+			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email,$stat);
 
 			echo '</div> <!-- .sub-block -->
 
