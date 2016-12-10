@@ -37,6 +37,7 @@ At this point, you should be able to access facade's web interface.
 1. Clone gitdm from git://git.lwn.net/gitdm.git
 2. Move it to wherever you want to keep it on the system.
 3. In the web interface, go to Configure and update 'Location of gitdm'.
+4. There's a patch for gitdm in facade/utilities, if you plan to analyze GitHub repos.
 
 ### Worker script setup:
 
