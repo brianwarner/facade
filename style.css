@@ -127,6 +127,38 @@ select.select-150 {
 	width: 150px;
 }
 
+.detail {
+	position: relative;
+	display: inline-block;
+}
+
+.detail-text {
+	visibility: hidden;
+	white-space: nowrap;
+	background-color: #DDD;
+	padding: 5px 10px;
+	border-radius: 4px;
+	position: absolute;
+	bottom: 140%;
+	left: 20px;
+	z-index: 1;
+}
+
+.detail-text::after {
+    content: " ";
+    position: absolute;
+    top: 100%;
+    left: 25px;
+    margin-left: -8px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: #DDD transparent transparent transparent;
+}
+
+.detail:hover .detail-text {
+	visibility: visible;
+}
+
 table {
 	border-collapse: collapse;
 	width: 100%;

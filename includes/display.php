@@ -390,7 +390,7 @@ function list_repos ($db,$project_id) {
 
 			$row_repo_log = $result_repo_log->fetch_assoc();
 
-			echo '<strong>';
+			echo '<div class="detail"><strong>';
 
 			if ($row_repo_log["status"]) {
 				echo $row_repo_log["status"];
@@ -412,7 +412,7 @@ function list_repos ($db,$project_id) {
 
 			if ($row_repo_log["date_attempted"]) {
 				$date_attempted = strtotime($row_repo_log["date_attempted"]);
-				echo '<br>Last successful pull at<br>' . date("H:i", $date_attempted) . ' on ' . date("M j, Y", $date_attempted);
+				echo '<span class="detail-text">Last successful pull at<br>' . date("H:i", $date_attempted) . ' on ' . date("M j, Y", $date_attempted). '</span>';
 			}
 
 			// Determine if repo is marked to be removed during the next facade-worker.py run
@@ -422,13 +422,15 @@ function list_repos ($db,$project_id) {
 			}
 
 
-			echo '</td>
+			echo '</div><!-- .detail -->
+				</td>
 				<td><span class="button"><form action="manage" id="delrepo"
 				method="post">
 				<input type="submit" name="confirmdelete_repo" value="delete">
 				<input type="hidden" name="project_id" value="' . $project_id . '">
 				<input type="hidden" name="repo_id" value="' . $row_repo["id"]. '">
-				</form></span>';
+				</form></span>
+				<div class="detail">';
 
 			// Find any incomplete repos
 
@@ -471,10 +473,11 @@ function list_repos ($db,$project_id) {
 
 			if ($row_gitdm_master['start_date']) {
 				$date_attempted = strtotime($row_gitdm_master["start_date"]);
-				echo '<br> Current through<br>' . date("F j, Y", $date_attempted);
+				echo '<span class="detail-text">Current through<br>' . date("F j, Y", $date_attempted) . '</span>';
 			}
 
-			echo '</td>
+			echo '</div><!-- .detail -->
+				</td>
 				</tr>';
 
 		}

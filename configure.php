@@ -215,24 +215,25 @@ echo '<div class="content-block">
 <table>
 
 <tr>
-<td class="half"><strong>Start all analysis on this
-date</strong><br><i>format: yyyy-mm-dd<br>default: 2000-01-01</i></td>
+<td class="half"><div class="detail"><strong>Start all analysis on this
+date</strong>
+<span class="detail-text"><i>format: yyyy-mm-dd<br>default: 2000-01-01</i></td>
 <td class="half">' . get_setting($db,"start_date") .
-edit_setting_button("start_date") . '</td>
+edit_setting_button("start_date") . '</span></div></td>
 </tr>
 
 <tr>
-<td><strong>End all analysis on this date</strong><br><i>format: yyyy-mm-dd,
-yesterday<br>default: yesterday</i></td>
+<td><div class="detail"><strong>End all analysis on this date</strong><span class="detail-text"><i>format: yyyy-mm-dd,
+yesterday<br>default: yesterday</i></span></div></td>
 <td>' . get_setting($db,"end_date") . edit_setting_button("end_date") .
 '</td>
 </tr>
 
 <!--<tr>
-<td><strong>Analysis period</strong><br><i>format: daily, weekly,
+<td><div class="detail"><strong>Analysis period</strong><span class="detail-text"><i>format: daily, weekly,
 monthly, annually<br>default: daily</i></td>
 <td>' . get_setting($db,"interval") . edit_setting_button("interval") .
-'</td></tr>-->
+'</span></div></td></tr>-->
 
 </table>
 
@@ -240,26 +241,26 @@ monthly, annually<br>default: daily</i></td>
 
 <table>
 <tr>
-<td class="half"><strong>Location of gitdm directory on
-server</strong><br><i>format: system path<br>default:
+<td class="half"><div class="detail"><strong>Location of gitdm directory on
+server</strong><span class="detail-text"><i>format: system path<br>default:
 /opt/facade/gitdm</i></td>
 <td class="half">' .
 stripslashes(get_setting($db,"gitdm")) . edit_setting_button("gitdm") .
-'</td>
+'</span></div></td>
 </tr>
 
 <tr>
-<td><strong>Location of git repos (must be writable<br>by user account doing
-the analysis)</strong><br><i>format: system path<br>default:
+<td><div class="detail"><strong>Location of git repos (must be writable<br>by user account doing
+the analysis)</strong><span class="detail-text"><i>format: system path<br>default:
 /opt/facade/git-trees/</i></td>
 <td>' . get_setting($db,"repo_directory") .
-edit_setting_button("repo_directory") . '</td>
+edit_setting_button("repo_directory") . '</span></div></td>
 </tr>
 
 <tr>
-<td><strong>Log level</strong><br><i>default: Quiet</i></td>
+<td><div class="detail"><strong>Log level</strong><span class="detail-text"><i>default: Quiet</i></td>
 <td>' . get_setting($db,"log_level") . edit_setting_button("log_level") .
-'</td>
+'</span></div></td>
 </tr>
 
 </table>
