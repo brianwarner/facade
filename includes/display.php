@@ -495,6 +495,8 @@ function list_excludes($db,$project_id = NULL) {
 	Project ID of 0 returns global excludes. No project ID returns
 	all exclusion rules. */
 
+	$stat_clause = "sum(d.added)";
+
 	// If scope is for a specific project, get that project's name - can I eliminate this?
 	if ($project_id > 0) {
 		$query = "SELECT name FROM projects
