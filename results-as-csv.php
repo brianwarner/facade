@@ -107,7 +107,7 @@ foreach ($projects as $project) {
 		AND e.domain IS NULL" .
 		$date_clause .
 		$affiliations_clause;
-print $query;
+
 	$result = query_db($db,$query,'Fetching project data');
 
 	// Write the project-specific data
