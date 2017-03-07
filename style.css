@@ -52,8 +52,8 @@ a:link, a:visited {
 	margin-left: 10px;
 }
 
-.menu-item {
-
+.logout {
+	float: right;
 }
 
 #site-title {

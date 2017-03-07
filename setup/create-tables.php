@@ -254,8 +254,89 @@ $query = "DROP TABLE IF EXISTS unknown_cache;
 
 multi_query_db($db,$query,"Create unknown contributor cache table");
 
+/* Create the auth tables
 
+These are used for basic user authentication and account history.
+*/
 
+include_once "includes/db.php";
+$db = setup_db();
+
+$query = "DROP TABLE IF EXISTS auth;
+	CREATE TABLE auth (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	user VARCHAR(64) NOT NULL,
+	email VARCHAR(64) NOT NULL,
+	password VARCHAR(64) NOT NULL,
+	created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+
+multi_query_db($db,$query,"Create auth table");
+
+$query = "DROP TABLE IF EXISTS auth_history;
+	CREATE TABLE auth_history (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	user VARCHAR(64) NOT NULL,
+	status VARCHAR(96) NOT NULL,
+	attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+
+multi_query_db($db,$query,"Create auth_history table");
+
+/*
+Create the administor
+*/
+
+$user = "";
+$pass = "";
+$pass_confirm = "";
+$email = "";
+
+while ($user == "") {
+
+	echo "Administrator user name: ";
+	$user = trim(fgets(STDIN));
+
+	if ($user == "") {
+		echo "Username cannot be empty.\n\n";
+	}
+}
+
+while (($pass != $pass_confirm) || ($pass == "")) {
+
+	echo "Administrator password: ";
+	$pass = trim(fgets(STDIN));
+
+	echo "Confirm password: ";
+	$pass_confirm = trim(fgets(STDIN));
+
+	if ($pass == "") {
+		echo "Password cannot be empty.\n\n";
+	} else if ($pass != $pass_confirm) {
+		echo "Passwords do not match.\n\n";
+	}
+}
+
+while ($email == "") {
+
+	echo "Administrator email: ";
+	$email = trim(fgets(STDIN));
+
+	if ($email == "") {
+		echo "Email cannot be empty.\n\n";
+	}
+}
+
+$query = "INSERT INTO auth (user,email,password)
+	VALUES ('$user','$email','$pass')";
+
+multi_query_db($db,$query,"Add administrator");
+
+$query = "INSERT INTO auth_history (user,status)
+	VALUES ('$user','Created')";
+
+multi_query_db($db,$query,"Log user");
 
 close_db($db);
 
