@@ -12,6 +12,12 @@ include_once "includes/delete.php";
 include_once "includes/db.php";
 $db = setup_db();
 
+// Protect against unauthorized access
+if (!$_SESSION['access_granted']) {
+	echo '<meta http-equiv="refresh" content="0;/user">';
+	die;
+}
+
 
 if ($_POST["confirmnew_repo"]) {
 

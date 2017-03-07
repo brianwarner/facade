@@ -14,6 +14,12 @@ include_once "includes/header.php";
 include_once "includes/db.php";
 $db = setup_db();
 
+// Check if user is authenticated.  If not, bounce to login page
+if (!$_SESSION['access_granted']) {
+	echo '<meta http-equiv="refresh" content="0;/user">';
+	die;
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 	$setting = sanitize_input($db,$_POST["setting"],32);

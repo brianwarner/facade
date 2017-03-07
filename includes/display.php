@@ -424,13 +424,16 @@ function list_repos ($db,$project_id) {
 
 			echo '</div><!-- .detail -->
 				</td>
-				<td><span class="button"><form action="manage" id="delrepo"
-				method="post">
-				<input type="submit" name="confirmdelete_repo" value="delete">
-				<input type="hidden" name="project_id" value="' . $project_id . '">
-				<input type="hidden" name="repo_id" value="' . $row_repo["id"]. '">
-				</form></span>
-				<div class="detail">';
+				<td>';
+			if ($_SESSION['access_granted']) {
+				echo '<span class="button"><form action="manage" id="delrepo"
+					method="post">
+					<input type="submit" name="confirmdelete_repo" value="delete">
+					<input type="hidden" name="project_id" value="' . $project_id . '">
+					<input type="hidden" name="repo_id" value="' . $row_repo["id"]. '">
+					</form></span>';
+			}
+			echo '<div class="detail">';
 
 			// Find any incomplete repos
 
@@ -555,7 +558,8 @@ function list_excludes($db,$project_id = NULL) {
 
 			// If current page is in the rule's scope, allow user to delete it
 			if (isset($project_id) &&
-			$row['projects_id'] == $project_id) {
+			$row['projects_id'] == $project_id &&
+			$_SESSION['access_granted']) {
 				echo '<span class="button">
 					<form action="manage" id="delexcludedomain" method="post">
 					<input type="submit" name="delete_excludedomain" value="delete">
@@ -588,7 +592,7 @@ function list_excludes($db,$project_id = NULL) {
 		echo '<p><strong>No domains excluded.</strong></p>';
 	}
 
-	if (isset($project_id)) {
+	if (isset($project_id) && $_SESSION['access_granted']) {
 		echo '<p>
 			<form action="manage" id="newexcludedomain" method="post">
 			<input type="submit" name="confirmnew_excludedomain"
@@ -640,7 +644,8 @@ function list_excludes($db,$project_id = NULL) {
 
 			// If current page is in rule's scope, allow user to delete it
 			if (isset($project_id) &&
-			$row['projects_id'] == $project_id) {
+			$row['projects_id'] == $project_id &&
+			$_SESSION['access_granted']) {
 
 				echo '<span class="button">
 					<form action="manage" id="delexcludeemail" method="post">
@@ -677,7 +682,7 @@ function list_excludes($db,$project_id = NULL) {
 		echo '<p><strong>No emails excluded.</strong></p>';
 	}
 
-	if (isset($project_id)) {
+	if (isset($project_id) && $_SESSION['access_granted']) {
 		echo '<form action="manage" id="newexcludeemail" method="post">
 			<input type="submit" name="confirmnew_excludeemail"
 			value="Exclude an email from ' . $project_name . '">

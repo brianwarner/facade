@@ -13,7 +13,6 @@ include_once "includes/db.php";
 include_once "includes/display.php";
 $db = setup_db();
 
-
 if ($_GET["id"]) {
 
 	// Display a specific project's details.
@@ -144,24 +143,25 @@ if ($_GET["id"]) {
 
 	list_repos($db,$project_id);
 
-	echo '<form action="manage" id="newrepo" method="post">
-		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="confirmnew_repo" value="Add a single repo">
-		</form>
-		<form action="manage" id="cgit" method="post">
-		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="confirmimport_cgit" value="Import from cgit">
-		</form></p>
-		<form action="manage" id="gerrit" method="post">
-		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
-		</form></p>
-		<form action="manage" id="github" method="post">
-		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="confirmimport_github" value="Import from GitHub">
-		</form></p>
-
-		</div> <!-- .content-block -->';
+	if ($_SESSION['access_granted']) {
+		echo '<form action="manage" id="newrepo" method="post">
+			<p><input type="hidden" name="project_id" value="' . $project_id . '">
+			<input type="submit" name="confirmnew_repo" value="Add a single repo">
+			</form>
+			<form action="manage" id="cgit" method="post">
+			<p><input type="hidden" name="project_id" value="' . $project_id . '">
+			<input type="submit" name="confirmimport_cgit" value="Import from cgit">
+			</form></p>
+			<form action="manage" id="gerrit" method="post">
+			<p><input type="hidden" name="project_id" value="' . $project_id . '">
+			<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
+			</form></p>
+			<form action="manage" id="github" method="post">
+			<p><input type="hidden" name="project_id" value="' . $project_id . '">
+			<input type="submit" name="confirmimport_github" value="Import from GitHub">
+			</form></p>';
+	}
+	echo '</div> <!-- .content-block -->';
 
 } else {
 
@@ -204,10 +204,13 @@ if ($_GET["id"]) {
 		echo '<div class="content-block"><p>No projects found.</p>';
 	}
 
-	echo '<form action="manage" id="newproject" method="post">
-<p><input type="submit" name="confirmnew_project" value="Add a new project">
-</form></p>
-</div> <!-- .content-block -->';
+	if ($_SESSION['access_granted']) {
+		echo '<form action="manage" id="newproject" method="post">
+			<p><input type="submit" name="confirmnew_project"
+		value="Add a new project"></form></p>';
+	}
+
+	echo '</div> <!-- .content-block -->';
 
 }
 
@@ -223,7 +226,7 @@ if ($project_id == 0) {
 
 echo '</div> <!-- .content-block -->';
 
-if ($_GET["id"]) {
+if ($_GET["id"] && $_SESSION['access_granted']) {
 	echo '<div class="content-block">
 	<h2>Manage</h2>
 	<p><form action="manage" id="editdelproject" method="post">

@@ -14,6 +14,11 @@ include_once "includes/header.php";
 include_once "includes/db.php";
 $db = setup_db();
 
+if (!$_SESSION['access_granted']) {
+	echo '<meta http-equiv="refresh" content="0;user">';
+	die;
+}
+
 $query = "SELECT NULL FROM special_tags";
 $result = query_db($db,$query,'Check if any tags are in the database');
 

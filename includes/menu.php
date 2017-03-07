@@ -13,11 +13,13 @@ echo '<div id="menu-item-wrapper">
 
 <span class="menu-item"><a href="./">Home</a></span>
 <span class="menu-item"><a href="projects">Projects</a></span>
-<span class="menu-item"><a href="repositories">Repositories</a></span>
-<span class="menu-item"><a href="tags">Tags</a></span>
-<span class="menu-item"><a href="results">Results</a></span>';
+<span class="menu-item"><a href="repositories">Repositories</a></span>';
+if ($_SESSION['access_granted']) {
+	echo '<span class="menu-item"><a href="tags">Tags</a></span>';
+}
+echo '<span class="menu-item"><a href="results">Results</a></span>';
 
-if (!empty($_SESSION['access_granted'])) {
+if ($_SESSION['access_granted']) {
 	echo '<span class="menu-item"><a href="configure">Configure</a></span>
 		<span class="menu-item logout"><a href="user">' . $_SESSION['user'] . '</a></span>';
 }
