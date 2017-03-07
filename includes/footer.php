@@ -16,10 +16,6 @@
 
 <div id="footer-wrapper">
 
-<div class="menu">
-<?php include "menu.php" ?>
-</div> <!-- .menu -->
-
 <div id="footer">
 <p>&copy; Brian Warner <?php echo date("Y") ?><br>
 This is open source software, licensed under GPL v2.<br />
