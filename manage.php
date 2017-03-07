@@ -11,6 +11,7 @@
 include_once "includes/delete.php";
 include_once "includes/db.php";
 $db = setup_db();
+session_start();
 
 // Protect against unauthorized access
 if (!$_SESSION['access_granted']) {
