@@ -329,7 +329,8 @@ while ($email == "") {
 }
 
 $query = "INSERT INTO auth (user,email,password)
-	VALUES ('$user','$email','$pass')";
+	VALUES ('$user','$email',
+	'" . password_hash($pass,PASSWORD_DEFAULT) . "')";
 
 multi_query_db($db,$query,"Add administrator");
 
