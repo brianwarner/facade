@@ -35,7 +35,7 @@ if (strtolower(trim($input)) != 'yes') {
 $start_date = "2000-01-01";
 $end_date = "yesterday";
 $interval = "daily";
-$gitdm = "/opt/gitdm";
+$gitdm = "/opt/gitdm/";
 $repo_directory = "/opt/facade/git-trees";
 
 // Create the settings table:
