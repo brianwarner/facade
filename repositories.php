@@ -82,21 +82,26 @@ if ($_GET["repo"]) {
 		} else {
 
 			echo '<div class="content-block">
-			<h2>Contributor summary</h2>
+			<h2>Contributor summary</h2>';
 
-			<div class="sub-block">';
+			if (($affiliation == 'All') || (($affiliation == 'All') && ($email != 'All'))) {
+				echo '<div class="sub-block">';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email,$stat);
+				gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email,$stat);
 
-			echo '</div> <!-- .sub-block -->
+				echo '</div> <!-- .sub-block -->';
+			}
 
-			<div class="sub-block">';
+			if (($email == 'All') || ($affiliation != 'All')) {
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email,$stat);
+				echo '<div class="sub-block">';
 
-			echo '</div> <!-- .sub-block -->
+				gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email,$stat);
 
-			</div> <!-- .content-block -->';
+				echo '</div> <!-- .sub-block -->';
+            }
+			echo '</div> <!-- .sub-block -->';
+
 		}
 	}
 
