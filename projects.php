@@ -138,31 +138,34 @@ if ($_GET["id"]) {
 		}
 	}
 
-	echo '<div class="content-block">
-		<h2>Current repositories</h2>';
+	if ($year == 'All' && $affiliation == 'All') {
 
-	list_repos($db,$project_id);
+		echo '<div class="content-block">
+			<h2>Current repositories</h2>';
 
-	if ($_SESSION['access_granted']) {
-		echo '<form action="manage" id="newrepo" method="post">
-			<p><input type="hidden" name="project_id" value="' . $project_id . '">
-			<input type="submit" name="confirmnew_repo" value="Add a single repo">
-			</form>
-			<form action="manage" id="cgit" method="post">
-			<p><input type="hidden" name="project_id" value="' . $project_id . '">
-			<input type="submit" name="confirmimport_cgit" value="Import from cgit">
-			</form></p>
-			<form action="manage" id="gerrit" method="post">
-			<p><input type="hidden" name="project_id" value="' . $project_id . '">
-			<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
-			</form></p>
-			<form action="manage" id="github" method="post">
-			<p><input type="hidden" name="project_id" value="' . $project_id . '">
-			<input type="submit" name="confirmimport_github" value="Import from GitHub">
-			</form></p>';
+		list_repos($db,$project_id);
+
+		if ($_SESSION['access_granted']) {
+			echo '<form action="manage" id="newrepo" method="post">
+				<p><input type="hidden" name="project_id" value="' . $project_id . '">
+				<input type="submit" name="confirmnew_repo" value="Add a single repo">
+				</form>
+				<form action="manage" id="cgit" method="post">
+				<p><input type="hidden" name="project_id" value="' . $project_id . '">
+				<input type="submit" name="confirmimport_cgit" value="Import from cgit">
+				</form></p>
+				<form action="manage" id="gerrit" method="post">
+				<p><input type="hidden" name="project_id" value="' . $project_id . '">
+				<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
+				</form></p>
+				<form action="manage" id="github" method="post">
+				<p><input type="hidden" name="project_id" value="' . $project_id . '">
+				<input type="submit" name="confirmimport_github" value="Import from GitHub">
+				</form></p>';
+
+		}
+		echo '</div> <!-- .content-block -->';
 	}
-	echo '</div> <!-- .content-block -->';
-
 } else {
 
 	// List all of the projects
