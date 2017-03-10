@@ -17,11 +17,7 @@
 <div id="footer-wrapper">
 
 <div id="footer">
-<p>&copy; Brian Warner <?php echo date("Y") ?><br>
-This is open source software, licensed under GPL v2.<br />
-No warranties, express or implied.</p>
-<p>Major thanks to Jon Corbet and Greg KH for creating gitdm,<br />
-which makes this analysis possible.</p>
+<p><a href="about">about</a> | <a href="user">manage</a></p>
 </div> <!-- #footer -->
 
 </div> <!-- #footer-wrapper -->
