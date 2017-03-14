@@ -289,13 +289,29 @@ def gitdm_analysis():
 
 	for repo in repos:
 
-		query = ("SELECT cal_table.date FROM cal_table LEFT JOIN "
-				"(SELECT * FROM gitdm_master WHERE repos_id=%s) repo "
-				"ON cal_table.date = repo.start_date "
-				"WHERE repo.start_date IS NULL" % repo["id"])
+		query = 'SELECT date FROM cal_table';
+		cursor.execute(query)
+		calendar_dates = cursor.fetchall()
+
+		query = ('SELECT start_date FROM gitdm_master WHERE repos_id=%s'
+			% repo["id"]);
 
 		cursor.execute(query)
-		missing_dates = cursor.fetchall()
+		existing_dates = cursor.fetchall()
+
+		missing_dates = []
+
+		# Find all dates where the repo is missing an entry.
+		# Empirically, iterating is much faster than a clever left join.
+
+		for c_date in calendar_dates:
+			found = 0
+			for e_date in existing_dates:
+				if str(c_date['date']) == e_date['start_date']:
+					found = 1
+
+			if not found:
+				missing_dates.append(c_date)
 
 		for date in missing_dates:
 
