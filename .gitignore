@@ -7,8 +7,9 @@
 
 # Config files
 db.php
+db.py
 database.py
-database.pyc
+*.pyc
 
 # Gitdm output files
 *.tmp

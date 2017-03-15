@@ -19,8 +19,8 @@ import MySQLdb
 import imp
 
 try:
-	imp.find_module('database')
-	from database import db,cursor
+	imp.find_module('db')
+	from db import db,cursor
 except:
 	sys.exit("Can't find database.py. Have you created it?")
 

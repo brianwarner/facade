@@ -14,7 +14,7 @@
 # otherwise you'll thrash your machine.
 
 import MySQLdb
-from database import db,cursor
+from db import db,cursor
 
 query = "UPDATE settings SET value='Idle' WHERE setting='utility_status'"
 cursor.execute(query)
