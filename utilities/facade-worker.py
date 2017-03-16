@@ -273,25 +273,29 @@ def gitdm_analysis():
 		end_date = (datetime.date.today() -
 			datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-	# Create temporary table with missing dates to find any backfills
-
-	log_activity('Verbose','Determining which repos are missing gitdm data')
-	query = "CALL make_cal_table('%s','%s')" % (start_date, end_date);
-	cursor.execute(query)
-	db.commit()
-
 	# Iterate over all repos and mark any dates that don't have a log entry as
 	# "Pending" so we know which data needs to be calculated.
+
+	# Generate the range of dates that should be in the database
+
+	all_dates = []
+
+	s_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
+	e_date = datetime.datetime.strptime(end_date,'%Y-%m-%d')
+
+	c_date = s_date
+
+	while c_date <= e_date:
+		all_dates.append(c_date.strftime('%Y-%m-%d'))
+		c_date += datetime.timedelta(days=1)
+
+	# Cycle through the repos and determine which dates are missing
 
 	query = "SELECT id FROM repos WHERE status='Active'";
 	cursor.execute(query)
 	repos = cursor.fetchall()
 
 	for repo in repos:
-
-		query = 'SELECT date FROM cal_table';
-		cursor.execute(query)
-		calendar_dates = cursor.fetchall()
 
 		query = ('SELECT start_date FROM gitdm_master WHERE repos_id=%s'
 			% repo["id"]);
@@ -304,19 +308,19 @@ def gitdm_analysis():
 		# Find all dates where the repo is missing an entry.
 		# Empirically, iterating is much faster than a clever left join.
 
-		for c_date in calendar_dates:
+		for a_date in all_dates:
 			found = 0
 			for e_date in existing_dates:
-				if str(c_date['date']) == e_date['start_date']:
+				if a_date == e_date['start_date']:
 					found = 1
 
 			if not found:
-				missing_dates.append(c_date)
+				missing_dates.append(a_date)
 
 		for date in missing_dates:
 
 			query = ("INSERT INTO gitdm_master (repos_id,status,start_date) "
-				"VALUES	(%s, 'Pending', '%s')" % (repo["id"],date["date"]))
+				"VALUES	(%s, 'Pending', '%s')" % (repo["id"],date))
 
 			cursor.execute(query)
 			db.commit()
