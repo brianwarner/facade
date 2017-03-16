@@ -218,31 +218,6 @@ def create_gitdm_data(reset=0):
 	cursor.execute(create)
 	db.commit()
 
-def create_cal_table_procedure(reset=0):
-
-# We may just be able to get rid of this in a future version. It was originally
-# needed for a left join that determined which dates were missing data. Now we
-# do this in python with for loops because the join was soooooo slooooooooow
-
-	if reset:
-		clear = "DROP PROCEDURE IF EXISTS make_cal_table"
-
-		cursor.execute(clear)
-		db.commit()
-
-	create = ("CREATE PROCEDURE make_cal_table(start_date DATE, end_date DATE)"
-		"BEGIN"
-		"DROP TABLE IF EXISTS cal_table;"
-		"CREATE TABLE cal_table(date DATE);"
-		"WHILE start_date <= end_date DO"
-		"INSERT INTO cal_table (date) VALUES (start_date);"
-		"SET start_date = date_add(start_date, INTERVAL 1 DAY);"
-		"END WHILE;"
-		"END;")
-
-	cursor.execute(create)
-	db.commit()
-
 def create_special_tags(reset=0):
 
 # Entries in this table are matched against email addresses found by gitdm to
@@ -419,7 +394,6 @@ if action.lower() == 'i':
 		create_repos_fetch_log('clear')
 		create_gitdm_master('clear')
 		create_gitdm_data('clear')
-#		create_cal_table_procedure('clear')
 		create_special_tags('clear')
 		create_utility_log('clear')
 		create_unknown_cache('clear')
@@ -445,7 +419,6 @@ elif action.lower() == 'u':
 		create_repos_fetch_log('clear')
 		create_gitdm_master('clear')
 		create_gitdm_data('clear')
-#		create_cal_table_procedure()
 		create_unknown_cache('clear')
 		create_auth('clear')
 
