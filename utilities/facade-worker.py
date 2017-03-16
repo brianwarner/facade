@@ -449,9 +449,15 @@ def correct_modified_gitdm_affiliations():
 
 						cursor.execute(query)
 
-						md5sum = cursor.fetchone()
+						if cursor.rowcount == 0:
+							md5sum = ''
+						else:
+							result = cursor.fetchone()
+							md5sum = result["md5sum"]
 
-						if not hasher.hexdigest() == md5sum["md5sum"]:
+
+						if not hasher.hexdigest() == md5sum:
+#						if not hasher.hexdigest() == md5sum["md5sum"]:
 
 						# No match found, process the file for differences
 
