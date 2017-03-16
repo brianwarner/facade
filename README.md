@@ -21,8 +21,8 @@ Facade is licensed under GPL v2.
 
 1. Create a database, a user, and grant all privileges.
 2. Copy includes/db.php.default to includes/db.php, add credentials.
-3. Run 'php setup/create-tables.php'
-4. Copy utilities/database.py.default to utilities/database.py, add credentials.
+3. Copy utilities/db.py.default to utilities/db.py, add credentials.
+4. Run 'python setup.py'
 
 At this point, you should be able to access facade's web interface.
 
