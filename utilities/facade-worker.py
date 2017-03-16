@@ -22,7 +22,7 @@ try:
 	imp.find_module('db')
 	from db import db,cursor
 except:
-	sys.exit("Can't find database.py. Have you created it?")
+	sys.exit("Can't find db.py. Have you created it?")
 
 import HTMLParser
 html = HTMLParser.HTMLParser()
