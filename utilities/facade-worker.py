@@ -684,6 +684,199 @@ def build_unknown_affiliation_cache():
 
 	log_activity('Info','Caching unknown affiliations (complete)')
 
+def build_web_caches():
+	# Cache the gitdm results by month and year.  This greatly reduces the
+	# amount of calculation required when browsing results, particularly if
+	# there are a lot of repos or a long range of dates.  This also enables a
+	# read-only kiosk mode that only displays results, suitable for a
+	# public-facing web server.
+
+	update_status('Caching web data for display')
+	log_activity('Info','Caching web data for display')
+
+	# Clear the old cache tables
+
+	# Create a temporary table for each cache, so we can swap in place.
+
+	query = "CREATE TABLE IF NOT EXISTS pmc LIKE project_monthly_cache";
+
+	cursor.execute(query)
+	db.commit()
+
+	query = "CREATE TABLE IF NOT EXISTS pac LIKE project_annual_cache";
+
+	cursor.execute(query)
+	db.commit()
+
+	query = "CREATE TABLE IF NOT EXISTS rmc LIKE repo_monthly_cache";
+
+	cursor.execute(query)
+	db.commit()
+
+	query = "CREATE TABLE IF NOT EXISTS rac LIKE repo_annual_cache";
+
+	cursor.execute(query)
+	db.commit()
+
+	# Swap in place, just in case someone's using the web UI at this moment.
+
+	query = ("RENAME TABLE project_monthly_cache TO pmc_old, "
+		"pmc TO project_monthly_cache, "
+		"project_annual_cache TO pac_old, "
+		"pac TO project_annual_cache, "
+		"repo_monthly_cache TO rmc_old, "
+		"rmc TO repo_monthly_cache, "
+		"repo_annual_cache TO rac_old, "
+		"rac TO repo_annual_cache")
+
+	cursor.execute(query)
+	db.commit()
+
+	# Get rid of the old tables.
+
+	query = ("DROP TABLE pmc_old, "
+		"pac_old, "
+		"rmc_old, "
+		"rac_old")
+
+	cursor.execute(query)
+	db.commit()
+
+	# Start caching by project
+
+	query = "SELECT id FROM projects"
+
+	cursor.execute(query)
+	projects = cursor.fetchall()
+
+	for project in projects:
+
+		# Cache monthly data by project
+
+		query = ("INSERT INTO project_monthly_cache "
+			"SELECT r.projects_id as id, "
+			"d.affiliation as affiliation, "
+			"d.email as email, "
+			"YEAR(m.start_date) as year, "
+			"MONTH(m.start_date) as month, "
+			"sum(d.added) as added, "
+			"sum(d.removed) as removed, "
+			"sum(d.changesets) as changesets "
+			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
+			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
+			"LEFT JOIN exclude e ON (d.email = e.email "
+				"AND (r.projects_id = e.projects_id "
+					"OR e.projects_id = 0)) "
+				"OR (d.email LIKE CONCAT('%%',e.domain) "
+					"AND (r.projects_id = e.projects_id "
+						"OR e.projects_id = 0)) "
+			"WHERE r.projects_id=%i "
+			"AND e.email IS NULL "
+			"AND e.domain IS NULL "
+			"GROUP BY d.email, "
+			"d.affiliation, "
+			"MONTH(m.start_date), "
+			"YEAR(m.start_date)" % project["id"])
+
+		cursor.execute(query)
+		db.commit()
+
+		# Cache annual data by project
+
+		query = ("INSERT INTO project_annual_cache "
+			"SELECT r.projects_id as id, "
+			"d.affiliation as affiliation, "
+			"d.email as email, "
+			"YEAR(m.start_date) as year, "
+			"sum(d.added) as added, "
+			"sum(d.removed) as removed, "
+			"sum(d.changesets) as changesets "
+			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
+			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
+			"LEFT JOIN exclude e ON (d.email = e.email "
+				"AND (r.projects_id = e.projects_id "
+					"OR e.projects_id = 0)) "
+				"OR (d.email LIKE CONCAT('%%',e.domain) "
+					"AND (r.projects_id = e.projects_id "
+						"OR e.projects_id = 0)) "
+			"WHERE r.projects_id=%i "
+			"AND e.email IS NULL "
+			"AND e.domain IS NULL "
+			"GROUP BY d.email, "
+			"d.affiliation, "
+			"YEAR(m.start_date)" % project["id"])
+
+		cursor.execute(query)
+		db.commit()
+
+	# Start caching by repo
+
+	query = "SELECT id FROM repos"
+
+	cursor.execute(query)
+	repos = cursor.fetchall()
+
+	for repo in repos:
+
+		# Cache monthly data by repo
+
+		query = ("INSERT INTO repo_monthly_cache "
+			"SELECT r.id as id, "
+			"d.affiliation as affiliation, "
+			"d.email as email, "
+			"YEAR(m.start_date) as year, "
+			"MONTH(m.start_date) as month, "
+			"sum(d.added) as added, "
+			"sum(d.removed) as removed, "
+			"sum(d.changesets) as changesets "
+			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
+			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
+			"LEFT JOIN exclude e ON (d.email = e.email "
+				"AND (r.projects_id = e.projects_id "
+					"OR e.projects_id = 0)) "
+				"OR (d.email LIKE CONCAT('%%',e.domain) "
+					"AND (r.projects_id = e.projects_id "
+						"OR e.projects_id = 0)) "
+			"WHERE r.id=%i "
+			"AND e.email IS NULL "
+			"AND e.domain IS NULL "
+			"GROUP BY d.email, "
+			"d.affiliation, "
+			"MONTH(m.start_date), "
+			"YEAR(m.start_date)" % repo["id"])
+
+		cursor.execute(query)
+		db.commit()
+
+		# Cache annual data by repo
+
+		query = ("INSERT INTO repo_annual_cache "
+			"SELECT r.id as id, "
+			"d.affiliation as affiliation, "
+			"d.email as email, "
+			"YEAR(m.start_date) as year, "
+			"sum(d.added) as added, "
+			"sum(d.removed) as removed, "
+			"sum(d.changesets) as changesets "
+			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
+			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
+			"LEFT JOIN exclude e ON (d.email = e.email "
+				"AND (r.projects_id = e.projects_id "
+					"OR e.projects_id = 0)) "
+				"OR (d.email LIKE CONCAT('%%',e.domain) "
+					"AND (r.projects_id = e.projects_id "
+						"OR e.projects_id = 0)) "
+			"WHERE r.id=%i "
+			"AND e.email IS NULL "
+			"AND e.domain IS NULL "
+			"GROUP BY d.email, "
+			"d.affiliation, "
+			"YEAR(m.start_date)" % repo["id"])
+
+		cursor.execute(query)
+		db.commit()
+
+	log_activity('Info','Caching web data for display (complete)')
 
 ### The real program starts here ###
 
@@ -701,7 +894,7 @@ fix_affiliations = 0
 funky_emails = 0
 rebuild_unknown_affiliations = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcgtafu')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcgtafuw')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything by default, unless invoked\n"
@@ -715,7 +908,8 @@ for opt in opts:
 				"	-t	Trim out-of-bounds data if date range changed\n"
 				"	-a	Fix affiliations when config files change\n"
 				"	-f	Fix funky emails (two '@', for example\n"
-				"	-u	Rebuild unknown affiliation cache\n\n")
+				"	-u	Rebuild unknown affiliation cache\n"
+				"	-w	Rebuild website caches\n\n")
 		sys.exit(0)
 	elif opt[0] == '-d':
 		delete_marked_repos = 1
@@ -749,6 +943,10 @@ for opt in opts:
 		rebuild_unknown_affiliations = 1
 		limited_run = 1
 		log_activity('Info','Option set: rebuilding unknown cache.')
+	elif opt[0] == '-w':
+		web_caches = 1
+		limited_run = 1
+		log_activity('Info','Option set: building web caches.')
 
 # Get the location of the directory where git repos are stored
 repo_base_directory = get_setting('repo_directory')
@@ -791,6 +989,9 @@ if not limited_run or (limited_run and funky_emails):
 
 if not limited_run or (limited_run and rebuild_unknown_affiliations):
 	build_unknown_affiliation_cache()
+
+if not limited_run or (limited_run and web_caches):
+	build_web_caches()
 # All done
 
 update_status('Idle')

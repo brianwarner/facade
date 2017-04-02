@@ -39,7 +39,7 @@ def create_settings(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS settings ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"setting VARCHAR(32) NOT NULL,"
 		"value VARCHAR(128) NOT NULL,"
 		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
@@ -73,7 +73,7 @@ def create_projects(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS projects ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"name VARCHAR(64) NOT NULL,"
 		"description VARCHAR(256),"
 		"website VARCHAR(64),"
@@ -97,8 +97,8 @@ def create_repos(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repos ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
-		"projects_id INT NOT NULL,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"projects_id INT UNSIGNED NOT NULL,"
 		"git VARCHAR(256) NOT NULL,"
 		"path VARCHAR(256),"
 		"name VARCHAR(256),"
@@ -119,7 +119,7 @@ def create_gitdm_configs(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS gitdm_configs ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"configfile VARCHAR(128) NOT NULL,"
 		"configtype VARCHAR(32) NOT NULL,"
 		"md5sum VARCHAR(32) NOT NULL,"
@@ -140,8 +140,8 @@ def create_excludes(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS exclude ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
-		"projects_id INT NOT NULL,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64),"
 		"domain VARCHAR(64))")
 
@@ -163,8 +163,8 @@ def create_repos_fetch_log(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
-		"repos_id INT NOT NULL,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(16) NOT NULL,"
 		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
 
@@ -186,8 +186,8 @@ def create_gitdm_master(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS gitdm_master ("
-		"id BIGINT AUTO_INCREMENT PRIMARY KEY,"
-		"repos_id INT NOT NULL,"
+		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(128) NOT NULL,"
 		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
 		"start_date VARCHAR(10))")
@@ -206,14 +206,14 @@ def create_gitdm_data(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS gitdm_data ("
-		"id BIGINT AUTO_INCREMENT PRIMARY KEY,"
-		"gitdm_master_id BIGINT NOT NULL,"
+		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"gitdm_master_id BIGINT UNSIGNED NOT NULL,"
 		"name VARCHAR(64) NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"affiliation VARCHAR(64) NOT NULL,"
-		"added INT NOT NULL,"
-		"removed INT NOT NULL,"
-		"changesets INT NOT NULL)")
+		"added INT UNSIGNED NOT NULL,"
+		"removed INT UNSIGNED NOT NULL,"
+		"changesets INT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
 	db.commit()
@@ -232,7 +232,7 @@ def create_special_tags(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS special_tags ("
-		"id BIGINT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"email VARCHAR(128) NOT NULL,"
 		"start_date DATE NOT NULL,"
 		"end_date DATE,"
@@ -253,7 +253,7 @@ def create_utility_log(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS utility_log ("
-		"id BIGINT AUTO_INCREMENT PRIMARY KEY,"
+		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"level VARCHAR(8) NOT NULL,"
 		"status VARCHAR(128) NOT NULL,"
 		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
@@ -261,7 +261,7 @@ def create_utility_log(reset=0):
 	cursor.execute(create)
 	db.commit()
 
-def create_unknown_cache(reset=0):
+def create_caches(reset=0):
 
 # After each facade-worker run, any unknown contributors and their email domain
 # are cached in this table to make them easier to fetch later.
@@ -273,11 +273,99 @@ def create_unknown_cache(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS unknown_cache ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
-		"projects_id INT NOT NULL,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"domain VARCHAR(64),"
-		"added INT NOT NULL)")
+		"added BIGINT UNSIGNED NOT NULL)")
+
+	cursor.execute(create)
+	db.commit()
+
+# After each facade-worker run, cache results used in summary tables to decrease
+# load times when the database gets large. Also enables a read-only kiosk mode.
+# Must store separate data for monthly and annual data because while you can
+# easily add monthly LoC and patch data and get meaningful annual stats,
+# contributors can't be added across months to get to total annual number.
+
+	# Monthly caches by project
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS project_monthly_cache"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS project_monthly_cache ("
+		"id INT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64) NOT NULL,"
+		"email VARCHAR(64) NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"month TINYINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL)")
+
+	cursor.execute(create)
+	db.commit()
+
+	# Annual caches by project
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS project_annual_cache"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS project_annual_cache ("
+		"id INT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64) NOT NULL,"
+		"email VARCHAR(64) NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL)")
+
+	cursor.execute(create)
+	db.commit()
+
+	# Monthly caches by repo
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS repo_monthly_cache"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS repo_monthly_cache ("
+		"id INT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64) NOT NULL,"
+		"email VARCHAR(64) NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"month TINYINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL)")
+
+	cursor.execute(create)
+	db.commit()
+
+	# Annual caches by repo
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS repo_annual_cache"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS repo_annual_cache ("
+		"id INT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64) NOT NULL,"
+		"email VARCHAR(64) NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
 	db.commit()
@@ -299,7 +387,7 @@ def create_auth(reset=0):
 
 
 	create = ("CREATE TABLE IF NOT EXISTS auth ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"user VARCHAR(64) NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"password VARCHAR(64) NOT NULL,"
@@ -310,7 +398,7 @@ def create_auth(reset=0):
 	db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS auth_history ("
-		"id INT AUTO_INCREMENT PRIMARY KEY,"
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"user VARCHAR(64) NOT NULL,"
 		"status VARCHAR(96) NOT NULL,"
 		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
@@ -396,7 +484,7 @@ if action.lower() == 'i':
 		create_gitdm_data('clear')
 		create_special_tags('clear')
 		create_utility_log('clear')
-		create_unknown_cache('clear')
+		create_caches('clear')
 		create_auth('clear')
 
 	else:
@@ -419,7 +507,7 @@ elif action.lower() == 'u':
 		create_repos_fetch_log('clear')
 		create_gitdm_master('clear')
 		create_gitdm_data('clear')
-		create_unknown_cache('clear')
+		create_caches('clear')
 		create_auth('clear')
 
 	else:

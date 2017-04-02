@@ -25,6 +25,20 @@ query = ("INSERT INTO utility_log (level,status) VALUES "
 cursor.execute(query)
 db.commit()
 
+# If for whatever reason the last run failed and we couldn't drop the stale
+# cache tables, the rename will fail. So we do this just in case.
+query = ("DROP TABLE IF EXISTS pmc_old, "
+	"pac_old, "
+	"rmc_old, "
+	"rac_old, "
+	"pmc, "
+	"pac, "
+	"rmc, "
+	"rac")
+
+cursor.execute(query)
+db.commit()
+
 cursor.close()
 db.close()
 

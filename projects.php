@@ -96,6 +96,7 @@ if ($_GET["id"]) {
 			<h2>All contributions</h2>';
 
 			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email,$stat);
+			cached_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email,$stat);
 
 		} else {
 
@@ -105,7 +106,7 @@ if ($_GET["id"]) {
 			if (($affiliation == 'All') || (($affiliation == 'All') && ($email != 'All'))) {
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year,$affiliation,$email,$stat);
+				cached_results_as_summary_table($db,'project',$project_id,'affiliation',5,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
 			}
@@ -114,7 +115,7 @@ if ($_GET["id"]) {
 
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'project',$project_id,'email',10,$year,$affiliation,$email,$stat);
+				cached_results_as_summary_table($db,'project',$project_id,'email',10,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
 			}

@@ -8,7 +8,272 @@
 * SPDX-License-Identifier:        GPL-2.0
 */
 
+function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,$affiliation,$email,$stat) {
+
+	if ($max_results != 'All') {
+		$results_clause = " LIMIT " . $max_results;
+	}
+
+	if ($year == 'All') {
+		$cache_table = $scope . '_annual_cache';
+		$year_clause = '';
+		$period = 'year';
+
+		// Get the range of years to name the summary array
+
+		$summary_keys = array();
+
+		$query = "SELECT year FROM " . $cache_table .
+			" GROUP BY year ORDER BY year ASC";
+		$result = query_db($db,$query,"Getting range of years");
+
+		while ($year_key = $result->fetch_assoc()) {
+			array_push($summary_keys,$year_key['year']);
+		}
+
+	} else {
+		$cache_table = $scope . '_monthly_cache';
+		$year_clause = "year = " . $year . " AND ";
+		$period = 'month';
+		$summary_keys = array(1,2,3,4,5,6,7,8,9,10,11,12);
+	}
+
+	if ($affiliation != 'All') {
+		$affiliation_clause = "affiliation = '" . $affiliation . "' AND ";
+	}
+
+	if ($email != 'All') {
+		$email_clause = "email = '" . $email . "' AND ";
+	}
+
+	if ($stat == 'contributors') {
+		$stat_clause = "COUNT(DISTINCT(email))";
+	} elseif ($stat == 'patches') {
+		$stat_clause = "SUM(patches)";
+	} elseif ($stat == 'removed') {
+		$stat_clause = "SUM(removed)";
+	} else {
+		$stat_clause = "sum(added)";
+	}
+
+	// Put some logic in to change this.
+
+	$sort_field = "sum(added)";
+	$sort_order = "DESC";
+
+	// Figure out how many results we have, total
+
+	$query = "SELECT " . $type . "
+		FROM " . $cache_table .
+		" WHERE " . $year_clause . "id=" . $id .
+		" GROUP BY " . $type .
+		" ORDER BY " . $sort_field . " " . $sort_order;
+
+	$result = query_db($db,$query,"Get initial list of results");
+
+	$total_entities = $result->num_rows;
+
+	// Get the sorted list of results.
+
+	$query = "SELECT " . $type . "
+		FROM " . $cache_table .
+		" WHERE " . $year_clause . $affiliation_clause . $email_clause . "id=" .
+		$id . " GROUP BY " . $type .
+		" ORDER BY " . $sort_field . " " . $sort_order .
+		$results_clause;
+
+	$result = query_db($db,$query,"Get initial list of results");
+
+	// Make sure we have results
+
+	if ($total_entities) {
+
+        if ($stat == 'contributors') {
+            echo '<h3>Unique contributor emails';
+        } else {
+            if ($stat == 'removed') {
+                echo '<h3>Lines of code removed by ';
+            } elseif ($stat == 'patches') {
+                echo '<h3>Patched landed by ';
+            } else {
+                echo '<h3>Lines of code added by ';
+            }
+
+            if ($email != 'All') {
+                echo $email;
+
+            } else {
+
+                if ($max_results != 'All' &&
+                $max_results <= $total_entities) {
+
+                    echo 'the top ';
+                    if ($max_results > 1) {
+                        echo $max_results . ' ';
+                    }
+                } else {
+                    echo 'all ';
+                }
+
+                echo 'contributor';
+                if ($max_results != 1) {
+                    echo 's';
+                }
+            }
+        }
+
+        if ($affiliation != 'All') {
+            echo ' from ' . $affiliation;
+        }
+
+        if ($year != 'All') {
+            echo ' in ' . $year;
+        }
+
+        if (($affiliation == 'All') && ($email == 'All')) {
+            echo ', by ' . $type . "</h3>\n";
+        }
+
+		// Print the table header
+
+		echo "<table><tr>\n";
+		echo '<th>&nbsp;</th>';
+		foreach ($summary_keys as $key) {
+			echo '<th class="results-period">';
+			if ($year == 'All') {
+				echo '<a href="' . $_SERVER['REQUEST_URI'] . '&year='.
+				$key . '">' . $key . '</a>';
+
+			} else {
+				$month = DateTime::createFromFormat('!m',$key);
+				echo $month->format('M');
+			}
+			echo "</th>\n";
+		}
+		echo '<th class="results-total">Total</th>' . "\n</tr>\n";
+
+		$grand_total = 0;
+
+		while ($list = $result->fetch_assoc()) {
+
+			// Get data for each row of the table
+
+			$query = "SELECT " . $stat_clause . " AS stat," .
+				$period . " AS period
+				FROM " . $cache_table . "
+				WHERE " . $year_clause . "id=" . $id . "
+				AND " . $type . "='" . $list[$type] . "'
+				GROUP BY period ORDER BY period ASC";
+
+			$result_data = query_db($db,$query,"Get data");
+
+			// Use a named array to identify dates with no data
+
+			$summary = array_fill_keys($summary_keys,0);
+			$total = 0;
+
+			while ($data = $result_data->fetch_assoc()) {
+				$summary[$data['period']] = $data['stat'];
+				$total += $data['stat'];
+				$grand_total += $data['stat'];
+			}
+
+			echo '<tr><td class="results-entity">';
+
+			if (($email == 'All') || ($affiliation == 'All')) {
+				echo '<a href="' . $_SERVER['REQUEST_URI'] .
+					'&' . $type . '=' . rawurlencode($list[$type]) . '">'
+					. $list[$type] . '</a>';
+			} else {
+				echo $list[$type];
+			}
+			echo "</td>\n";
+			foreach ($summary as $summary_data) {
+				echo '<td class="' . $stat . '">' . number_format($summary_data)
+					. "</td>\n";
+			}
+
+			if ($stat == 'contributors') {
+
+				// If doing contribs, overwrite $total with meaningful number
+
+				$query = "SELECT " . $stat_clause . " AS stat
+					FROM " . $cache_table . "
+					WHERE " . $year_clause . "id=" . $id . "
+					AND " . $type . "='" . $list[$type] . "'";
+
+				$result_contribs = query_db($db,$query,"Get data");
+
+				$total_contribs = $result_contribs->fetch_assoc();
+
+				$total = $total_contribs['stat'];
+			}
+
+			echo '<td class="total">' . number_format($total) . "</td></tr>\n";
+		}
+
+		if (($max_results == 'All' || $max_results >= $total_entities)
+			&& ($affiliation =='All' && $email == 'All')) {
+
+			// Write the totals row
+
+			$summary = array_fill_keys($summary_keys,0);
+
+			echo '<tr><td class="total">Total from all contributors</td>';
+
+			$query = "SELECT " . $stat_clause . " as stat," .
+				$period . " AS period
+				FROM " . $cache_table . "
+				WHERE " . $year_clause . "id=" . $id . "
+				GROUP BY period ORDER BY period ASC";
+
+			$result_total = query_db($db,$query,"Get totals");
+
+			while ($period_total = $result_total->fetch_assoc()) {
+				$summary[$period_total['period']] = $period_total['stat'];
+			}
+
+			foreach ($summary as $summary_data) {
+				echo '<td class="total">' . number_format($summary_data)
+					. "</td>\n";
+			}
+
+			if ($stat == 'contributors') {
+
+				// If doing contribs, overwrite $grand_total with meaningful number
+
+				$query = "SELECT " . $stat_clause . " AS stat
+					FROM " . $cache_table . "
+					WHERE " . $year_clause . "id=" . $id;
+
+				$result_contribs = query_db($db,$query,"Get data");
+
+				$total_contribs = $result_contribs->fetch_assoc();
+
+				$grand_total = $total_contribs['stat'];
+			}
+
+			echo '<td class="grand-total">' . number_format($grand_total) .
+				"</td></tr>\n";
+		}
+
+		echo '</table>';
+
+		// If there are more results to show, add "View all" link
+		if ($max_results != 'All' &&
+		$max_results < $total_entities ) {
+
+			echo '</p><a href="' . $_SERVER['REQUEST_URI'] . '&detail=' .
+			$type . '">View all</a></p>';
+		}
+	} else {
+		echo '<p><strong>No data found.</strong></p>';
+	}
+}
+
 function gitdm_results_as_summary_table($db,$scope,$id,$type,$max_results,$year,$affiliation,$email,$stat) {
+
+	// This function is deprecated and will be removed.
 
 	if ($scope == 'project') {
 		$scope_clause = "r.projects_id=" . $id . " AND ";

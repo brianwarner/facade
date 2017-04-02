@@ -77,7 +77,7 @@ if ($_GET["repo"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'repo',$repo_id,$detail,'All',$year,$affiliation,$email,$stat);
+			cached_results_as_summary_table($db,'repo',$repo_id,$detail,'All',$year,$affiliation,$email,$stat);
 
 		} else {
 
@@ -87,7 +87,7 @@ if ($_GET["repo"]) {
 			if (($affiliation == 'All') || (($affiliation == 'All') && ($email != 'All'))) {
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email,$stat);
+				cached_results_as_summary_table($db,'repo',$repo_id,'affiliation',5,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
 			}
@@ -96,7 +96,7 @@ if ($_GET["repo"]) {
 
 				echo '<div class="sub-block">';
 
-				gitdm_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email,$stat);
+				cached_results_as_summary_table($db,'repo',$repo_id,'email',10,$year,$affiliation,$email,$stat);
 
 				echo '</div> <!-- .sub-block -->';
             }
