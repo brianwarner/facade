@@ -95,7 +95,6 @@ if ($_GET["id"]) {
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
 
-			gitdm_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email,$stat);
 			cached_results_as_summary_table($db,'project',$project_id,$detail,'All',$year,$affiliation,$email,$stat);
 
 		} else {
