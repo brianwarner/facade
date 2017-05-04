@@ -16,8 +16,8 @@ include_once "includes/display.php";
 $db = setup_db();
 
 // Make sure there is data to export
-$query = "SELECT NULL from gitdm_data";
-$result = query_db($db,$query,'Checking if gitdm has been run');
+$query = "SELECT NULL from analysis_data";
+$result = query_db($db,$query,'Checking if analysis has been run');
 
 if ($result->num_rows > 0) {
 
@@ -106,15 +106,19 @@ if ($result->num_rows > 0) {
 		<div id="affiliation-list">
 		<table>';
 
-		$query = "SELECT DISTINCT affiliation FROM gitdm_data
-			ORDER BY affiliation";
+		$report_attribution = get_setting($db,'report_attribution');
+
+		$query = "SELECT DISTINCT " . $report_attribution . "_affiliation " .
+			"FROM analysis_data ORDER BY " . $report_attribution . "_affiliation";
+
 		$result = query_db($db,$query,"Getting affiliations");
 
 	while($row = $result->fetch_assoc()) {
 		echo '<tr>
 			<td><label><input type="checkbox" name="affiliations[]"
-			value="' . $row["affiliation"] . '"
-			class="checkbox">' . $row["affiliation"] . '</label></td>';
+			value="' . $row[$report_attribution . "_affiliation"] . '"
+			class="checkbox">' . $row[$report_attribution . "_affiliation"] . 
+			'</label></td>';
 	}
 
 	echo '</table>

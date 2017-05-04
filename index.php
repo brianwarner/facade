@@ -15,26 +15,29 @@ include_once "includes/db.php";
 include_once "includes/display.php";
 $db = setup_db();
 
+$report_attribution = get_setting($db,'report_attribution');
+
 $query = "SELECT NULL FROM projects";
 $result_projects = query_db($db,$query,'Getting number of projects');
 
 $query = "SELECT NULL FROM repos";
 $result_repos = query_db($db,$query,'Getting number of repos');
 
-$query = "SELECT DISTINCT email FROM gitdm_data";
+$query = "SELECT DISTINCT " . $report_attribution . "_email FROM analysis_data";
 $result_email = query_db($db,$query,'Getting number of developers');
 
-$query = "SELECT SUM(added) FROM gitdm_data";
+$query = "SELECT SUM(added) FROM analysis_data";
 $result_added = query_db($db,$query,'Getting lines of code');
 $added = $result_added->fetch_assoc();
 
-$query = "SELECT DISTINCT affiliation FROM gitdm_data
-	WHERE affiliation != '(Unknown)'";
+$query = "SELECT DISTINCT " . $report_attribution . "_affiliation " . 
+	"FROM analysis_data WHERE " . $report_attribution . "_affiliation != '(Unknown)'";
 $result_affiliations = query_db($db,$query,'Getting affiliations');
 
 $start_date = new DateTime(get_setting($db,'start_date'));
-$end_date = get_setting($db,'end_date');
 
+$length_of_time = $start_date->diff(new DateTime(date("y-m-d",time())));
+/*
 if ($end_date == 'yesterday') {
 	$end_date = new DateTime(date("Y-m-d",time()-60*60*24));
 } else {
@@ -42,7 +45,7 @@ if ($end_date == 'yesterday') {
 }
 
 $length_of_time = $start_date->diff($end_date);
-
+*/
 echo '<div class="content-block content-highlight">
 
 	<p>You are currently tracking <strong>' .

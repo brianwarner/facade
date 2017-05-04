@@ -31,26 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 		method="POST"><input type="hidden" name="setting" value="' .
 		$setting . '">';
 
-		if ($setting == "end_date") {
-
-			echo '<h2>Edit date that analysis ends</h2>
-				<p><strong>Note:</strong> Changing this will affect your entire
-				database, as current data outside the date range will be
-				dropped. New dates will be added.</p>
-
-				<p>Changes will take effect the nexttime facade-worker.py is
-				run.</p>
-
-				<p><select id="select_end_date" name="select_end_date"
-				onchange="custom_input(this,\'custom_date\',\'70\')">
-				<option value="yesterday">Default (yesterday)</option>
-				<option value="custom">Custom</option>
-				</select>
-
-				<input type="text" id="custom_date" name="value"
-				class="custom-input hidden"></p>';
-
-		} elseif ($setting == "start_date") {
+		if ($setting == "start_date") {
 
 			echo '<h2>Edit date that analysis begins</h2>
 				<p><strong>Note:</strong> Changing this will affect your entire
@@ -61,13 +42,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				run.</p>
 
 				<p>Begin on a specific date (yyyy-mm-dd):
-				<span class="text"><input type="text" name="value"></span></p>';
-
-		} elseif ($setting == "gitdm") {
-
-			echo '<h2>Where is the gitdm directory on the system?</h2>
-
-				<p>System path to gitdm:
 				<span class="text"><input type="text" name="value"></span></p>';
 
 		} elseif ($setting == "repo_directory") {
@@ -102,9 +76,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				including when everything starts and finishes.</label></p>
 
 				<p><label><input type="radio" name="log_level_radio"
-				value="Verbose" id="log_level_info"> Log everything, which will
+				value="Verbose" id="log_level_verbose"> Log everything, which will
 				generate a lot of information. Only use this when you are
 				debugging.</label></p>';
+
+		} elseif ($setting == "report_date") {
+
+			echo '<h2>What date should be used for web-based reports?</h2>
+
+				<p><strong>Note:</strong> This setting determines how commits
+				are organized in the web UI. They can either be counted by the
+				author date (when the patch was created) or the committer date
+				(when the patch was applied).</p>
+
+				<p>This does not affect data exported as a CSV, which will
+				always contain both fields.</p>
+
+				<p><label><input type="radio" name="date_radio" value="author"
+				id="author_date" checked="checked">Author</label></p>
+
+				<p><label><input type="radio" name="date_radio" value="committer"
+				id="committer_date">Committer</label></p>';
+
+		} elseif ($setting == "report_attribution") {
+
+			echo '<h2>What email/affiliation should be used for web-based reports?</h2>
+
+				<p><strong>Note:</strong> This setting determines how commits
+				are organized in the web UI. They can either be organized by
+				author email (who created the patch) or the committer email
+				(who applied the patch).</p>
+
+				<p>This does not affect data exported as a CSV, which will
+				always contain both fields.</p>
+
+				<p><label><input type="radio" name="attribution_radio" value="author"
+				id="author_email" checked="checked">Author</label></p>
+
+				<p><label><input type="radio" name="attribution_radio" value="committer"
+				id="committer_email">Committer</label></p>';
 
 		} else {
 			echo '<div class="info">Unknown setting.</div>';
@@ -116,16 +126,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 		$value = sanitize_input($db,$_POST["value"],32);
 
-		if ($setting == "end_date") {
-			$select_end_date = sanitize_input($db,$_POST["select_end_date"],9);
-
-			if ($select_end_date == "yesterday") {
-				$value = $select_end_date;
-			}
-		}
-
 		if ($setting == "log_level") {
 			$value = sanitize_input($db,$_POST["log_level_radio"],10);
+		}
+
+		if ($setting == "report_date") {
+			$value = sanitize_input($db,$_POST["date_radio"],11);
+		}
+
+		if ($setting == "report_attribution") {
+			$value = sanitize_input($db,$_POST["attribution_radio"],11);
 		}
 
 		if ($value) {
@@ -135,32 +145,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			// Gripe if the new start date will cause a null date range
 			if ($setting == "start_date") {
 
-				if ($value > get_setting($db,"end_date") ||
-				(get_setting($db,"end_date") == 'yesterday' &&
-				$value > date("Y-m-d",time()-60*60*24))) {
+				if ($value > date("Y-m-d",time())) {
 
-					echo '<div class="info"><p>Check your start and end dates,
-					they appear to be out of order.</p></div>';
+					echo '<div class="info"><p>Check your start date,
+					as it appears to be in the future.</p></div>';
 
 				}
 			}
 
-			// Gripe if the new end date will cause a null date range
-			if ($setting == "end_date") {
-
-				if ($value < get_setting($db,"start_date")) {
-
-					echo '<div class="info"><p>Check your start and end dates,
-					they appear to be out of order.</p></div>';
-
-				}
-			}
-
-			if ($setting == "repo_directory" ||
-			$setting == "gitdm") {
+			if ($setting == "repo_directory") {
 
 				if (sanitize_input($db,$_POST["rebuild_repos"],1)) {
 					$query = "UPDATE repos SET status='New'";
+					query_db($db,$query,"Preparing to rebuid repos");
+
 				}
 
 				if (substr($value,0,1) != '/') {
@@ -216,30 +214,32 @@ $last_modified = strtotime($result->fetch_assoc()['last_modified']);
 
 echo '<div class="content-block">
 
-<h2>Data collection</h2>
+<h2>Data collection and display</h2>
 
 <table>
 
 <tr>
-<td class="half"><div class="detail"><strong>Start all analysis on this
-date</strong>
+<td class="half"><div class="detail"><strong>Analyze patches committed after this date</strong>
 <span class="detail-text"><i>format: yyyy-mm-dd<br>default: 2000-01-01</i></td>
 <td class="half">' . get_setting($db,"start_date") .
 edit_setting_button("start_date") . '</span></div></td>
 </tr>
 
 <tr>
-<td><div class="detail"><strong>End all analysis on this date</strong><span class="detail-text"><i>format: yyyy-mm-dd,
-yesterday<br>default: yesterday</i></span></div></td>
-<td>' . get_setting($db,"end_date") . edit_setting_button("end_date") .
-'</td>
+<td class="half"><div class="detail"><strong>Use this email when generating
+reports that are displayed on the website</strong>
+<span class="detail-text"><i>format: author, committer<br>default: author</i></td>
+<td class="half">' . get_setting($db,"report_attribution") .
+edit_setting_button("report_attribution") . '</span></div></td>
 </tr>
 
-<!--<tr>
-<td><div class="detail"><strong>Analysis period</strong><span class="detail-text"><i>format: daily, weekly,
-monthly, annually<br>default: daily</i></td>
-<td>' . get_setting($db,"interval") . edit_setting_button("interval") .
-'</span></div></td></tr>-->
+<tr>
+<td class="half"><div class="detail"><strong>Use this date when generating
+reports that are displayed on the website</strong>
+<span class="detail-text"><i>format: author, committer<br>default: author</i></td>
+<td class="half">' . get_setting($db,"report_date") .
+edit_setting_button("report_date") . '</span></div></td>
+</tr>
 
 </table>
 
@@ -247,25 +247,16 @@ monthly, annually<br>default: daily</i></td>
 
 <table>
 <tr>
-<td class="half"><div class="detail"><strong>Location of gitdm directory on
-server</strong><span class="detail-text"><i>format: system path<br>default:
-/opt/facade/gitdm</i></td>
-<td class="half">' .
-stripslashes(get_setting($db,"gitdm")) . edit_setting_button("gitdm") .
-'</span></div></td>
-</tr>
-
-<tr>
-<td><div class="detail"><strong>Location of git repos (must be writable<br>by user account doing
+<td class="half"><div class="detail"><strong>Location of git repos (must be writable by user account doing
 the analysis)</strong><span class="detail-text"><i>format: system path<br>default:
 /opt/facade/git-trees/</i></td>
-<td>' . get_setting($db,"repo_directory") .
+<td class="half">' . get_setting($db,"repo_directory") .
 edit_setting_button("repo_directory") . '</span></div></td>
 </tr>
 
 <tr>
-<td><div class="detail"><strong>Log level</strong><span class="detail-text"><i>default: Quiet</i></td>
-<td>' . get_setting($db,"log_level") . edit_setting_button("log_level") .
+<td class="half"><div class="detail"><strong>Log level</strong><span class="detail-text"><i>default: Quiet</i></td>
+<td class="half">' . get_setting($db,"log_level") . edit_setting_button("log_level") .
 '</span></div></td>
 </tr>
 

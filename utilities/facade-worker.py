@@ -10,9 +10,15 @@
 # Git repo maintenance
 #
 # This script is responsible for cloning new repos and keeping existing repos up
-# to date.  It is intended to be run a few times per day, so that all repos are
-# kept up to date should something unexpected happen (like a network failure)
-# right before you try to run gitdm.
+# to date. It can be run as often as you want (and will detect when it's
+# already running, so as not to spawn parallel processes), but once or twice per
+# day should be more than sufficient. Each time it runs, it updates the repo
+# and checks for any parents of HEAD that aren't already accounted for in the
+# repos. It also rebuilds cache data for display.
+#
+# If for whatever reason you manually update the affiliations table in the
+# database, be sure to run with the -n flag to "nuke" all existing affiliation
+# data. It will be rebuilt the next time facade-worker.py runs.
 
 import sys
 import MySQLdb
@@ -27,28 +33,35 @@ except:
 import HTMLParser
 html = HTMLParser.HTMLParser()
 
-from subprocess import call
-import time
-import string
-import random
-import datetime
-import csv
-import hashlib
-hasher = hashlib.md5()
+import subprocess
 import os
 import getopt
 
 global log_level
 
+#### Helpers ####
+
+def get_setting(setting):
+
+# Get a setting from the database
+
+	query = ("SELECT value FROM settings WHERE setting='%s' ORDER BY "
+		"last_modified DESC LIMIT 1" % setting)
+	cursor.execute(query)
+	return cursor.fetchone()["value"]
 
 def update_status(status):
+
+# Update the status displayed in the UI
+
 	query = ("UPDATE settings SET value='%s' WHERE setting='utility_status'"
 		% status)
 	cursor.execute(query)
 	db.commit()
 
 def log_activity(level,status):
-	# Determine if something needs to be logged
+
+# Log an activity based upon urgency and user's preference
 
 	log_options = ('Error','Quiet','Info','Verbose')
 
@@ -57,54 +70,353 @@ def log_activity(level,status):
 			% (level,status))
 		cursor.execute(query)
 		db.commit()
-		sys.stderr.write("%s\n" % status)
+		sys.stderr.write("* %s\n" % status)
 
-def get_setting(setting):
-	query = ("SELECT value FROM settings WHERE setting='%s' ORDER BY "
-		"last_modified DESC LIMIT 1" % setting)
-	cursor.execute(query)
-	return cursor.fetchone()["value"]
+def update_repo_log(repos_id,status):
+
+# Log a repo's fetch status
+
+	log_message = ("INSERT INTO repos_fetch_log (repos_id,status) "
+		"VALUES (%s,'%s')" % (repos_id,status))
+
+	cursor.execute(log_message)
+	db.commit()
+
+def update_analysis_log(repos_id,status):
+
+# Log a repo's analysis status
+
+	log_message = ("INSERT INTO analysis_log (repos_id,status) "
+		"VALUES (%s,'%s')" % (repos_id,status))
+
+	cursor.execute(log_message)
+	db.commit()
+def check_swapped_emails(name,email):
+
+# Sometimes people mix up their name and email in their git settings
+
+	if name.find('@') >=0 and email.find('@') == -1:
+		return email,name
+	else:
+		return name,email
+
+def strip_extra_amp(email):
+
+# Some repos have multiple ampersands, which really messes up domain pattern
+# matching. This extra info is not used, so we discard it.
+
+	if email.count('@') > 1:
+		return email[:email.find('@',email.find('@')+1)]
+	else:
+		return email
+
+def discover_alias(email):
+
+# Match aliases with their canonical email
+
+	alias = "SELECT canonical FROM aliases WHERE alias='%s'" % email
+
+	cursor.execute(alias)
+	db.commit()
+
+	if cursor.rowcount:
+		return cursor.fetchone()["canonical"]
+	else:
+		return email
+
+def discover_affiliation(email,date):
+
+# Attempt to match email with who they were working for when the patch was
+# authored or committed
+
+	# First, see if there's an exact match
+	match = ("SELECT affiliation FROM affiliations "
+		"WHERE domain='%s' AND start_date < '%s' "
+		"ORDER BY start_date DESC LIMIT 1" % (email,date))
+
+	cursor.execute(match)
+	db.commit()
+
+	if cursor.rowcount:
+		return cursor.fetchone()["affiliation"]
+
+	# If we couldn't find an obvious match, try to match a pattern
+	if email.find('@') >= 0:
+		domain = email[email.find('@')+1:]
+	else:
+		# If it's not a properly formatted email, give up
+		return '(Unknown)'
+
+	# Now we go for a domain-level match
+	match = ("SELECT affiliation FROM affiliations "
+		"WHERE domain='%s' AND start_date < '%s' "
+		"ORDER BY start_date ASC LIMIT 1" % (domain,date))
+
+	cursor.execute(match)
+	db.commit()
+
+	if cursor.rowcount:
+		return cursor.fetchone()["affiliation"]
+	else:
+		return '(Unknown)'
+
+def store_working_commit(repo_id,commit):
+
+# Store the working commit.
+
+	store_commit = ("UPDATE repos "
+		"SET working_commit = '%s' "
+		"WHERE id = %s"
+		% (commit,repo_id))
+
+	cursor.execute(store_commit)
+	db.commit()
+
+def trim_commit(repo_id,commit):
+
+# Quickly remove a given commit
+
+	remove_commit = ("DELETE FROM analysis_data "
+		"WHERE repos_id=%s AND commit='%s'" %
+		(repo_id,commit))
+
+	cursor.execute(remove_commit)
+	db.commit()
+
+def analyze_commit(repo_id,repo_loc,commit):
+
+# This function analyzes a given commit, counting the additions, removals, and
+# whitespace changes. It collects all of the metadata about the commit, and
+# stashes it in the database.
+
+	header = True
+	filename = ''
+	filename = ''
+	added = 0
+	removed = 0
+	whitespace = 0
+
+	git_log = subprocess.Popen(["git --git-dir %s log -p -M %s -n1 "
+		"--pretty=format:'" 
+		"author_name: %%an%%nauthor_email: %%ae%%nauthor_date:%%ai%%n"
+		"committer_name: %%cn%%ncommitter_email: %%ce%%ncommitter_date: %%ci%%n"
+		"parents: %%p%%nEndPatch' "
+		% (repo_loc,commit)], stdout=subprocess.PIPE, shell=True)
+
+	# Stash the commit we're going to analyze so we can back it out if something
+	# goes wrong later.
+
+	store_working_commit(repo_id,commit)
+
+	for line in git_log.stdout.read().split(os.linesep):
+		if len(line) > 0:
+
+			if line.find('author_name:') == 0:
+				author_name = line[13:].replace("'","\\'")
+				continue
+
+			if line.find('author_email:') == 0:
+				author_email = line[14:].replace("'","\\'")
+				continue
+
+			if line.find('author_date:') == 0:
+ 				author_date = line[12:22]
+				continue
+
+			if line.find('committer_name:') == 0:
+				committer_name = line[16:].replace("'","\\'")
+				continue
+
+			if line.find('committer_email:') == 0:
+				committer_email = line[17:].replace("'","\\'")
+				continue
+
+			if line.find('committer_date:') == 0:
+				committer_date = line[16:26]
+				continue
+
+			if line.find('parents:') == 0:
+				if len(line[9:].split(' ')) == 2:
+
+					# We found a merge commit, which won't have a filename
+					filename = '(Merge commit)';
+
+					added = 0
+					removed = 0
+					whitespace = 0
+				continue
+
+			if line.find('--- ') == 0:
+				if filename == '(Deleted) ':
+					filename = filename + line[6:]
+				continue
+
+			if line.find('+++ ') == 0:
+				if not filename.find('(Deleted) ') == 0:
+					filename = line[6:]
+				continue
+
+			if line.find('rename to ') == 0:
+				filename = line[10:]
+				continue
+
+			if line.find('deleted file ') == 0:
+				filename = '(Deleted) '
+				continue
+
+			if line.find('diff --git') == 0:
+
+				# Git only displays the beginning of a file in a patch, not
+				# the end. We need some kludgery to discern where one starts
+				# and one ends. This is the last line always separating
+				# files in commits. But we only want to do it for the second
+				# time onward, since the first time we hit this line it'll be
+				# right after parsing the header and there won't be any useful
+				# information contained in it.
+
+				if not header:
+					store_commit(repo_id,commit,filename,
+						author_name,author_email,author_date,
+						committer_name,committer_email,committer_date,
+						added,removed,whitespace)
+
+				header = False
+
+				# Reset stats and prepare for the next section
+				whitespaceCheck = []
+				resetRemovals = True
+				filename = ''
+				added = 0
+				removed = 0
+				whitespace = 0
+				continue
+
+			# Count additions and removals and look for whitespace changes
+			if not header:
+				if line[0] == '+':
+
+					# First check if this is a whitespace change
+					if len(line.strip()) == 1:
+						# Line with zero length
+						whitespace += 1
+
+					else:
+						# Compare against removals, detect whitespace changes
+						whitespaceChange = False
+
+						for check in whitespaceCheck:
+
+							# Mark matches of non-trivial length
+							if line[1:].strip() == check and len(line[1:].strip()) > 8:
+								whitespaceChange = True
+
+						if whitespaceChange:
+							# One removal was whitespace, back it out
+							removed -= 1
+							whitespace += 1
+							# Remove the matched line
+							whitespaceCheck.remove(check)
+
+						else:
+							# Did not trigger whitespace criteria
+							added += 1
+
+					# Once we hit an addition, next removal line will be new.
+					# At that point, start a new collection for checking.
+					resetRemovals = True
+
+				if line[0] == '-':
+					removed += 1
+					if resetRemovals:
+						whitespaceCheck = []
+						resetRemovals = False
+					# Store the line to check next add lines for a match
+					whitespaceCheck.append(line[1:].strip())
+
+	# Store the last stats from the git log
+	store_commit(repo_id,commit,filename,
+		author_name,author_email,author_date,
+		committer_name,committer_email,committer_date,
+		added,removed,whitespace)
+
+def store_commit(repos_id,commit,filename,
+	author_name,author_email,author_date,
+	committer_name,committer_email,committer_date,
+	added,removed, whitespace):
+
+# Fix some common issues in git commit logs and store data
+
+	# Sometimes git is misconfigured and name/email get swapped
+	author_name, author_email = check_swapped_emails(author_name,author_email)
+	committer_name,committer_email = check_swapped_emails(committer_name,committer_email)
+
+	# Some systems append extra info after a second @
+	author_email = strip_extra_amp(author_email)
+	committer_email = strip_extra_amp(committer_email)
+
+	# Check if there's a known alias for this email
+	author_email = discover_alias(author_email)
+	committer_email = discover_alias(committer_email)
+
+	store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
+		"author_name,author_email,author_date,"
+		"committer_name,committer_email,committer_date,"
+		"added,removed,whitespace) VALUES ("
+		"%s,'%s','%s','%s','%s','%s','%s','%s','%s',%s,%s,%s)"
+		% (repos_id,commit,filename,
+		author_name,author_email,author_date,
+		committer_name,committer_email,committer_date,
+		added,removed,whitespace))
+
+	cursor.execute(store)
+	db.commit()
+
+#### Facade main functions ####
 
 def git_repo_cleanup():
-	# Clean up any git repos that are pending deletion
+
+# Clean up any git repos that are pending deletion
 
 	update_status('Purging deleted repos')
-	log_activity('Info','Purging deleted repos')
+	log_activity('Info','Processing deletions')
 
 	repo_base_directory = get_setting('repo_directory')
 
 	query = "SELECT id,projects_id,path,name FROM repos WHERE status='Delete'"
 	cursor.execute(query)
 
-	delete_repos = cursor.fetchall()
+	delete_repos = list(cursor)
 
 	for row in delete_repos:
 
 		cmd = ("rm -rf %s%s/%s%s"
-			% (repo_base_directory,row["projects_id"],row["path"],row["name"]))
+			% (repo_base_directory,row['projects_id'],row['path'],row['name']))
 
-		return_code = call(cmd,shell=True)
+		return_code = subprocess.Popen([cmd],shell=True).wait()
 
-		query = "DELETE FROM repos WHERE id=%s" % row["id"]
+		query = "DELETE FROM repos WHERE id=%s" % row['id']
 		cursor.execute(query)
 		db.commit()
 
-		log_activity('Verbose','Deleted repo %s' % row["id"])
+		log_activity('Verbose','Deleted repo %s' % row['id'])
 
-		cleanup = '%s/%s%s' % (row["projects_id"],row["path"],row["name"])
+		cleanup = '%s/%s%s' % (row['projects_id'],row['path'],row['name'])
 
 		# Attempt to cleanup any empty parent directories
 		while (cleanup.find('/',0) > 0):
 			cleanup = cleanup[:cleanup.rfind('/',0)]
 
 			cmd = "rmdir %s%s" % (repo_base_directory,cleanup)
-			call(cmd,shell=True)
+			subprocess.Popen([cmd],shell=True).wait()
 			log_activity('Verbose','Attempted %s' % cmd)
+
+		update_repo_log(row['id'],'Deleted')
 
 	log_activity('Info','Processing deletions (complete)')
 
 def git_repo_updates():
-	# Now we need to update existing repos
+
+# Update existing repos
 
 	update_status('Updating repos')
 	log_activity('Info','Updating existing repos')
@@ -115,34 +427,30 @@ def git_repo_updates():
 		"status='Active'");
 	cursor.execute(query)
 
-	existing_repos = cursor.fetchall()
+	existing_repos = list(cursor)
 
 	for row in existing_repos:
 
-		log_activity('Verbose','Attempting to update %s' % row["git"])
+		log_activity('Verbose','Attempting to update %s' % row['git'])
+		update_repo_log(row['id'],'Updating')
 
 		cmd = ("git -C %s%s/%s%s pull"
-			% (repo_base_directory,row["projects_id"],row["path"],row["name"]))
+			% (repo_base_directory,row['projects_id'],row['path'],row['name']))
 
-		return_code = call(cmd,shell=True)
+		return_code = subprocess.Popen([cmd],shell=True).wait()
 
 		if return_code == 0:
-			query = ("INSERT INTO repos_fetch_log (repos_id,status) values "
-				"(%s,'Up-to-date')" % row["id"])
-			cursor.execute(query)
-			db.commit()
+			update_repo_log(row['id'],'Up-to-date')
 			log_activity('Verbose','Updated %s' % row["git"])
 		else:
-			query = ("INSERT INTO repos_fetch_log (repos_id,status) values "
-				"(%s,'Failed (%s)')" % (row["id"],return_code))
-
-			cursor.execute(query)
-			db.commit()
+			update_repo_log(row['id'],'Failed (%s)' % return_code)
 			log_activity('Error','Could not update %s' % row["git"])
+
 	log_activity('Info','Updating existing repos (complete)')
 
 def git_repo_initialize():
-	# Select any new git repos so we can set up their locations and git clone)
+
+# Select any new git repos so we can set up their locations and git clone
 
 	update_status('Fetching new repos')
 	log_activity('Info','Fetching new repos')
@@ -150,10 +458,11 @@ def git_repo_initialize():
 	query = "SELECT id,projects_id,git FROM repos WHERE status LIKE 'New%'";
 	cursor.execute(query)
 
-	new_repos = cursor.fetchall()
+	new_repos = list(cursor)
 
 	for row in new_repos:
 		print row["git"]
+		update_repo_log(row['id'],'Cloning')
 
 		git = html.unescape(row["git"])
 
@@ -196,26 +505,21 @@ def git_repo_initialize():
 				(git,repo_name))
 
 		# Create the prerequisite directories
-		return_code = call('mkdir -p %s' % repo_path,shell=True)
+		return_code = subprocess.Popen(['mkdir -p %s' %repo_path],shell=True).wait()
 
 		# Make sure it's ok to proceed
 		if return_code != 0:
 			print("COULD NOT CREATE REPO DIRECTORY")
-			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES "
-				"(%s,'Failed (mkdir %s)')" % (row["id"],repo_path))
-			print(query)
-			cursor.execute(query)
-			db.commit()
+
+			update_repo_log(row['id'],'Failed (mkdir %s)' % repo_path)
 			update_status('Failed (mkdir %s)' % repo_path)
 			log_activity('Error','Could not create repo directory: %s' %
 				repo_path)
+
 			sys.exit("Could not create git repo's prerequisite directories. "
 				" Do you have write access?")
 
-		query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
-			"'New (cloning)')" % row["id"])
-		cursor.execute(query)
-		db.commit()
+		update_repo_log(row['id'],'New (cloning)')
 
 		query = ("UPDATE repos SET status='New (Initializing)', path='%s', "
 			"name='%s' WHERE id=%s"	% (repo_relative_path,repo_name,row["id"]))
@@ -224,31 +528,24 @@ def git_repo_initialize():
 		db.commit()
 
 		log_activity('Verbose','Cloning: %s' % git)
+
 		cmd = "git -C %s clone '%s' %s" % (repo_path,git,repo_name)
-		return_code = call(cmd, shell=True)
+		return_code = subprocess.Popen([cmd], shell=True).wait()
 
 		if (return_code == 0):
-			# If cloning succeeded, repo is ready for gitdm
+			# If cloning succeeded, repo is ready for analysis
 			query = ("UPDATE repos SET status='Active',path='%s', name='%s' "
 				"WHERE id=%s" % (repo_relative_path,repo_name,row["id"]))
 
 			cursor.execute(query)
 			db.commit()
 
-			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
-				"'Up-to-date')" % row["id"])
-
-			cursor.execute(query)
-			db.commit()
+			update_repo_log(row['id'],'Up-to-date')
 			log_activity('Info','Cloned %s' % git)
 
 		else:
 			# If cloning failed, log it and set the status back to new
-			query = ("INSERT INTO repos_fetch_log (repos_id,status) VALUES (%s,"
-				"'Failed (%s)')" % (row["id"],return_code))
-
-			cursor.execute(query)
-			db.commit()
+			update_repo_log(row['id'],'Failed (%s)' % return_code)
 
 			query = ("UPDATE repos SET status='New (failed)' WHERE id=%s"
 				% row["id"])
@@ -260,82 +557,51 @@ def git_repo_initialize():
 
 	log_activity('Info', 'Fetching new repos (complete)')
 
-def gitdm_analysis():
+def analysis():
 
-	update_status('Running gitdm')
-	log_activity('Info','Running gitdm analysis')
+# Run the analysis by looping over all active repos. For each repo, we retrieve
+# the list of commits which lead to HEAD. If any are missing from the database,
+# they are filled in. Then we check to see if any commits in the database are
+# not in the list of parents, and prune them out.
+#
+# We also keep track of the last commit to be processed, so that if the analysis
+# is interrupted (possibly leading to partial data in the database for the
+# commit being analyzed at the time) we can recover.
 
-	gitdm_loc = get_setting('gitdm')
+	update_status('Running analysis')
+	log_activity('Info','Beginning analysis')
+
 	start_date = get_setting('start_date')
-	end_date = get_setting('end_date')
 
-	if end_date == 'yesterday':
-		end_date = (datetime.date.today() -
-			datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-
-	# Iterate over all repos and mark any dates that don't have a log entry as
-	# "Pending" so we know which data needs to be calculated.
-
-	# Generate the range of dates that should be in the database
-
-	all_dates = []
-
-	s_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
-	e_date = datetime.datetime.strptime(end_date,'%Y-%m-%d')
-
-	c_date = s_date
-
-	while c_date <= e_date:
-		all_dates.append(c_date.strftime('%Y-%m-%d'))
-		c_date += datetime.timedelta(days=1)
-
-	# Cycle through the repos and determine which dates are missing
-
-	query = "SELECT id FROM repos WHERE status='Active'";
-	cursor.execute(query)
-	repos = cursor.fetchall()
+	repo_list = "SELECT id FROM repos WHERE status='Active'"
+	cursor.execute(repo_list)
+	repos = list(cursor)
 
 	for repo in repos:
 
-		query = ('SELECT start_date FROM gitdm_master WHERE repos_id=%s'
-			% repo["id"]);
+		update_analysis_log(repo['id'],'Beginning analysis')
 
-		cursor.execute(query)
-		existing_dates = cursor.fetchall()
+		# First we check to see if the previous analysis didn't complete
 
-		missing_dates = []
+		get_status = ("SELECT working_commit FROM repos WHERE id=%s" %
+			repo['id'])
 
-		# Find all dates where the repo is missing an entry.
-		# Empirically, iterating is much faster than a clever left join.
+		cursor.execute(get_status)
+		working_commit = cursor.fetchone()['working_commit']
 
-		for a_date in all_dates:
-			found = 0
-			for e_date in existing_dates:
-				if a_date == e_date['start_date']:
-					found = 1
+		# If there's a commit still there, the previous run was interrupted and
+		# the commit data may be incomplete. It should be trimmed, just in case.
 
-			if not found:
-				missing_dates.append(a_date)
+		if working_commit:
+			trim_commit(repo['id'],working_commit)
+			store_working_commit(repo['id'],'')
 
-		for date in missing_dates:
+		# Start the main analysis
 
-			query = ("INSERT INTO gitdm_master (repos_id,status,start_date) "
-				"VALUES	(%s, 'Pending', '%s')" % (repo["id"],date))
-
-			cursor.execute(query)
-			db.commit()
-
-	# Locate the repositories, get all of the "Pending" dates, and run gitdm
-
-	query = "SELECT * FROM gitdm_master WHERE status='Pending'"
-	cursor.execute(query)
-	repos = cursor.fetchall()
-	log_activity('Verbose','Analyzing all repos with missing gitdm data')
-
-	for repo in repos:
+		update_analysis_log(repo['id'],'Collecting data')
 
 		query = ("SELECT projects_id,path,name FROM repos WHERE id=%s"
-			% repo["repos_id"])
+			% repo['id'])
 
 		cursor.execute(query)
 		repo_detail = cursor.fetchone()
@@ -344,359 +610,135 @@ def gitdm_analysis():
 			repo_detail["projects_id"], repo_detail["path"],
 			repo_detail["name"]))
 
-		outfile = 'gitdm_results.tmp'
+		# Grab the parents of HEAD
 
-		end_date = str((datetime.datetime.strptime(repo["start_date"],'%Y-%m-%d')
-			+ datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
+		parents = subprocess.Popen(["git --git-dir %s log --ignore-missing "
+			"--pretty=format:'%%H' --since=%s" % (repo_loc,start_date)],
+			stdout=subprocess.PIPE, shell=True)
 
-		gitdmcall = ('git --git-dir %s log -p -M --since=%s --before=%s --all '
-			'| %s/gitdm -b %s -u -s -d -x %s' % (repo_loc, repo["start_date"],
-			end_date, gitdm_loc, gitdm_loc, outfile))
+		parent_commits = set(parents.stdout.read().split(os.linesep))
 
-		return_code = call(gitdmcall,shell=True)
+		# Grab the existing commits from the database
 
-		# Insert results into the gitdm_results table in the db.
+		existing_commits = set()
 
-		with open(outfile,"r") as file:
-			reader = csv.reader(file,delimiter=',')
+		find_existing = ("SELECT DISTINCT commit FROM analysis_data WHERE repos_id=%s" %
+			repo['id'])
 
-			# First we verify that the temp file matches what we expected
+		cursor.execute(find_existing)
 
-			header = next(reader)
-			if ','.join(header) == 'Name,Email,Affliation,Date,Added,Removed,Changesets':
+		for commit in list(cursor):
+			existing_commits.add(commit['commit'])
 
-				for row in reader:
-					name = row[0].replace("'","\\'")
-					email = row[1].replace("'","\\'")
-					affiliation = row[2].replace("'","\\'")
-					added = row[4]
-					removed = row[5]
-					changesets = row[6]
+		# Find missing commits and add them
 
-					query = ("INSERT INTO gitdm_data (gitdm_master_id, name, "
-							"email, affiliation, added, removed, changesets)"
-						"VALUES (%s,'%s','%s','%s',%s,%s,%s)" % (repo["id"],
-						name, email, affiliation, added, removed, changesets))
+		missing_commits = parent_commits - existing_commits
 
-					cursor.execute(query)
-					db.commit()
+		for commit in missing_commits:
 
-				query = ("UPDATE gitdm_master SET status='Complete' WHERE id=%s"
-					% repo["id"])
+			analyze_commit(repo['id'],repo_loc,commit)
 
-				cursor.execute(query)
-				db.commit()
+			store_working_commit(repo['id'],'')
 
-				call('rm %s' % outfile,shell=True)
+		update_analysis_log(repo['id'],'Data collection complete')
 
-	log_activity('Info','Running gitdm analysis (complete)')
+		update_analysis_log(repo['id'],'Beginning to trim commits')
 
-def purge_old_gitdm_data():
-	# Trim data outside of the current start/end dates
+		# Find commits which are out of the analysis range
 
-	update_status('Trimming out-of-bounds data')
-	log_activity('Info','Trimming out-of-bounds data')
+		trimmed_commits = existing_commits - parent_commits
 
-	start_date = get_setting('start_date')
-	end_date = get_setting('end_date')
+		for commit in trimmed_commits:
 
-	query = ("DELETE m,d FROM gitdm_master m "
-		"LEFT JOIN gitdm_data d "
-		"ON m.id=d.gitdm_master_id "
-		"WHERE m.start_date < '%s' "
-			"OR m.start_date > '%s'" % (start_date, end_date))
+			trim_commit(repo['id'],commit)
 
-	cursor.execute(query)
+		update_analysis_log(repo['id'],'Commit trimming complete')
+
+	update_analysis_log(repo['id'],'Analysis complete')
+	log_activity('Info','Running analysis (complete)')
+
+def nuke_affiliations():
+
+# Delete all stored affiliations in the database. Normally when you
+# add/remove/change affiliation data via the web UI, any potentially affected
+# records will be deleted and then rebuilt on the next run. However, if you
+# manually add affiliation records via the database or import them by some other
+# means, there's no elegant way to discover which affiliations are affected. So
+# this is the scorched earth way: remove them all to force a total rebuild.
+# Brutal but effective.
+
+	log_activity('Info','Nuking affiliations')
+
+	nuke = ("UPDATE analysis_data SET author_affiliation = NULL, "
+			"committer_affiliation = NULL")
+
+	cursor.execute(nuke)
 	db.commit()
 
-	log_activity('Info','Trimming out-of-bounds data (complete)')
+	log_activity('Info','Nuking affiliations (complete)')
 
-def correct_modified_gitdm_affiliations():
-	# Watch for changes in the gitdm config files that would change results
+def fill_empty_affiliations():
 
-	update_status('Updating affiliations')
-	log_activity('Info','Updating affiliations')
+# When a record is added, it has no affiliation data. Also, when an affiliation
+# mapping is changed via the UI, affiliation data will be set to NULL. This
+# function finds any records with NULL affiliation data and fills them.
 
-	gitdm_loc = get_setting('gitdm')
+	update_status('Filling empty affiliations')
+	log_activity('Info','Filling empty affiliations')
 
-	for line in open('%sgitdm.config' % gitdm_loc):
+	find_null_authors = ("SELECT author_email,author_date "
+		"FROM analysis_data "
+		"WHERE author_affiliation IS NULL")
 
-		# Find all lines which are not commented and not empty
-		if not line.strip().startswith('#') and not len(line.strip()) == 0:
-			(configtype,configfile) = line.strip().split()
-			# There are only certain configs that are relevant, we can ignore the rest
-			if configtype == 'EmailAliases' or configtype == 'EmailMap':
+	cursor.execute(find_null_authors)
 
-				with open ('%s%s' % (gitdm_loc, configfile), 'rb') as file:
-					hasher.update(file.read())
+	authors = list(cursor)
 
-					cached_configfile = ('%s/cached-configs/%s.cache'
-						% (os.path.dirname(os.path.realpath(sys.argv[0])),
-						configfile.replace('/','.')))
+	for author in authors:
+		affiliation = discover_affiliation(author['author_email'],author['author_date'])
 
-					mismatches = []
-					config_contents = []
-					captured_domains = []
+		update = ("UPDATE analysis_data SET author_affiliation = '%s' "
+			"WHERE author_email = '%s' AND author_date = '%s'"
+			% (affiliation,author['author_email'],author['author_date']))
 
-					# Only diff if file is already cached
-					if os.path.isfile(cached_configfile):
-
-						# Determine if the file matches the current md5
-						query = ("SELECT md5sum FROM gitdm_configs "
-							"WHERE configfile = '%s' "
-							"ORDER BY last_modified DESC LIMIT 1"
-							% configfile)
-
-						cursor.execute(query)
-
-						if cursor.rowcount == 0:
-							md5sum = ''
-						else:
-							result = cursor.fetchone()
-							md5sum = result["md5sum"]
-
-
-						if not hasher.hexdigest() == md5sum:
-#						if not hasher.hexdigest() == md5sum["md5sum"]:
-
-						# No match found, process the file for differences
-
-							log_activity('Info','Config file change detected (%s)' %
-								configfile)
-
-							# Walk through file to figure out what is different
-							for line_config in open(gitdm_loc + configfile):
-
-								if not line_config.strip().startswith('#') and not len(line_config.strip()) == 0:
-
-									line_match = False
-
-									# Strip any comments in the line
-									if line_config.find('#'):
-										line_config_content = line_config[:line_config.find('#')]
-									else:
-										line_config_content = line_config
-
-									# Storing for possible date constraints
-									config_contents.append(line_config_content)
-
-									for line_cache in open(cached_configfile):
-
-										# Strip any comments in the line
-										if line_cache.find('#'):
-											line_cache_content = line_cache[:line_cache.find('#')]
-										else:
-											line_cache_content = line_cache
-
-										# Look for a match in cached file
-										if line_config_content == line_cache_content:
-											line_match = True
-
-									if not line_match:
-										# Store mis-matches so we can process them.
-										mismatches.append(line_config)
-
-					else:
-
-						# File isn't cached, so all of it must be stored
-						log_activity('Info','New config file detected (%s)' %
-							configfile)
-
-						for line_config in open('%s%s' % (gitdm_loc,configfile)):
-							if not line_config.strip().startswith('#') and not len(line_config.strip()) == 0:
-								# Store all entries in the file
-
-								if line_config.find('#'):
-									# Strip any comments in the line
-									line_config_content = line_config[:line_config.find('#')]
-								else:
-									line_config_content = line_config
-								mismatches.append(line_config_content)
-
-								# Storing for possible date constraints
-								config_contents.append(line_config_content)
-
-					# Now it's time to process the mismatches
-					for mismatch in mismatches:
-
-						if configtype == 'EmailAliases':
-
-							# Grab the canonical email from the end of the string
-							canonical = mismatch.split()[-1]
-
-							# Grab everything up to the canonical email
-							alias = mismatch[:mismatch.rfind(canonical)].strip()
-
-							query = ("UPDATE gitdm_data SET email='%s' "
-								"WHERE email='%s'"
-								% (canonical.replace("'","\\'"),
-								alias.replace("'","\\'")))
-
-							cursor.execute(query)
-							db.commit()
-
-						if configtype == 'EmailMap':
-
-							date_overlaps = []
-							is_current = 0
-
-							# Grab the domain or email from beginning of the string
-							domain = mismatch.split()[0].replace("'","\\'")
-
-							if domain not in captured_domains:
-
-								# Find any date overlaps that affect this change
-								for configfile_line in config_contents:
-
-									config_domain = configfile_line.split()[0].replace("'","\\'")
-
-									if config_domain == domain:
-										config_remainder = configfile_line[len(config_domain):].strip().replace("'","\\'").split("<")
-
-										# Capture date, if it exists
-										if len(config_remainder) == 2:
-											(affiliation,end_date) = map(str.strip,config_remainder)
-											if datetime.datetime.strptime(end_date,"%Y-%m-%d") > datetime.datetime.today():
-												is_current = 1
-										else:
-											affiliation = config_remainder[0]
-											end_date = time.strftime("%Y-%m-%d")
-											is_current = 1
-
-										date_overlaps.append([end_date,domain,affiliation])
-
-								# If no current entry, fill with (Unknown)
-								if not is_current:
-									date_overlaps.append([time.strftime("%Y-%m-%d"),domain,'(Unknown)'])
-									log_activity('Info','Backfilling with '
-										'(Unknown) affiliation for %s. This'
-										' is bad.' % domain)
-
-							for overlap in sorted(date_overlaps,reverse=1):
-
-								query = ("UPDATE gitdm_data d "
-									"LEFT JOIN gitdm_master m "
-									"ON m.id=d.gitdm_master_id "
-									"SET d.affiliation = '%s' "
-									"WHERE m.start_date < '%s' "
-									"AND d.email LIKE '%%%s%%' "
-									% (overlap[2],overlap[0],overlap[1]))
-
-								log_activity('Verbose','Updating '
-									'affiliation: %s, %s until %s' %
-									(overlap[1],overlap[2],overlap[0]))
-
-								cursor.execute(query)
-								db.commit()
-
-							captured_domains.append(domain)
-
-						# Cache the file
-						cmd = "cp %s%s %s" % (gitdm_loc, configfile,
-							cached_configfile)
-
-						return_code = call(cmd, shell=True)
-
-						if return_code == 0:
-							# Update hash so unchanged files can be ignored.
-							hashstatus = "Complete"
-						else:
-							# Log as an error.
-							hashstatus = "Incomplete"
-
-						query = ("INSERT INTO gitdm_configs "
-							"(configfile,configtype,md5sum,status) "
-							"VALUES ('%s','%s','%s','%s')"
-							% (configfile, configtype, hasher.hexdigest(),
-							hashstatus))
-
-						cursor.execute(query)
-						db.commit()
-
-	log_activity('Info','Updating affiliations (complete)')
-
-def fix_funky_emails():
-	# Some emails have two @, fix those
-
-	update_status('Fixing funky emails')
-	log_activity('Info','Fixing funky emails')
-
-	query = "SELECT id,email FROM gitdm_data WHERE email LIKE '%@%@%'"
-	cursor.execute(query)
-	funky_emails = cursor.fetchall()
-
-	for funky_email in funky_emails:
-
-		# Trim everything to the right of the second @
-		fixed_email = funky_email["email"][:funky_email["email"].rfind('@')]
-
-		query = ("UPDATE gitdm_data "
-			"SET email='%s' "
-			"WHERE id='%s'" % (fixed_email, funky_email["id"]))
-
-		cursor.execute(query)
+		cursor.execute(update)
 		db.commit()
 
-	log_activity('Info','Fixing funky emails (complete)')
+	find_null_committers = ("SELECT committer_email,committer_date "
+		"FROM analysis_data "
+		"WHERE committer_affiliation IS NULL")
 
-def build_unknown_affiliation_cache():
+	cursor.execute(find_null_committers)
+	committers = list(cursor)
 
-	update_status('Caching unknown affiliations')
-	log_activity('Info','Caching unknown affiliations')
+	for committer in committers:
+		affiliation = discover_affiliation(committer['committer_email'],committer['committer_date'])
 
-	query = "DROP TABLE IF EXISTS unknown_cache"
-	cursor.execute(query)
-	unknowns = cursor.fetchall()
+		update = ("UPDATE analysis_data SET committer_affiliation = '%s' "
+			"WHERE committer_email = '%s' AND committer_date = '%s'"
+			% (affiliation,committer['committer_email'],committer['committer_date']))
 
-	query = ("CREATE TABLE unknown_cache "
-		"(id INT AUTO_INCREMENT PRIMARY KEY, "
-		"projects_id INT NOT NULL, "
-		"email VARCHAR(64) NOT NULL, "
-		"domain VARCHAR(64), "
-		"added INT NOT NULL)")
-
-	cursor.execute(query)
-	db.commit()
-
-	query = ("SELECT r.projects_id AS projects_id,d.email AS email,SUM(d.added) "
-		"FROM repos r "
-		"RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
-		"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
-		"WHERE d.affiliation = '(Unknown)' "
-		"GROUP BY r.projects_id,d.email")
-
-	cursor.execute(query)
-	unknowns = cursor.fetchall()
-
-	unknown_cache = {}
-
-	for unknown in unknowns:
-
-		# Isolate the domain name, and add the lines of code associated with it
-		query = ("INSERT INTO unknown_cache (projects_id,email,domain,added) "
-			"VALUES (%s,'%s','%s',%s)" % (unknown["projects_id"],
-			unknown["email"].replace("'","\\'"),
-			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
-			unknown["SUM(d.added)"]))
-
-		cursor.execute(query)
+		cursor.execute(update)
 		db.commit()
 
-	log_activity('Info','Caching unknown affiliations (complete)')
+	log_activity('Info','Filling empty affiliations (complete)')
 
-def build_web_caches():
-	# Cache the gitdm results by month and year.  This greatly reduces the
-	# amount of calculation required when browsing results, particularly if
-	# there are a lot of repos or a long range of dates.  This also enables a
-	# read-only kiosk mode that only displays results, suitable for a
-	# public-facing web server.
+def rebuild_unknown_affiliation_and_web_caches():
 
-	update_status('Caching web data for display')
-	log_activity('Info','Caching web data for display')
+# When there's a lot of analysis data, calculating display data on the fly gets
+# pretty expensive. Instead, we crunch the data based upon the user's preferred
+# statistics (author or committer) and store them. We also store all records
+# with an (Unknown) affiliation for display to the user.
 
-	# Clear the old cache tables
+	update_status('Caching data for display')
+	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 
 	# Create a temporary table for each cache, so we can swap in place.
+
+	query = "CREATE TABLE IF NOT EXISTS uc LIKE unknown_cache"
+
+	cursor.execute(query)
+	db.commit()
 
 	query = "CREATE TABLE IF NOT EXISTS pmc LIKE project_monthly_cache";
 
@@ -720,7 +762,9 @@ def build_web_caches():
 
 	# Swap in place, just in case someone's using the web UI at this moment.
 
-	query = ("RENAME TABLE project_monthly_cache TO pmc_old, "
+	query = ("RENAME TABLE unknown_cache TO uc_old, "
+		"uc TO unknown_cache, "
+		"project_monthly_cache TO pmc_old, "
 		"pmc TO project_monthly_cache, "
 		"project_annual_cache TO pac_old, "
 		"pac TO project_annual_cache, "
@@ -734,7 +778,8 @@ def build_web_caches():
 
 	# Get rid of the old tables.
 
-	query = ("DROP TABLE pmc_old, "
+	query = ("DROP TABLE uc_old, "
+		"pmc_old, "
 		"pac_old, "
 		"rmc_old, "
 		"rac_old")
@@ -742,142 +787,225 @@ def build_web_caches():
 	cursor.execute(query)
 	db.commit()
 
+	report_date = get_setting('report_date')
+	report_attribution = get_setting('report_attribution')
+
+	# Cache unknowns
+
+	unknown_authors = ("SELECT r.projects_id AS projects_id, "
+		"a.author_email AS email, "
+		"SUM(a.added) AS added "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"WHERE a.author_affiliation = '(Unknown)' "
+		"GROUP BY r.projects_id,a.author_email")
+
+	cursor.execute(unknown_authors)
+	unknowns = list(cursor)
+
+	for unknown in unknowns:
+
+		# Isolate the domain name, and add the lines of code associated with it
+		query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
+			"VALUES ('author',%s,'%s','%s',%s)" % (unknown["projects_id"],
+			unknown["email"].replace("'","\\'"),
+			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
+			unknown["added"]))
+
+		cursor.execute(query)
+		db.commit()
+
+	unknown_committers = ("SELECT r.projects_id AS projects_id, "
+		"a.committer_email AS email, "
+		"SUM(a.added) AS added "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"WHERE a.committer_affiliation = '(Unknown)' "
+		"GROUP BY r.projects_id,a.committer_email")
+
+	cursor.execute(unknown_committers)
+	unknowns = list(cursor)
+
+	for unknown in unknowns:
+
+		# Isolate the domain name, and add the lines of code associated with it
+		query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
+			"VALUES ('committer',%s,'%s','%s',%s)" % (unknown["projects_id"],
+			unknown["email"].replace("'","\\'"),
+			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
+			unknown["added"]))
+
+		cursor.execute(query)
+		db.commit()
+
 	# Start caching by project
 
 	query = "SELECT id FROM projects"
 
 	cursor.execute(query)
-	projects = cursor.fetchall()
+	projects = list(cursor)
 
 	for project in projects:
 
 		# Cache monthly data by project
 
-		query = ("INSERT INTO project_monthly_cache "
-			"SELECT r.projects_id as id, "
-			"d.affiliation as affiliation, "
-			"d.email as email, "
-			"YEAR(m.start_date) as year, "
-			"MONTH(m.start_date) as month, "
-			"sum(d.added) as added, "
-			"sum(d.removed) as removed, "
-			"sum(d.changesets) as changesets "
-			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
-			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
-			"LEFT JOIN exclude e ON (d.email = e.email "
-				"AND (r.projects_id = e.projects_id "
-					"OR e.projects_id = 0)) "
-				"OR (d.email LIKE CONCAT('%%',e.domain) "
+		get_emails = ("SELECT DISTINCT a.%s_email AS email "
+			"FROM analysis_data a "
+			"JOIN repos r ON r.id = a.repos_id "
+			"LEFT JOIN exclude e ON "
+				"(a.author_email = e.email "
 					"AND (r.projects_id = e.projects_id "
 						"OR e.projects_id = 0)) "
-			"WHERE r.projects_id=%i "
-			"AND e.email IS NULL "
-			"AND e.domain IS NULL "
-			"GROUP BY d.email, "
-			"d.affiliation, "
-			"MONTH(m.start_date), "
-			"YEAR(m.start_date)" % project["id"])
-
-		cursor.execute(query)
-		db.commit()
-
-		# Cache annual data by project
-
-		query = ("INSERT INTO project_annual_cache "
-			"SELECT r.projects_id as id, "
-			"d.affiliation as affiliation, "
-			"d.email as email, "
-			"YEAR(m.start_date) as year, "
-			"sum(d.added) as added, "
-			"sum(d.removed) as removed, "
-			"sum(d.changesets) as changesets "
-			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
-			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
-			"LEFT JOIN exclude e ON (d.email = e.email "
-				"AND (r.projects_id = e.projects_id "
-					"OR e.projects_id = 0)) "
-				"OR (d.email LIKE CONCAT('%%',e.domain) "
+				"OR (a.author_email LIKE CONCAT('%%',e.domain) "
 					"AND (r.projects_id = e.projects_id "
-						"OR e.projects_id = 0)) "
-			"WHERE r.projects_id=%i "
+					"OR e.projects_id = 0)) "
+			"WHERE r.projects_id=%s "
 			"AND e.email IS NULL "
-			"AND e.domain IS NULL "
-			"GROUP BY d.email, "
-			"d.affiliation, "
-			"YEAR(m.start_date)" % project["id"])
+			"AND e.domain IS NULL"
+			% (report_attribution,project['id']))
 
-		cursor.execute(query)
-		db.commit()
+		cursor.execute(get_emails)
+		non_excluded_emails = list(cursor)
+
+		for email in non_excluded_emails:
+
+			# Cache monthly by project
+
+			get_stats = ("INSERT INTO project_monthly_cache "
+				"SELECT r.projects_id AS projects_id, "
+				"a.%s_email AS email, "
+				"a.%s_affiliation AS affiliation, "
+				"MONTH(a.%s_date) AS month, "
+				"YEAR(a.%s_date) AS year, "
+				"SUM(a.added) AS added, "
+				"SUM(a.removed) AS removed, "
+				"SUM(a.whitespace) AS whitespace, "
+				"COUNT(DISTINCT a.filename) AS files, "
+				"COUNT(DISTINCT a.commit) AS patches "
+				"FROM analysis_data a "
+				"JOIN repos r ON r.id = a.repos_id "
+				"WHERE a.%s_email='%s' "
+				"AND r.projects_id = %s "
+				"GROUP BY month, "
+				"year, "
+				"affiliation, "
+				"email" 
+				% (report_attribution,report_attribution,
+				report_date,report_date,report_attribution,
+				email['email'],project['id']))
+
+			cursor.execute(get_stats)
+			db.commit()
+	
+			# Cache annually by project
+
+			get_stats = ("INSERT INTO project_annual_cache "
+				"SELECT r.projects_id AS projects_id, "
+				"a.%s_email AS email, "
+				"a.%s_affiliation AS affiliation, "
+				"YEAR(a.%s_date) AS year, "
+				"SUM(a.added) AS added, "
+				"SUM(a.removed) AS removed, "
+				"SUM(a.whitespace) AS whitespace, "
+				"COUNT(DISTINCT a.filename) AS files, "
+				"COUNT(DISTINCT a.commit) AS patches "
+				"FROM analysis_data a "
+				"JOIN repos r ON r.id = a.repos_id "
+				"WHERE a.%s_email='%s' "
+				"AND r.projects_id = %s "
+				"GROUP BY year, "
+				"affiliation, "
+				"email" 
+				% (report_attribution,report_attribution,
+				report_date,report_attribution,
+				email['email'],project['id']))
+
+			cursor.execute(get_stats)
+			db.commit()
 
 	# Start caching by repo
 
 	query = "SELECT id FROM repos"
 
 	cursor.execute(query)
-	repos = cursor.fetchall()
+	repos = list(cursor)
 
 	for repo in repos:
 
-		# Cache monthly data by repo
+		# Cache monthly data by project
 
-		query = ("INSERT INTO repo_monthly_cache "
-			"SELECT r.id as id, "
-			"d.affiliation as affiliation, "
-			"d.email as email, "
-			"YEAR(m.start_date) as year, "
-			"MONTH(m.start_date) as month, "
-			"sum(d.added) as added, "
-			"sum(d.removed) as removed, "
-			"sum(d.changesets) as changesets "
-			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
-			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
-			"LEFT JOIN exclude e ON (d.email = e.email "
-				"AND (r.projects_id = e.projects_id "
-					"OR e.projects_id = 0)) "
-				"OR (d.email LIKE CONCAT('%%',e.domain) "
+		get_emails = ("SELECT DISTINCT a.author_email AS email "
+			"FROM analysis_data a "
+			"JOIN repos r ON r.id = a.repos_id "
+			"LEFT JOIN exclude e ON "
+				"(a.author_email = e.email "
 					"AND (r.projects_id = e.projects_id "
 						"OR e.projects_id = 0)) "
-			"WHERE r.id=%i "
-			"AND e.email IS NULL "
-			"AND e.domain IS NULL "
-			"GROUP BY d.email, "
-			"d.affiliation, "
-			"MONTH(m.start_date), "
-			"YEAR(m.start_date)" % repo["id"])
-
-		cursor.execute(query)
-		db.commit()
-
-		# Cache annual data by repo
-
-		query = ("INSERT INTO repo_annual_cache "
-			"SELECT r.id as id, "
-			"d.affiliation as affiliation, "
-			"d.email as email, "
-			"YEAR(m.start_date) as year, "
-			"sum(d.added) as added, "
-			"sum(d.removed) as removed, "
-			"sum(d.changesets) as changesets "
-			"FROM repos r RIGHT JOIN gitdm_master m ON r.id = m.repos_id "
-			"RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id "
-			"LEFT JOIN exclude e ON (d.email = e.email "
-				"AND (r.projects_id = e.projects_id "
-					"OR e.projects_id = 0)) "
-				"OR (d.email LIKE CONCAT('%%',e.domain) "
+				"OR (a.author_email LIKE CONCAT('%%',e.domain) "
 					"AND (r.projects_id = e.projects_id "
-						"OR e.projects_id = 0)) "
-			"WHERE r.id=%i "
+					"OR e.projects_id = 0)) "
+			"WHERE r.id=%s "
 			"AND e.email IS NULL "
-			"AND e.domain IS NULL "
-			"GROUP BY d.email, "
-			"d.affiliation, "
-			"YEAR(m.start_date)" % repo["id"])
+			"AND e.domain IS NULL"
+			% repo['id'])
 
-		cursor.execute(query)
-		db.commit()
+		cursor.execute(get_emails)
+		non_excluded_emails = list(cursor)
 
-	log_activity('Info','Caching web data for display (complete)')
+		for email in non_excluded_emails:
 
+			# Cache monthly by repo
+
+			get_stats = ("INSERT INTO repo_monthly_cache "
+				"SELECT repos_id, "
+				"%s_email AS email, "
+				"%s_affiliation AS affiliation, "
+				"MONTH(%s_date) AS month, "
+				"YEAR(%s_date) AS year, "
+				"SUM(added) AS added, "
+				"SUM(removed) AS removed, "
+				"SUM(whitespace) AS whitespace, "
+				"COUNT(DISTINCT filename) AS files, "
+				"COUNT(DISTINCT commit) AS patches "
+				"FROM analysis_data "
+				"WHERE %s_email='%s' "
+				"AND repos_id = %s "
+				"GROUP BY month, "
+				"year, "
+				"affiliation, "
+				"email" 
+				% (report_attribution,report_attribution,
+				report_date,report_date,report_attribution,
+				email['email'],repo['id']))
+
+			cursor.execute(get_stats)
+			db.commit()
+	
+			# Cache annually by repo
+
+			get_stats = ("INSERT INTO repo_annual_cache "
+				"SELECT repos_id, "
+				"%s_email AS email, "
+				"%s_affiliation AS affiliation, "
+				"YEAR(%s_date) AS year, "
+				"SUM(added) AS added, "
+				"SUM(removed) AS removed, "
+				"SUM(whitespace) AS whitespace, "
+				"COUNT(DISTINCT filename) AS files, "
+				"COUNT(DISTINCT commit) AS patches "
+				"FROM analysis_data "
+				"WHERE %s_email='%s' "
+				"AND repos_id = %s "
+				"GROUP BY year, "
+				"affiliation, "
+				"email" % (report_attribution,report_attribution,
+				report_date,report_attribution,
+				email['email'],repo['id']))
+
+			cursor.execute(get_stats)
+			db.commit()
+
+	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 ### The real program starts here ###
 
 # Figure out how much we're going to log
@@ -888,13 +1016,12 @@ limited_run = 0
 delete_marked_repos = 0
 pull_repos = 0
 clone_repos = 0
-run_gitdm = 0
-trim_data = 0
-fix_affiliations = 0
-funky_emails = 0
-rebuild_unknown_affiliations = 0
+run_analysis = 0
+nuke_stored_affiliations = 0
+fix_affiliations = 0 #
+rebuild_caches = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcgtafuw')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcanfr')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything by default, unless invoked\n"
@@ -904,49 +1031,46 @@ for opt in opts:
 				"	-d	Delete marked repos\n"
 				"	-p	Run 'git pull' on repos\n"
 				"	-c	Run 'git clone' on new repos\n"
-				"	-g	Run gitdm\n"
-				"	-t	Trim out-of-bounds data if date range changed\n"
-				"	-a	Fix affiliations when config files change\n"
-				"	-f	Fix funky emails (two '@', for example\n"
-				"	-u	Rebuild unknown affiliation cache\n"
-				"	-w	Rebuild website caches\n\n")
+				"	-a	Analyze git repos\n"
+				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
+				"	-f	Fix affiliations when config files change\n"
+				"	-r	Rebuild unknown affiliation and web caches\n\n")
 		sys.exit(0)
+
 	elif opt[0] == '-d':
 		delete_marked_repos = 1
 		limited_run = 1
 		log_activity('Info','Option set: delete marked repos.')
+
 	elif opt[0] == '-p':
 		pull_repos = 1
 		limited_run = 1
 		log_activity('Info','Option set: update repos.')
+
 	elif opt[0] == '-c':
 		clone_repos = 1
 		limited_run = 1
 		log_activity('Info','Option set: clone new repos.')
-	elif opt[0] == '-g':
-		run_gitdm = 1
-		limited_run = 1
-		log_activity('Info','Option set: running gitdm analysis.')
-	elif opt[0] == '-t':
-		trim_data = 1
-		limited_run = 1
-		log_activity('Info','Option set: trimming out-of-bounds data.')
+
 	elif opt[0] == '-a':
+		run_analysis = 1
+		limited_run = 1
+		log_activity('Info','Option set: running analysis.')
+
+	elif opt[0] == '-n':
+		nuke_stored_affiliations = 1
+		limited_run = 1
+		log_activity('Info','Option set: nuking all affiliations')
+
+	elif opt[0] == '-f':
 		fix_affiliations = 1
 		limited_run = 1
 		log_activity('Info','Option set: fixing affiliations.')
-	elif opt[0] == '-f':
-		funky_emails = 1
+
+	elif opt[0] == '-r':
+		rebuild_caches = 1
 		limited_run = 1
-		log_activity('Info','Option set: fixing funky emails.')
-	elif opt[0] == '-u':
-		rebuild_unknown_affiliations = 1
-		limited_run = 1
-		log_activity('Info','Option set: rebuilding unknown cache.')
-	elif opt[0] == '-w':
-		web_caches = 1
-		limited_run = 1
-		log_activity('Info','Option set: building web caches.')
+		log_activity('Info','Option set: rebuilding caches.')
 
 # Get the location of the directory where git repos are stored
 repo_base_directory = get_setting('repo_directory')
@@ -975,23 +1099,18 @@ if not limited_run or (limited_run and pull_repos):
 if not limited_run or (limited_run and clone_repos):
 	git_repo_initialize()
 
-if not limited_run or (limited_run and run_gitdm):
-	gitdm_analysis()
+if not limited_run or (limited_run and run_analysis):
+	analysis()
 
-if not limited_run or (limited_run and trim_data):
-	purge_old_gitdm_data()
+if nuke_stored_affiliations:
+	nuke_affiliations()
 
 if not limited_run or (limited_run and fix_affiliations):
-	correct_modified_gitdm_affiliations()
+	fill_empty_affiliations()
 
-if not limited_run or (limited_run and funky_emails):
-	fix_funky_emails()
+if not limited_run or (limited_run and rebuild_caches):
+	rebuild_unknown_affiliation_and_web_caches()
 
-if not limited_run or (limited_run and rebuild_unknown_affiliations):
-	build_unknown_affiliation_cache()
-
-if not limited_run or (limited_run and web_caches):
-	build_web_caches()
 # All done
 
 update_status('Idle')

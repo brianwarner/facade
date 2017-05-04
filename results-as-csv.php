@@ -15,22 +15,17 @@ $project = array();
 $tags = array();
 $affiliations = array();
 
+$report_attribution = get_setting($db,'report_attribution');
+
 // Handle custom dates
 if ($_GET["start"] == 'custom') {
 	$start_date = sanitize_input($db,$_GET["start_date"],10);
 	$date_clause = $date_clause . " AND m.start_date >= '" . $start_date . "'";
 }
 
-if ($_GET["end"] == 'custom') {
-	$end_date = sanitize_input($db,$_GET["end_date"],10);
-	$date_clause = $date_clause . " AND m.start_date <= '" . $end_date . "'";
-}
-
 // If dates are actually out of order, reset the clause and return everything
-if ($_GET["start"] == 'custom' &&
-$_GET["end"] == 'custom' &&
-$start_date > $end_date) {
-	$date_clause = "";
+if ($start_date > date("Y-m-d",time())) {
+	$date_clause = '';
 }
 
 // Normalize a request for specific repos, or fall back to all repos
@@ -69,8 +64,8 @@ if (isset($_GET["affiliations"])) {
 		$affiliations[] = sanitize_input($db,$affiliation,64);
 	}
 
-	$affiliations_clause = " AND (Affiliation='" .
-		join("' OR Affiliation='",$affiliations) . "')";
+	$affiliations_clause = " AND (" . $report_attribution . "_affiliation='" .
+		join("' OR " . $report_attribution . "_affiliation='",$affiliations) . "')";
 }
 
 // Get ready for export
@@ -82,24 +77,30 @@ $f = fopen('php://output', 'w');
 
 // Walk through the project IDs
 foreach ($projects as $project) {
-	$query = "SELECT p.name AS 'Project name',
+
+	$get_results = "SELECT p.name AS 'Project name',
 		r.path AS 'Repo Path',
 		r.name AS 'Repo Name',
-		m.start_date AS 'Start Date',
-		d.name AS 'Developer Name',
-		d.email AS 'Email',
-		d.affiliation AS 'Affiliation',
-		d.added AS 'LoC Added',
-		d.removed AS 'LoC Removed',
-		d.changesets AS 'Patches'
+		a.author_date AS 'Author Date',
+		a.author_name AS 'Author Name',
+		a.author_email AS 'Author Email',
+		a.author_affiliation AS 'Author Affiliation',
+		a.committer_date AS 'Committer Date',
+		a.committer_name AS 'Committer Name',
+		a.committer_email AS 'Committer Email',
+		a.committer_affiliation AS 'Committer Affiliation',
+		a.added AS 'LoC Added',
+		a.removed AS 'LoC Removed',
+		a.whitespace AS 'Whitespace changes',
+		a.commit AS 'Commit',
+		a.filename AS 'Filename'
 		FROM projects p
 		RIGHT JOIN repos r ON p.id = r.projects_id
-		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
-		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-		LEFT JOIN exclude e ON (d.email = e.email
+		RIGHT JOIN analysis_data a ON r.id = a.repos_id
+		LEFT JOIN exclude e ON (a.author_email = e.email
 			AND (r.projects_id = e.projects_id
 			OR e.projects_id = 0))
-		OR (d.email LIKE CONCAT('%',e.domain)
+		OR (a.author_email LIKE CONCAT('%',e.domain)
 			AND (r.projects_id = e.projects_id
 			OR e.projects_id = 0))
 		WHERE r.projects_id = $project
@@ -108,7 +109,7 @@ foreach ($projects as $project) {
 		$date_clause .
 		$affiliations_clause;
 
-	$result = query_db($db,$query,'Fetching project data');
+	$result = query_db($db,$get_results,'Fetching project data');
 
 	// Write the project-specific data
 	while ($row = $result->fetch_assoc()) {

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2016 Brian Warner
+# Copyright 2016-2017 Brian Warner
 #
 # This file is part of Facade, and is made available under the terms of the GNU
 # General Public License version 2.

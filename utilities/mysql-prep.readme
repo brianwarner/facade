@@ -6,4 +6,4 @@ Things you need to do:
 3. Create a user
 4. Grant that user access to the database
 5. Update the values in includes/db.php
-
+6. Update the values in utilities/db.py

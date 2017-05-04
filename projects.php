@@ -48,23 +48,25 @@ if ($_GET["id"]) {
 
 	// Determine if a year was requested.
 	$year = 'All';
+	$period = 'annual';
 	if ($_GET["year"]) {
 		$year = sanitize_input($db,$_GET["year"],4);
 		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
+		$period = 'monthly';
 	}
 
 	// Determine if a specific affiliation was requested.
 	$affiliation = 'All';
 	if ($_GET["affiliation"]) {
 		$affiliation = sanitize_input($db,rawurldecode($_GET["affiliation"]),64);
-		$affiliation_clause = " AND d.affiliation = '" . $affiliation . "'";
+		$affiliation_clause = " AND affiliation = '" . $affiliation . "'";
 	}
 
 	// Determine if a specific email was requested.
 	$email = 'All';
 	if ($_GET["email"]) {
 		$email = sanitize_input($db,rawurldecode($_GET["email"]),64);
-		$email_clause = " AND d.email = '" . $email . "'";
+		$email_clause = " AND email = '" . $email . "'";
 	}
 
 	// Determine if a specific stat was requested.
@@ -77,12 +79,10 @@ if ($_GET["id"]) {
 
 	// Verify that there's data to show. If not, suppress the report displays.
 // add a clause to check by the stat requested
-	$query = "SELECT NULL FROM repos r
-		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
-		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-		WHERE m.status = 'Complete'
-		AND r.projects_id=" . $project_id .
+	$query = "SELECT NULL FROM project_" . $period . "_cache " .
+		"WHERE projects_id=" . $project_id .
 		$year_clause . $affiliation_clause . $email_clause;
+
 	$result = query_db($db,$query,"Figure out if there's anything to display.");
 
 	if ($result->num_rows > 0) {
@@ -220,12 +220,8 @@ if ($_GET["id"]) {
 echo '<div class="content-block">
 <h2>Domains and emails excluded from ' . $project_name .'</h2>';
 
-list_excludes($db,$project_id);
-
-if ($project_id == 0) {
-	echo '<h2>All domain and email exclusions</h2>';
-	list_excludes($db);
-}
+list_excludes($db,$project_id,$project_name,'domain');
+list_excludes($db,$project_id,$project_name,'email');
 
 echo '</div> <!-- .content-block -->';
 

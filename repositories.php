@@ -13,7 +13,6 @@ include_once "includes/display.php";
 include_once "includes/db.php";
 $db = setup_db();
 
-
 if ($_GET["repo"]) {
 
 	$repo_id = sanitize_input($db,$_GET["repo"],11);
@@ -30,23 +29,25 @@ if ($_GET["repo"]) {
 
 	// Determine if a year was requested.
 	$year = 'All';
+	$period = 'annual';
 	if ($_GET["year"]) {
 		$year = sanitize_input($db,$_GET["year"],4);
-		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
+		$period = 'monthly';
+		$period_clause = ' AND year=' . $year;
 	}
 
 	// Determine if a specific affiliation was requested.
 	$affiliation = 'All';
 	if ($_GET["affiliation"]) {
 		$affiliation = sanitize_input($db,rawurldecode($_GET["affiliation"]),64);
-		$affiliation_clause = " AND d.affiliation = '" . $affiliation . "'";
+		$affiliation_clause = " AND affiliation = '" . $affiliation . "'";
 	}
 
 	// Determine if a specific email was requested.
 	$email = 'All';
 	if ($_GET["email"]) {
 		$email = sanitize_input($db,rawurldecode($_GET["email"]),64);
-		$email_clause = " AND d.email = '" . $email . "'";
+		$email_clause = " AND email = '" . $email . "'";
 	}
 
 	// Determine if a specific stat was requested.
@@ -56,13 +57,11 @@ if ($_GET["repo"]) {
 	}
 
 	write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
+//update this
 
 	// First, verify that there's data to show. If not, suppress the report displays.
-	$query = "SELECT NULL FROM repos r
-		RIGHT JOIN gitdm_master m ON r.id = m.repos_id
-		RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-		WHERE m.status = 'Complete'
-		AND r.id=" . $repo_id .
+	$query = "SELECT NULL FROM repo_" . $period . "_cache " .
+		"WHERE repos_id=" . $repo_id . 
 		$year_clause . $affiliation_clause . $email_clause;
 
 	$result = query_db($db,$query,"Check whether to display.");

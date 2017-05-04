@@ -8,34 +8,6 @@
 * SPDX-License-Identifier:        GPL-2.0
 */
 
-function delete_gitdm_data ($db,$repo_id,$name) {
-
-	// Get the ID associated with the gitdm master and data tables
-	$query = "SELECT id FROM gitdm_master
-		WHERE repos_id=" . $repo_id;
-
-	$result = query_db($db,$query,"Getting gitdm ID");
-
-	while ($row = $result->fetch_assoc()) {
-
-		$gitdm_master_id = $row["id"];
-
-		// Clear the gitdm data
-		$query = "DELETE FROM gitdm_data
-			WHERE gitdm_master_id=" . $gitdm_master_id;
-
-		query_db($db,$query,"Deleting gitdm data for repo " . $name);
-
-		// Remove the master entry
-		$query = "DELETE FROM gitdm_master
-			WHERE id=" . $gitdm_master_id;
-
-		query_db($db,$query,"Deleting the master entry for " . $name);
-
-	}
-	echo '<div class="info">gitdm data deleted for repo ' . $name . '</div>';
-}
-
 function delete_repository ($db,$repo_id) {
 
 	// Get the url of the git repo to let the user know what was deleted
@@ -66,8 +38,12 @@ function delete_repository ($db,$repo_id) {
 		echo '<div class="info">Repo "' . $name . '" removed.</div>';
 
 	} else {
-		// Clear gitdm data, mark for deletion so facade-worker.py removes files
-		delete_gitdm_data($db,$repo_id,$name);
+		// Clear analysis data, mark for deletion so facade-worker.py removes files
+
+		$clean = "DELETE FROM analysis_data WHERE repos_id = $repo_id";
+
+		query_db($db,$clean,'Deleting analysis data for ' . $repo_id);
+
 
 		$query = "UPDATE repos SET status='Delete'
 			WHERE id=" . $repo_id;
@@ -97,6 +73,12 @@ function delete_project ($db,$project_id) {
 	while ($row = $result->fetch_assoc()) {
 		delete_repository($db,$row["id"]);
 	}
+
+	// Then remove the excludes
+	$remove_excludes = "DELETE FROM exclude WHERE projects_id = " . $project_id;
+
+	query_db($db,$remove_excludes,'Removing excludes for project with ID ' .
+		$project_id);
 
 	// Remove the project. If delete fails (e.g., php times out), can try again.
 	$query = "DELETE FROM projects

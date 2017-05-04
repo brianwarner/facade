@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2016 Brian Warner
+# Copyright 2016-2017 Brian Warner
 #
 # This file is part of Facade, and is made available under the terms of the GNU
 # General Public License version 2.
@@ -21,15 +21,14 @@ try:
 except:
     sys.exit("Can't find db.py. Have you created it?")
 
+#### Settings table ####
+
 def create_settings(reset=0):
 
 # Create and populate the default settings table.
 
 	# default settings
 	start_date = "2000-01-01";
-	end_date = "yesterday";
-	interval = "daily";
-	gitdm = "/opt/gitdm/";
 	repo_directory = "/opt/facade/git-trees/";
 
 	if reset:
@@ -42,25 +41,84 @@ def create_settings(reset=0):
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"setting VARCHAR(32) NOT NULL,"
 		"value VARCHAR(128) NOT NULL,"
-		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
 
 	cursor.execute(create)
 	db.commit()
 
 	initialize = ("INSERT INTO settings (setting,value) VALUES"
 		"('start_date','%s'),"
-		"('end_date','%s'),"
-		"('interval','%s'),"
-		"('gitdm','%s'),"
 		"('repo_directory','%s'),"
 		"('utility_status','Idle'),"
-		"('log_level','Quiet')"
-		% (start_date,end_date,interval,gitdm,repo_directory))
+		"('log_level','Quiet'),"
+		"('report_date','author'),"
+		"('report_attribution','author')"
+		% (start_date,repo_directory))
 
 	cursor.execute(initialize)
 	db.commit()
 
 	print "Settings table created."
+
+#### Log tables ####
+
+def create_repos_fetch_log(reset=0):
+
+# A new entry is logged every time a repo update is attempted
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS repos_fetch_log"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
+		"repos_id INT UNSIGNED NOT NULL,"
+		"status VARCHAR(64) NOT NULL,"
+		"date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+
+	cursor.execute(create)
+	db.commit()
+
+def create_analysis_log(reset=0):
+
+# Log the analysis for each repo
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS analysis_log"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS analysis_log ("
+		"repos_id INT UNSIGNED NOT NULL,"
+		"status VARCHAR(64) NOT NULL,"
+		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+
+	cursor.execute(create)
+	db.commit()
+
+def create_utility_log(reset=0):
+
+# Create the table that will track the state of the utility script that
+# maintains repos and does the analysis.
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS utility_log"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS utility_log ("
+		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"level VARCHAR(8) NOT NULL,"
+		"status VARCHAR(128) NOT NULL,"
+		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+
+	cursor.execute(create)
+	db.commit()
+
+#### Project and repo tables ####
 
 def create_projects(reset=0):
 
@@ -103,31 +161,78 @@ def create_repos(reset=0):
 		"path VARCHAR(256),"
 		"name VARCHAR(256),"
 		"added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-		"status VARCHAR(32) NOT NULL)")
+		"status VARCHAR(32) NOT NULL,"
+		"working_commit VARCHAR(40))")
 
 	cursor.execute(create)
 	db.commit()
 
-def create_gitdm_configs(reset=0):
+#### Affiliation tables ####
 
-# Create the table that will watch gitdm's map files for changes.
+def create_affiliations(reset=0):
+
+# Track which domains/emails should be associated with what organizations. Also
+# populate table with some sample entries.
 
 	if reset:
-		clear = "DROP TABLE IF EXISTS gitdm_configs"
+		clear = "DROP TABLE IF EXISTS affiliations"
 
 		cursor.execute(clear)
 		db.commit()
 
-	create = ("CREATE TABLE IF NOT EXISTS gitdm_configs ("
-		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"configfile VARCHAR(128) NOT NULL,"
-		"configtype VARCHAR(32) NOT NULL,"
-		"md5sum VARCHAR(32) NOT NULL,"
-		"status VARCHAR(32) NOT NULL,"
-		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+	create = ("CREATE TABLE IF NOT EXISTS affiliations ("
+		"domain VARCHAR (64) NOT NULL,"
+		"affiliation VARCHAR (64) NOT NULL,"
+		"start_date DATE NOT NULL DEFAULT '1970-01-01',"
+		"UNIQUE (domain,affiliation,start_date))")
 
 	cursor.execute(create)
 	db.commit()
+
+	if reset:
+		populate = ("INSERT INTO affiliations(domain,affiliation) VALUES "
+			"('samsung.com','Samsung'),"
+			"('linuxfoundation.org','Linux Foundation'),"
+			"('redhat.com','Red Hat'),"
+			"('intel.com','Intel'),"
+			"('brian@bdwarner.com','(Hobbyist)')")
+
+		cursor.execute(populate)
+		db.commit()
+
+		populate = ("INSERT INTO affiliations(domain,affiliation,start_date) VALUES "
+			"('brian@bdwarner.com','Samsung','2015-07-05'),"
+			"('brian@bdwarner.com','The Linux Foundation','2011-01-06'),"
+			"('brian@bdwarner.com','IBM','2006-05-20')")
+
+		cursor.execute(populate)
+		db.commit()
+
+def create_aliases(reset=0):
+
+# Store aliases to reduce individuals to one identity, and populate table with
+# sample entries
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS aliases"
+
+		cursor.execute(clear)
+		db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS aliases ("
+		"canonical VARCHAR(64) NOT NULL,"
+		"alias VARCHAR(64) NOT NULL,"
+		"UNIQUE (canonical,alias))")
+
+	cursor.execute(create)
+	db.commit()
+
+	if reset:
+		populate = ("INSERT INTO aliases (canonical,alias) VALUES "
+			"('brian@bdwarner.com','bdwarner@gmail.com')")
+
+		cursor.execute(populate)
+		db.commit()
 
 def create_excludes(reset=0):
 
@@ -148,82 +253,12 @@ def create_excludes(reset=0):
 	cursor.execute(create)
 	db.commit()
 
-def create_repos_fetch_log(reset=0):
-
-# A new entry is logged every time a repo update is attempted:
-#  * If the update succeeds, it will be logged as "Success" and gitdm will run.
-#  * If it fails, it will be logged as "Failed" and gitdm will not run.
-#  * If a failed repository updates later, gitdm will be run for all "Failed"
-#	 dates and their log status will be updated to "Reconciled".
-
-	if reset:
-		clear = "DROP TABLE IF EXISTS repos_fetch_log"
-
-		cursor.execute(clear)
-		db.commit()
-
-	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
-		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"repos_id INT UNSIGNED NOT NULL,"
-		"status VARCHAR(16) NOT NULL,"
-		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-
-	cursor.execute(create)
-	db.commit()
-
-def create_gitdm_master(reset=0):
-
-# A new entry is logged every time a gitdm analysis hs been attempted:
-#  * If gitdm succeeds, it will be logged as "Success".
-#  * If it fails, it will be logged as "Failed" and gitdm try again next time.
-#  * If gitdm later succees on a repository that previously failed, the log
-#	 status will be updated to "Reconciled".
-
-	if reset:
-		clear = "DROP TABLE IF EXISTS gitdm_master"
-
-		cursor.execute(clear)
-		db.commit()
-
-	create = ("CREATE TABLE IF NOT EXISTS gitdm_master ("
-		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"repos_id INT UNSIGNED NOT NULL,"
-		"status VARCHAR(128) NOT NULL,"
-		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-		"start_date VARCHAR(10))")
-
-	cursor.execute(create)
-	db.commit()
-
-def create_gitdm_data(reset=0):
-
-# Create the raw data table
-
-	if reset:
-		clear = "DROP TABLE IF EXISTS gitdm_data"
-
-		cursor.execute(clear)
-		db.commit()
-
-	create = ("CREATE TABLE IF NOT EXISTS gitdm_data ("
-		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"gitdm_master_id BIGINT UNSIGNED NOT NULL,"
-		"name VARCHAR(64) NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"affiliation VARCHAR(64) NOT NULL,"
-		"added INT UNSIGNED NOT NULL,"
-		"removed INT UNSIGNED NOT NULL,"
-		"changesets INT UNSIGNED NOT NULL)")
-
-	cursor.execute(create)
-	db.commit()
-
 def create_special_tags(reset=0):
 
-# Entries in this table are matched against email addresses found by gitdm to
-# categorize subsets of people.  For example, people who worked for a certain
-# organization who should be categorized separately, to benchmark performance
-# against the rest of a company.
+# Entries in this table are matched against email addresses found during
+# analysis categorize subsets of people.  For example, people who worked for a
+# certain organization who should be categorized separately, to benchmark 
+# performance against the rest of a company.
 
 	if reset:
 		clear = "DROP TABLE IF EXISTS special_tags"
@@ -241,27 +276,41 @@ def create_special_tags(reset=0):
 	cursor.execute(create)
 	db.commit()
 
-def create_utility_log(reset=0):
+#### Analysis tables ####
 
-# Create the table that will track the state of the utility script that
-# maintains repos and calls gitdm.
+def create_analysis(reset=0):
+
+# Analysis data
 
 	if reset:
-		clear = "DROP TABLE IF EXISTS utility_log"
+		clear = "DROP TABLE IF EXISTS analysis_data"
 
 		cursor.execute(clear)
 		db.commit()
 
-	create = ("CREATE TABLE IF NOT EXISTS utility_log ("
-		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"level VARCHAR(8) NOT NULL,"
-		"status VARCHAR(128) NOT NULL,"
-		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+	create = ("CREATE TABLE IF NOT EXISTS analysis_data ("
+		"repos_id INT UNSIGNED NOT NULL,"
+		"commit VARCHAR(40) NOT NULL,"
+		"author_name VARCHAR(64) NOT NULL,"
+		"author_email VARCHAR(64) NOT NULL,"
+		"author_date VARCHAR(10) NOT NULL,"
+		"author_affiliation VARCHAR(64),"
+		"committer_name VARCHAR(64) NOT NULL,"
+		"committer_email VARCHAR(64) NOT NULL,"
+		"committer_date VARCHAR(10) NOT NULL,"
+		"committer_affiliation VARCHAR(64),"
+		"added INT UNSIGNED NOT NULL,"
+		"removed INT UNSIGNED NOT NULL,"
+		"whitespace INT UNSIGNED NOT NULL,"
+		"filename VARCHAR(4096) NOT NULL,"
+		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
 
 	cursor.execute(create)
 	db.commit()
 
-def create_caches(reset=0):
+#### Cache tables ####
+
+def create_unknown_caches(reset=0):
 
 # After each facade-worker run, any unknown contributors and their email domain
 # are cached in this table to make them easier to fetch later.
@@ -273,7 +322,7 @@ def create_caches(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS unknown_cache ("
-		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+		"type VARCHAR(10) NOT NULL,"
 		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"domain VARCHAR(64),"
@@ -281,6 +330,8 @@ def create_caches(reset=0):
 
 	cursor.execute(create)
 	db.commit()
+
+def create_web_caches(reset=0):
 
 # After each facade-worker run, cache results used in summary tables to decrease
 # load times when the database gets large. Also enables a read-only kiosk mode.
@@ -297,13 +348,15 @@ def create_caches(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS project_monthly_cache ("
-		"id INT UNSIGNED NOT NULL,"
-		"affiliation VARCHAR(64) NOT NULL,"
+		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
-		"year SMALLINT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64),"
 		"month TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
 		"patches BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
@@ -318,12 +371,14 @@ def create_caches(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS project_annual_cache ("
-		"id INT UNSIGNED NOT NULL,"
-		"affiliation VARCHAR(64) NOT NULL,"
+		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
+		"affiliation VARCHAR(64),"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
 		"patches BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
@@ -338,13 +393,15 @@ def create_caches(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_monthly_cache ("
-		"id INT UNSIGNED NOT NULL,"
-		"affiliation VARCHAR(64) NOT NULL,"
+		"repos_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
-		"year SMALLINT UNSIGNED NOT NULL,"
+		"affiliation VARCHAR(64),"
 		"month TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
 		"patches BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
@@ -359,16 +416,20 @@ def create_caches(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_annual_cache ("
-		"id INT UNSIGNED NOT NULL,"
-		"affiliation VARCHAR(64) NOT NULL,"
+		"repos_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
+		"affiliation VARCHAR(64),"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
 		"patches BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
 	db.commit()
+
+#### Authentication tables ####
 
 def create_auth(reset=0):
 
@@ -388,7 +449,7 @@ def create_auth(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS auth ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"user VARCHAR(64) NOT NULL,"
+		"user VARCHAR(64) UNIQUE NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"password VARCHAR(64) NOT NULL,"
 		"created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
@@ -445,7 +506,6 @@ def create_auth(reset=0):
 	cursor.execute(query)
 	db.commit()
 
-
 # ==== The real program starts here ==== #
 
 # First make sure the database files have been setup
@@ -472,19 +532,27 @@ if action.lower() == 'i':
 	confirm = raw_input('(yes): ')
 
 	if confirm == "yes":
-		print "Setting up database."
+		print "Setting up database tables."
 
 		create_settings('clear')
+
+		create_repos_fetch_log('clear')
+		create_analysis_log('clear')
+		create_utility_log('clear')
+
 		create_projects('clear')
 		create_repos('clear')
-		create_gitdm_configs('clear')
+
+		create_affiliations('clear')
+		create_aliases('clear')
 		create_excludes('clear')
-		create_repos_fetch_log('clear')
-		create_gitdm_master('clear')
-		create_gitdm_data('clear')
 		create_special_tags('clear')
-		create_utility_log('clear')
-		create_caches('clear')
+
+		create_analysis('clear')
+
+		create_unknown_caches('clear')
+		create_web_caches('clear')
+
 		create_auth('clear')
 
 	else:
@@ -493,8 +561,8 @@ if action.lower() == 'i':
 elif action.lower() == 'u':
 
 	print ("========== Updating database tables ==========\n\n"
-		"This will attempt to add and alter your database tables while preserving your major settings.\n"
-		"It will reset your accumulated gitdm data, which means it will be rebuilt the next time\n"
+		"This will attempt to add database tables while preserving your major settings.\n"
+		"It will reset your analysis data, which means it will be rebuilt the next time\n"
 		"facade-worker.py runs. This minimizes the risk of stale data.\n\n"
 		"This may or may not work. Are you sure you want to continue?\n")
 
@@ -503,12 +571,22 @@ elif action.lower() == 'u':
 	if confirm.lower() == "yes":
 		print "Attempting update."
 
-		create_gitdm_configs('clear')
-		create_repos_fetch_log('clear')
-		create_gitdm_master('clear')
-		create_gitdm_data('clear')
-		create_caches('clear')
-		create_auth('clear')
+		create_repos_fetch_log()
+		create_analysis_log()
+		create_utility_log()
+
+		create_projects()
+		create_repos()
+
+		create_affiliations()
+		create_aliases()
+		create_excludes()
+		create_special_tags()
+
+		create_analysis('clear')
+
+		create_unknown_caches('clear')
+		create_web_caches('clear')
 
 	else:
 		print "Exiting without doing anything."

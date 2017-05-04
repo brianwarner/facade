@@ -15,7 +15,9 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 	}
 
 	if ($year == 'All') {
+
 		$cache_table = $scope . '_annual_cache';
+
 		$year_clause = '';
 		$period = 'year';
 
@@ -52,6 +54,10 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 		$stat_clause = "SUM(patches)";
 	} elseif ($stat == 'removed') {
 		$stat_clause = "SUM(removed)";
+	} elseif ($stat == 'whitespace') {
+		$stat_clause = "SUM(whitespace)";
+	} elseif ($stat == 'files') {
+		$stat_clause = "COUNT(DISTINCT(files))";
 	} else {
 		$stat_clause = "sum(added)";
 	}
@@ -65,11 +71,11 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 
 	$query = "SELECT " . $type . "
 		FROM " . $cache_table .
-		" WHERE " . $year_clause . "id=" . $id .
+		" WHERE " . $year_clause . $scope . "s_id=" . $id .
 		" GROUP BY " . $type .
 		" ORDER BY " . $sort_field . " " . $sort_order;
 
-	$result = query_db($db,$query,"Get initial list of results");
+	$result = query_db($db,$query,"Get number of results");
 
 	$total_entities = $result->num_rows;
 
@@ -77,8 +83,8 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 
 	$query = "SELECT " . $type . "
 		FROM " . $cache_table .
-		" WHERE " . $year_clause . $affiliation_clause . $email_clause . "id=" .
-		$id . " GROUP BY " . $type .
+		" WHERE " . $year_clause . $affiliation_clause . $email_clause . 
+		$scope . "s_id=" .	$id . " GROUP BY " . $type .
 		" ORDER BY " . $sort_field . " " . $sort_order .
 		$results_clause;
 
@@ -93,8 +99,12 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
         } else {
             if ($stat == 'removed') {
                 echo '<h3>Lines of code removed by ';
+			} elseif ($stat == 'whitespace') {
+				echo '<h3>Whitespace changes by ';
             } elseif ($stat == 'patches') {
                 echo '<h3>Patched landed by ';
+            } elseif ($stat == 'filees') {
+                echo '<h3>Files changed by ';
             } else {
                 echo '<h3>Lines of code added by ';
             }
@@ -161,7 +171,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 			$query = "SELECT " . $stat_clause . " AS stat," .
 				$period . " AS period
 				FROM " . $cache_table . "
-				WHERE " . $year_clause . "id=" . $id . "
+				WHERE " . $year_clause . $scope . "s_id=" . $id . "
 				AND " . $type . "='" . $list[$type] . "'
 				GROUP BY period ORDER BY period ASC";
 
@@ -193,13 +203,13 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 					. "</td>\n";
 			}
 
-			if ($stat == 'contributors') {
+			if (($stat == 'contributors') || ($stat == 'files')) {
 
-				// If doing contribs, overwrite $total with meaningful number
+				// If doing contribs or files, overwrite $total with meaningful number
 
 				$query = "SELECT " . $stat_clause . " AS stat
 					FROM " . $cache_table . "
-					WHERE " . $year_clause . "id=" . $id . "
+					WHERE " . $year_clause . $scope . "s_id=" . $id . "
 					AND " . $type . "='" . $list[$type] . "'";
 
 				$result_contribs = query_db($db,$query,"Get data");
@@ -224,7 +234,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 			$query = "SELECT " . $stat_clause . " as stat," .
 				$period . " AS period
 				FROM " . $cache_table . "
-				WHERE " . $year_clause . "id=" . $id . "
+				WHERE " . $year_clause . $scope . "s_id=" . $id . "
 				GROUP BY period ORDER BY period ASC";
 
 			$result_total = query_db($db,$query,"Get totals");
@@ -238,13 +248,13 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 					. "</td>\n";
 			}
 
-			if ($stat == 'contributors') {
+			if (($stat == 'contributors') || ($stat == 'files')) {
 
-				// If doing contribs, overwrite $grand_total with meaningful number
+				// If doing contribs or files, overwrite $grand_total with meaningful number
 
 				$query = "SELECT " . $stat_clause . " AS stat
 					FROM " . $cache_table . "
-					WHERE " . $year_clause . "id=" . $id;
+					WHERE " . $year_clause . $scope . "s_id=" . $id;
 
 				$result_contribs = query_db($db,$query,"Get data");
 
@@ -342,7 +352,7 @@ function list_repos ($db,$project_id) {
 			<tr>
 			<th class="half">Git repo</th>
 			<th class="quarter">Repo Status</th>
-			<th class="quarter">gitdm Status</th>
+			<th class="quarter">Analysis Status</th>
 			</tr>';
 
 		while ($row_repo = $result_repo->fetch_assoc()) {
@@ -356,7 +366,7 @@ function list_repos ($db,$project_id) {
 
 			$query = "SELECT status FROM repos_fetch_log
 				WHERE repos_id=" . $row_repo["id"] . "
-				ORDER BY id DESC LIMIT 1";
+				ORDER BY date DESC LIMIT 1";
 
 			$result_repo_log = query_db($db,$query,"Select last repo status for " . $row_repo["git"]);
 
@@ -373,10 +383,10 @@ function list_repos ($db,$project_id) {
 
 			// Determine the last time the git repo was successfully pulled
 
-			$query = "SELECT status,date_attempted FROM repos_fetch_log
+			$query = "SELECT status,date FROM repos_fetch_log
 				WHERE repos_id=" . $row_repo["id"] . "
 				AND status='Up-to-date'
-				ORDER BY date_attempted DESC LIMIT 1";
+				ORDER BY date DESC LIMIT 1";
 
 			$result_repo_log = query_db($db,$query,"Select last successful repo status for " . $row_repo["git"]);
 
@@ -384,7 +394,9 @@ function list_repos ($db,$project_id) {
 
 			if ($row_repo_log["date_attempted"]) {
 				$date_attempted = strtotime($row_repo_log["date_attempted"]);
-				echo '<span class="detail-text">Last successful pull at<br>' . date("H:i", $date_attempted) . ' on ' . date("M j, Y", $date_attempted). '</span>';
+				echo '<span class="detail-text">Last successful pull at<br>' . 
+					date("H:i", $date_attempted) . ' on ' . 
+					date("M j, Y", $date_attempted). '</span>';
 			}
 
 			// Determine if repo is marked to be removed during the next facade-worker.py run
@@ -407,48 +419,19 @@ function list_repos ($db,$project_id) {
 			}
 			echo '<div class="detail">';
 
-			// Find any incomplete repos
+			// Get the analysis status
 
-			$query = "SELECT status FROM gitdm_master
-				WHERE repos_id=" . $row_repo["id"] . "
-				AND status!='Complete'
-				ORDER BY date_attempted ASC";
+			$query = "SELECT status FROM analysis_log WHERE repos_id = " .
+				$row_repo['id'] . " ORDER BY date_attempted DESC";
 
-			$result_gitdm_master = query_db($db,$query,"Get any incomplete gitdm status");
-			$row_gitdm_master = $result_gitdm_master->fetch_assoc();
+			$result_analysis = query_db($db,$query,'Get last analysis status');
+			$analysis_status = $result_analysis->fetch_assoc();
 
-			if ($row_gitdm_master) {
-				echo '<span style="color:red"><strong>INCOMPLETE</strong></span>';
+			if ($analysis_status) {
+				echo '<strong>' . $analysis_status['status'] . '</strong>';
 			} else {
-				// Determine if the repo has complete status
-				$query = "SELECT status FROM gitdm_master
-					WHERE repos_id=" . $row_repo["id"] . "
-					AND status='Complete'
-					ORDER BY date_attempted DESC";
-
-				$result_gitdm_master = query_db($db,$query,"Get any incomplete gitdm status");
-				$row_gitdm_master = $result_gitdm_master->fetch_assoc();
-
-				if ($row_gitdm_master) {
-					echo "<strong>Complete</strong>";
-				} else {
-					// If the return is empty, there must be no status
-					echo '<strong><span style="color:green">New</span></strong>';
-				}
-
-			}
-
-			$query = "SELECT start_date FROM gitdm_master
-				WHERE repos_id=" . $row_repo["id"] . "
-				AND status='Complete'
-				ORDER BY start_date DESC LIMIT 1";
-
-			$result_gitdm_master = query_db($db,$query,"Get last complete gitdm status");
-			$row_gitdm_master = $result_gitdm_master->fetch_assoc();
-
-			if ($row_gitdm_master['start_date']) {
-				$date_attempted = strtotime($row_gitdm_master["start_date"]);
-				echo '<span class="detail-text">Current through<br>' . date("F j, Y", $date_attempted) . '</span>';
+				// If the return is empty, there must be no status
+				echo '<strong><span style="color:green">New</span></strong>';
 			}
 
 			echo '</div><!-- .detail -->
@@ -464,78 +447,98 @@ function list_repos ($db,$project_id) {
 	}
 }
 
-function list_excludes($db,$project_id = NULL) {
+function list_excludes($db,$project_id,$project_name,$type) {
 
-	/* List all excluded domains and emails given the project_id.
-	Project ID of 0 returns global excludes. No project ID returns
-	all exclusion rules. */
+/* List all excluded domains and emails given the project_id. Project ID of 0
+ * returns global exclusions, and project ID -1 returns all exclusion rules.
+ * $type must be either 'domain' or 'email. */
 
-	$stat_clause = "sum(d.added)";
-
-	// If scope is for a specific project, get that project's name - can I eliminate this?
-	if ($project_id > 0) {
-		$query = "SELECT name FROM projects
-			WHERE id=" . $project_id;
-
-		$result = query_db($db,$query,"Retrieving name");
-		$row = $result->fetch_assoc();
-		$project_name = $row["name"];
-
-		$project_clause = ' AND r.projects_id = ' . $project_id;
-
-		// Show all rules that apply on a project detail page
-		$project_id_clause = " AND (projects_id=" . $project_id . " OR projects_id=0)";
-
-	} elseif ($project_id === 0) {
-		$project_name = "all projects";
-		$project_id_clause = " AND projects_id=0";
-	}
+	$stat = "sum(a.added)";
+	$report_attribution = get_setting($db,'report_attribution');
 
 	echo '<div class="sub-block">';
 
-	$query = "SELECT id,domain,projects_id FROM exclude
-		WHERE domain IS NOT NULL" .
-		$project_id_clause;
+	if ($project_id == 0) {
+		// Return stats for all excluded domain/email stats
+		$exclude_scope = '';
 
-	$result = query_db($db,$query,'Getting all excluded domains');
+	} else {
+		// Just return the project's excluded domains/emails, including globals.
+		$exclude_scope = 'AND (projects_id = ' . $project_id . ' OR
+			projects_id = 0)';
+	}
 
-	if ($result->num_rows > 0) {
+	$get_excludes = "SELECT id,projects_id,$type AS type FROM exclude
+		WHERE $type IS NOT NULL $exclude_scope ORDER BY projects_id";
 
+	$excludes = query_db($db,$get_excludes,'Getting all excluded ' . $type . 's');
+
+	if ($excludes) {
+
+		// If excludes are found, print the table
 		echo '<table>
 			<tr>
-			<th class="quarter">Domains</th>
-			<th class="quarter">Lines of code excluded</th>
+			<th class="quarter">Author\'s ' . $type . '</th>
+			<th class="quarter">Lines of code affected</th>
 			<th class="half">Applies to</th>
 			</tr>';
 
-		// Get the number of lines of code affected by each exclude
-		while ($row = $result->fetch_assoc()) {
+		while ($exclude = $excludes->fetch_assoc()) {
 
-			$query = "SELECT " . $stat_clause . " AS added
-				FROM gitdm_master m
-				RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-				LEFT JOIN repos r ON m.repos_id = r.id
-				WHERE d.email LIKE '%" . $row['domain'] . "%'" . $project_clause;
+			if ($exclude['projects_id'] == 0) {
 
-			$result_lines = query_db($db,$query,
-				'Getting excluded lines for project ' . $project_name . ',
-				domain ' . $row['domain']);
+				if ($project_id > 0) {
 
-			$lines = $result_lines->fetch_assoc();
+					// Limit stats to this project for global excludes
+					$project = 'AND r.projects_id = ' . $project_id;
+				} else {
+
+					// Show stats across all projects for global excludes
+					$project = '';
+				}
+
+				// Set an appropriate 'Applies to' name
+				$name = "All projects";
+
+			} else {
+
+				// Limit excludes to their associated project
+				$project = ' AND r.projects_id = ' . $exclude['projects_id'];
+
+				// Set the 'Applies to' text for the appropriate project
+				$get_name = "SELECT name FROM projects WHERE id=" . 
+					$exclude['projects_id'];
+
+				$name_result = query_db($db,$get_name,'getting name for display');
+
+				$name = $name_result->fetch_assoc()['name'];
+			}
+
+			$get_details = "SELECT $stat AS stat FROM analysis_data a
+				JOIN repos r ON a.repos_id = r.id
+				WHERE " . $report_attribution . "_email 
+				LIKE '%" . $exclude['type'] . "%'" . $project;
+
+			$details = query_db($db,$get_details,'Getting exclude details');
+			
+			$detail_stat = $details->fetch_assoc()['stat'];
+
+			if (!$detail_stat) {
+				$detail_stat = 0;
+			}
 
 			echo '<tr>
-				<td>' . $row['domain'] . '</td>
-				<td>' . number_format($lines['added']) . '</td>
-				<td>';
+				<td>' . $exclude['type'] . '</td>
+				<td>' . number_format($detail_stat) . '</td>
+				<td>' . $name;
 
 			// If current page is in the rule's scope, allow user to delete it
-			if (isset($project_id) &&
-			$row['projects_id'] == $project_id &&
+			if ($exclude['projects_id'] == $project_id &&
 			$_SESSION['access_granted']) {
 				echo '<span class="button">
-					<form action="manage" id="delexcludedomain" method="post">
-					<input type="submit" name="delete_excludedomain" value="delete">
-					<input type="hidden" name="exclude_id" value="' . $row['id']
+					<form action="manage" id="delexclude' . $type . '" method="post">
+					<input type="submit" name="delete_exclude' . $type . '" value="delete">
+					<input type="hidden" name="exclude_id" value="' . $exclude['id']
 					. '">
 					<input type="hidden" name="project_id" value="' .
 					$project_id . '">
@@ -543,125 +546,26 @@ function list_excludes($db,$project_id = NULL) {
 					</span>';
 			}
 
-			// Identify the scope of the exclusion rule
-			if ($row['projects_id'] == 0) {
-				echo 'All projects</td>';
-			} else {
-				$query = "SELECT name FROM projects
-					WHERE id=" . $row['projects_id'];
+			echo '</td>
+				</tr>';
 
-				$result_excluded_from = query_db($db,$query,'Getting project name');
-				$excluded_from = $result_excluded_from->fetch_assoc();
-				echo $excluded_from['name'] . '</td>';
-			}
-
-			echo '</tr>';
 		}
-
 		echo '</table>';
 
 	} else {
-		echo '<p><strong>No domains excluded.</strong></p>';
+		echo '<p><strong>No ' . $type . 's excluded</strong></p>';
 	}
 
-	if (isset($project_id) && $_SESSION['access_granted']) {
+	if ($project_id >= 0 && $_SESSION['access_granted']) {
 		echo '<p>
-			<form action="manage" id="newexcludedomain" method="post">
-			<input type="submit" name="confirmnew_excludedomain"
-			value="Exclude a domain from ' . $project_name . '">
+			<form action="manage" id="newexclude' . $type . '" method="post">
+			<input type="submit" name="confirmnew_exclude' . $type . '"
+			value="Exclude ' . $type . ' from ' . $project_name . '">
 			<input type="hidden" name="project_name" value="' . $project_name .
 			'">
 			<input type="hidden" name="project_id" value="' . $project_id .'">
 			</form>
 			</p>';
-	}
-
-	echo '</div> <!-- .sub-block -->
-
-	<div class="sub-block">';
-
-	$query = "SELECT id,email,projects_id FROM exclude
-		WHERE email IS NOT NULL" .
-		$project_id_clause . "
-		ORDER BY projects_id ASC,
-		email ASC";
-
-	$result = query_db($db,$query,'Getting all excluded emails');
-
-	if ($result->num_rows > 0) {
-
-		echo '<table>
-			<tr>
-			<th class="quarter">Emails</th>
-			<th class="quarter">Lines of code excluded</th>
-			<th class="half">Applies to</th>
-			</tr>';
-
-		// Get the number of lines of code affected by each exclude
-		while ($row = $result->fetch_assoc()) {
-
-			$query = "SELECT " . $stat_clause . " AS added
-				FROM gitdm_master m
-				RIGHT JOIN gitdm_data d ON m.id = d.gitdm_master_id
-				LEFT JOIN repos r ON m.repos_id = r.id
-				WHERE d.email='" . $row['email'] . "'" . $project_clause;
-
-			$result_lines = query_db($db,$query,
-				'Getting excluded lines for project ' . $project_name .
-				', email ' . $row['email']);
-
-			$lines = $result_lines->fetch_assoc();
-
-			echo '<tr><td>' . $row['email'] . '</td><td>' . number_format($lines['added']) . '</td><td>';
-
-			// If current page is in rule's scope, allow user to delete it
-			if (isset($project_id) &&
-			$row['projects_id'] == $project_id &&
-			$_SESSION['access_granted']) {
-
-				echo '<span class="button">
-					<form action="manage" id="delexcludeemail" method="post">
-					<input type="submit" name="delete_excludeemail"
-					value="delete">
-					<input type="hidden" name="exclude_id" value="' . $row['id']
-					. '">
-					<input type="hidden" name="project_id" value="' .
-					$projects_id . '">
-					</form>
-					</span>';
-
-			}
-
-
-			// Identify the scope of the exclusion rule
-			if ($row['projects_id'] == 0) {
-				echo 'All projects</td>';
-			} else {
-				$query = "SELECT name FROM projects
-					WHERE id=" . $row['projects_id'];
-
-				$result_excluded_from = query_db($db,$query,'Getting project name');
-				$excluded_from = $result_excluded_from->fetch_assoc();
-				echo $excluded_from['name'] . '</td>';
-			}
-
-			echo '</tr>';
-		}
-
-		echo '</table>';
-
-	} else {
-		echo '<p><strong>No emails excluded.</strong></p>';
-	}
-
-	if (isset($project_id) && $_SESSION['access_granted']) {
-		echo '<form action="manage" id="newexcludeemail" method="post">
-			<input type="submit" name="confirmnew_excludeemail"
-			value="Exclude an email from ' . $project_name . '">
-			<input type="hidden" name="project_name" value="' . $project_name .
-			'">
-			<input type="hidden" name="project_id" value="' . $project_id .'">
-			</form>';
 	}
 
 	echo '</div> <!-- .sub-block -->';
@@ -753,10 +657,15 @@ function write_stat_selector_submenu($raw_uri,$stat) {
 	}
 	echo '"><a href="' . $clean_uri. '&stat=removed">Lines removed</a></span>
 	<span class="item';
+	if ($stat == 'whitespace') {
+		echo ' active';
+	}
+	echo '"><a href="' . $clean_uri . '&stat=whitespace">Whitespace changes</a></span>
+	<span class="item';
 	if ($stat == 'patches') {
 		echo ' active';
 	}
-	echo '"><a href="' . $clean_uri . '&stat=patches">Patches</a></span>
+	echo '"><a href="' . $clean_uri. '&stat=patches">Patches</a></span>
 	<span class="item';
 	if ($stat == 'contributors') {
 		echo ' active';
