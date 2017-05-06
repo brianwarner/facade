@@ -181,6 +181,7 @@ def create_affiliations(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS affiliations ("
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"domain VARCHAR (64) NOT NULL,"
 		"affiliation VARCHAR (64) NOT NULL,"
 		"start_date DATE NOT NULL DEFAULT '1970-01-01',"
@@ -220,6 +221,7 @@ def create_aliases(reset=0):
 		db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS aliases ("
+		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"canonical VARCHAR(64) NOT NULL,"
 		"alias VARCHAR(64) NOT NULL,"
 		"UNIQUE (canonical,alias))")
@@ -578,8 +580,8 @@ elif action.lower() == 'u':
 		create_projects()
 		create_repos()
 
-		create_affiliations()
-		create_aliases()
+		create_affiliations('clear')
+		create_aliases('clear')
 		create_excludes()
 		create_special_tags()
 

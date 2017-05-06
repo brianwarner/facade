@@ -546,6 +546,163 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
+} elseif ($_POST["confirmnew_alias"]) {
+
+	$title = "Add an alias";
+	include_once "includes/header.php";
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	echo '<div class="content-block"><div class="sub-block"><p>Alias mapping
+		help ensure that developers with multiple email addresses get full
+		credit for their work.</p>
+		</div> <!-- .sub-block -->
+		<div class="sub-block">
+		<form action="manage" id="newalias" method="post">
+		<table>
+		<tr>
+		<td class="quarter"><label for="alias">This email: </label></td>
+		<td class="quarter"><span class="text"><input type="text" name="alias"></span></td>
+		<td class="half">&nbsp;</td>
+		</tr>
+		<tr>
+		<td class="quarter"><label for="canonical">Is an alias for: </label></td>
+		<td class="quarter"><span class="text"><input type="text" name="canonical"></span></td>
+		<td class="half">&nbsp;</td>
+		</tr>
+		</table>
+		<input type="submit" name="new_alias" value="Add alias">
+		</form>
+		</div> <!-- .sub-block -->';
+
+	include_once "includes/footer.php";
+
+} elseif ($_POST["new_alias"]) {
+
+	$alias = sanitize_input($db,$_POST['alias'],64);
+	$canonical = sanitize_input($db,$_POST['canonical'],64);
+
+	if ($alias && $canonical) {
+
+		$add_alias = "INSERT INTO aliases (alias,canonical) VALUES ('" . $alias
+			. "','" . $canonical . "')";
+
+		query_db($db,$add_alias,'Adding alias');
+	}
+
+	header("Location: people");
+
+} elseif ($_POST["delete_alias"]) {
+
+	$id = sanitize_input($db,$_POST['id'],11);
+
+	if ($id) {
+
+		$delete = "DELETE FROM aliases WHERE id=" . $id;
+		query_db($db,$delete,'Deleting alias');
+
+	}
+
+	header("Location: people");
+
+} elseif ($_POST["confirmnew_affiliation"]) {
+
+	$title = "Add an affiliation";
+	include_once "includes/header.php";
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	echo '<div class="content-block"><div class="sub-block"><p>Affiliation
+		mappings help trace work back to specific companies, based upon the
+		domain name their employees use or by specific email addresses.</p>
+		<p>The start date field allows you to indicate that after a certain
+		date, the affiliation should be changed. This should be used when a
+		developer uses a personal email and then changes companies, or when a
+		company is acquired and the domain is now associated with a new
+		parent.</p>
+
+		</div> <!-- .sub-block -->
+		<div class="sub-block">
+		<form action="manage" id="newaffiliation" method="post">
+		<table>
+		<tr>
+		<td class="quarter"><label for="domain">This email or domain: </label></td>
+		<td class="quarter"><span class="text"><input type="text" name="domain"></span></td>
+		<td class="half">&nbsp;</td>
+		</tr>
+		<tr>
+		<td class="quarter"><label for="affiliation">Is associated with this
+		organization: </label></td>
+		<td class="quarter"><span class="text"><input type="text"
+		name="affiliation"></span></td>
+		<td class="half">&nbsp;</td>
+		</tr>
+		<tr>
+		<td class="quarter">But only after this date (optional):</td>
+		<td class="quarter"><span class="text"><input type="text"
+		name="start_date"></span></td>
+		<td>&nbsp;</td>
+		</tr>
+		</table>
+		</div> <!-- .sub-block -->
+		<div class="sub-block">
+		<input type="submit" name="new_affiliation" value="Add affiliation">
+		</form>
+		</div> <!-- .sub-block -->';
+
+	include_once "includes/footer.php";
+
+} elseif ($_POST["new_affiliation"]) {
+
+	$domain = sanitize_input($db,$_POST['domain'],64);
+	$affiliation = sanitize_input($db,$_POST['affiliation'],64);
+	$start_date = sanitize_input($db,$_POST['start_date'],10);
+
+	if ($domain && $affiliation) {
+
+		if ($start_date) {
+			$add_affiliation = "INSERT INTO affiliations
+				(domain,affiliation,start_date) VALUES ('"
+				. $domain . "','" . $affiliation . "','" . $start_date . "')";
+
+		} else {
+			$add_affiliation = "INSERT INTO affiliations
+				(domain,affiliation) VALUES ('"
+				. $domain . "','" . $affiliation . "')";
+		}
+
+		query_db($db,$add_affiliation,'Adding affiliation');
+
+		// Delete all matching affiliations, so they will be rebuilt with
+		// corrected data next time facade-worker.py runs.
+
+		$delete = "UPDATE analysis_data SET author_affiliation = NULL WHERE
+			author_email LIKE CONCAT('%','" . $domain . "')";
+
+		query_db($db,$delete,'Clearing author info');
+
+		$delete = "UPDATE analysis_data SET committer_affiliation = NULL WHERE
+			committer_email LIKE CONCAT('%','" . $domain . "')";
+
+		query_db($db,$delete,'Clearing committer info');
+
+	}
+
+	header("Location: people");
+
+} elseif ($_POST["delete_affiliation"]) {
+
+	$id = sanitize_input($db,$_POST['id'],11);
+
+	if ($id) {
+
+		$delete = "DELETE FROM affiliations WHERE id=" . $id;
+		query_db($db,$delete,'Deleting affiliations');
+
+	}
+
+	header("Location: people");
+
 } else {
 	echo "Oops, what did you want to do?\n";
 }
