@@ -8,13 +8,6 @@
 # Config files
 db.php
 db.py
-database.py
 *.pyc
-
-# Gitdm output files
-*.tmp
-
-# Cached gitdm configs
-*.cache
 
 *.swp
