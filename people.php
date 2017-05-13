@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Copyright 2016 Brian Warner
+* Copyright 2017 Brian Warner
 *
 * This file is part of Facade, and is made available under the terms of the GNU
 * General Public License version 2.
@@ -15,13 +15,18 @@ include_once "includes/db.php";
 include_once "includes/display.php";
 $db = setup_db();
 
-$report_attribution = get_setting($db,'report_attribution');
+// Protect against unauthorized access
+if (!$_SESSION['access_granted']) {
+	echo '<meta http-equiv="refresh" content="0;/user">';
+	die;
+}
 
+$report_attribution = get_setting($db,'report_attribution');
 
 echo '<div class="content-block">
 <p>Facade will attempt to determine the affiliation of a contributor based upon
 the contents of this table. It will first attempt to determine if an email is a
-known alias for a contributor\'s primary email address.Next it will attempt to
+known alias for a contributor\'s primary email address. Next it will attempt to
 find an exact affiliation match for the email. If it cannot find an exact match,
 it will then attempt to match the domain. If no match is found, the affiliation
 is marked (Unknown).</p> <p>Since people change companies, and companies get
@@ -40,7 +45,8 @@ $result = query_db($db,$get_aliases,'Fetching aliases');
 
 if ($result->num_rows > 0) {
 
-	echo '<table>
+	echo '<div class="scroll-list">
+			<table>
 			<tr><th class="quarter">Primary email</th>
 			<th class="quarter">Alias</th>
 			<th class="half">&nbsp;</th></tr>';
@@ -56,7 +62,8 @@ if ($result->num_rows > 0) {
 
 	}
 
-	echo '</table>';
+	echo '</table>
+		</div> <!-- .scroll-list -->';
 } else {
 	echo '<p><strong>No aliases defined</strong></p>';
 }
@@ -77,6 +84,7 @@ $result = query_db($db,$get_affiliations,'Fetching affiliations');
 if ($result->num_rows > 0) {
 
 	echo '<h3>Affiliations by domain</h3>
+			<div class="scroll-list">
 			<table>
 			<tr><th class="quarter">Domain</th>
 			<th class="quarter">Affiliation</th>
@@ -98,7 +106,8 @@ if ($result->num_rows > 0) {
 		</form></td></tr>';
 
 	}
-	echo '</table>';
+	echo '</table>
+		</div> <!-- .scroll-list -->';
 }
 
 // Next show email mappings
@@ -110,6 +119,7 @@ $result = query_db($db,$get_affiliations,'Fetching affiliations');
 if ($result->num_rows > 0) {
 
 	echo '<h3>Affiliations by email</h3>
+			<div class="scroll-list">
 			<table>
 			<tr><th class="quarter">Email</th>
 			<th class="quarter">Affiliation</th>
@@ -132,7 +142,8 @@ if ($result->num_rows > 0) {
 
 	}
 
-	echo '</table>';
+	echo '</table>
+		</div> <!-- .scroll-list -->';
 
 } else {
 	echo '<p><strong>No affiliations defined</strong></p>';
@@ -141,6 +152,33 @@ if ($result->num_rows > 0) {
 echo '<form action="manage" id="newaffiliation" method="post">
 <p><input type="submit" name="confirmnew_affiliation"
 value="Add a new affiliation"></form></p>
+</div> <!-- .content-block -->
+
+<div class="content-block">
+
+<h2>Import / Export</h2>
+
+<p>You can export and import aliases and affiliations as CSV files. The easiest
+way to do this is to export the lists, add the new entries, and upload them
+again. Entries already in the database will be ignored.</p>
+
+<div class="sub-block">
+<h3>Aliases</h3>
+<form action="manage" id="import_export_aliases" method="post" enctype="multipart/form-data">
+<p><input type="submit" name="export_aliases" value="Export aliases"</p>
+<p><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_aliases" value="Import aliases"></p>
+</form>
+</div> <!-- .sub-block -->
+
+<div class="sub-block">
+<h3>Affiliations</h3>
+<form action="manage" id="import_export_affiliations" method="post" enctype="multipart/form-data">
+<p><input type="submit" name="export_affiliations" value="Export affiliations"></p>
+<p><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_affiliations" value="Import affiliations"></p>
+</form>
+</div> <!-- .sub-block -->
 </div> <!-- .content-block -->';
 
 include_once "includes/footer.php";

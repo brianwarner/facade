@@ -103,7 +103,7 @@ if ($result->num_rows > 0) {
 		<th><input type="checkbox" onClick="toggle_affiliations(this)"
 		class="checkbox">&nbsp;</th></tr>
 		</table>
-		<div id="affiliation-list">
+		<div class="scroll-list">
 		<table>';
 
 		$report_attribution = get_setting($db,'report_attribution');
@@ -123,7 +123,7 @@ if ($result->num_rows > 0) {
 
 	echo '</table>
 
-	</div> <!-- #affiliation-list -->
+	</div> <!-- .scroll-list -->
 	</div> <!-- .sub-block -->
 
 	<div class="sub-block">

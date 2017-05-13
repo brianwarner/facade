@@ -233,7 +233,7 @@ th.results-total {
 	text-decoration: underline;
 }
 
-#affiliation-list {
+.scroll-list {
 	overflow: scroll;
 	max-height: 300px;
 }

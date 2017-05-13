@@ -701,6 +701,122 @@ if ($_POST["confirmnew_repo"]) {
 
 	}
 
+	// Delete all matching affiliations, so they will be rebuilt with corrected
+	// data next time facade-worker.py runs.
+
+	$delete = "UPDATE analysis_data SET author_affiliation = NULL WHERE
+		author_email LIKE CONCAT('%','" . $domain . "')";
+
+	query_db($db,$delete,'Clearing author info');
+
+	$delete = "UPDATE analysis_data SET committer_affiliation = NULL WHERE
+		committer_email LIKE CONCAT('%','" . $domain . "')";
+
+	query_db($db,$delete,'Clearing committer info');
+
+	header("Location: people");
+
+} elseif ($_POST["export_aliases"]) {
+
+	$fetch_aliases = "SELECT canonical,alias FROM aliases";
+
+	$aliases = query_db($db,$fetch_aliases,'fetching aliases');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_aliases.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Canonical email','Alias'],',');
+
+	while ($alias = $aliases->fetch_assoc()) {
+		fputcsv($f,$alias,',');
+	}
+
+} elseif ($_POST["export_affiliations"]) {
+
+	$fetch_affiliations = "SELECT domain,affiliation,start_date FROM affiliations";
+
+	$affiliations = query_db($db,$fetch_affiliations,'fetching affiliations');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_affiliations.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Domain','Affiliation','Beginning on'],',');
+
+	while ($affiliation = $affiliations->fetch_assoc()) {
+		fputcsv($f,$affiliation,',');
+	}
+
+} elseif ($_POST["import_aliases"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Canonical email' && 
+					$line[1] == 'Alias') {
+					$safe = True;
+				}
+			} else {
+
+				$insert = "INSERT IGNORE INTO aliases
+					(canonical,alias) VALUES ('" . 
+					$line[0] . "','" . $line[1] . "')";
+
+				query_db($db,$insert,'Importing alias');
+
+			}
+		}
+	}
+
+	header("Location: people");
+
+} elseif ($_POST["import_affiliations"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Domain' && 
+					$line[1] == 'Affiliation' &&
+					$line[2] == 'Beginning on') {
+					$safe = True;
+				}
+			} else {
+
+				if ($line[2]) {
+
+				$insert = "INSERT IGNORE INTO affiliations
+					(domain,affiliation,start_date) VALUES ('" . 
+					$line[0] . "','" . $line[1] . "','" . $line[2] . "')";
+
+				} else {
+
+				$insert = "INSERT IGNORE INTO affiliations
+					(domain,affiliation) VALUES ('" . 
+					$line[0] . "','" . $line[1] . "')";
+
+				}
+
+				query_db($db,$insert,'Importing alias');
+
+			}
+		}
+	}
+
 	header("Location: people");
 
 } else {
