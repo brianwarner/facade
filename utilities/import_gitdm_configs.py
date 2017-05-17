@@ -88,6 +88,21 @@ def commit_affiliation(line):
 		cursor.execute(insert)
 		db.commit()
 
+def bad_config(domain,first,second):
+
+	print ('\n***WARNING: BAD EMAIL MAPPING. YOU NEED TO FIX THIS.***\n\n'
+		'This happens when you have an email or domain mapped to more than one\n'
+		'affiliation without a date to establish order. For example:\n'
+		'  dev@company.com	IBM\n'
+		'  dev@company.com	Samsung\n\n'
+		'You must add an end date to proceed further:\n'
+		'  dev@company.com	IBM < 2011-01-06\n'
+		'  dev@company.com	Samsung\n\n\n'
+		'In this case, the offending lines were:\n'
+		'  %s -> %s\n  %s -> %s\n\n' % (domain,first,domain,second))
+
+	sys.exit(1)
+
 def import_emailmap(filename):
 
 	safe = False
@@ -138,14 +153,22 @@ def import_emailmap(filename):
 					"straight from the gitdm repository.\n\n%s\n" % filename)
 				sys.exit(1)
 
+		# Dedupe the list (we don't a set since each line must stay mutable)
+
+		deduped = []
+
+		for line in importfile:
+			if line not in deduped:
+				deduped.append(line)
+
 		# Sort by domain and date so we can convert end dates to start dates
 
-		importfile.sort(key=lambda key: (key[0],key[2]), reverse=True)
+		deduped.sort(key=lambda key: (key[0],key[2]), reverse=True)
 
 		previous_line = ''
 		latest_found = False
 
-		for line in importfile:
+		for line in deduped:
 
 			# Walk through the file. When a line matches the previous line, it's
 			# part of a group of domain records with end dates and overlaps. In
@@ -157,18 +180,26 @@ def import_emailmap(filename):
 			if previous_line:
 				if line[0] == previous_line[0]:
 
+					if previous_line[2] == line[2]:
+
+						bad_config(previous_line[0],previous_line[1],line[1])
+
 					# Convert the ending date to a starting date
 
 					previous_line[2] = line[2]
 					line[2] = ''
 
 				else:
-
 					previous_line[2] = ''
 
 				commit_affiliation(previous_line)
 
 			previous_line = line
+
+		# If last item in file is standalone, clear the placeholder
+
+		if line[2] == '9999-12-31':
+			line[2] = ''
 
 		commit_affiliation(previous_line)
 
