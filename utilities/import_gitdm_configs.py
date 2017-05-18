@@ -88,9 +88,9 @@ def commit_affiliation(line):
 		cursor.execute(insert)
 		db.commit()
 
-def bad_config(domain,first,second):
+def bad_config(domain,first,second,filename):
 
-	print ('\n***WARNING: BAD EMAIL MAPPING. YOU NEED TO FIX THIS.***\n\n'
+	print ('\n*** WARNING: BAD EMAIL MAPPING. YOU NEED TO FIX THIS. ***\n\n'
 		'This happens when you have an email or domain mapped to more than one\n'
 		'affiliation without a date to establish order. For example:\n'
 		'  dev@company.com	IBM\n'
@@ -98,8 +98,8 @@ def bad_config(domain,first,second):
 		'You must add an end date to proceed further:\n'
 		'  dev@company.com	IBM < 2011-01-06\n'
 		'  dev@company.com	Samsung\n\n\n'
-		'In this case, the offending lines were:\n'
-		'  %s -> %s\n  %s -> %s\n\n' % (domain,first,domain,second))
+		'In this case, the offending lines in %s were:\n'
+		'  %s -> %s\n  %s -> %s\n\n' % (filename,domain,first,domain,second))
 
 	sys.exit(1)
 
@@ -182,7 +182,7 @@ def import_emailmap(filename):
 
 					if previous_line[2] == line[2]:
 
-						bad_config(previous_line[0],previous_line[1],line[1])
+						bad_config(previous_line[0],previous_line[1],line[1],filename)
 
 					# Convert the ending date to a starting date
 
