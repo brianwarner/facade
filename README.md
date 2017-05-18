@@ -28,7 +28,7 @@ At this point, you should be able to access facade's web interface.
 ### Git repo setup:
 
 1. Choose a volume with plenty of storage, and create a directory.
-2. Ensure the user account that will run facade-worker.py has r/w permissions.  
+2. Ensure the user account that will run facade-worker.py has r/w permissions.
 3. In the web interface, go to Configure and update 'Location of git repos'.
 
 ### Worker script setup:

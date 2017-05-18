@@ -117,7 +117,7 @@ if ($result->num_rows > 0) {
 		echo '<tr>
 			<td><label><input type="checkbox" name="affiliations[]"
 			value="' . $row[$report_attribution . "_affiliation"] . '"
-			class="checkbox">' . $row[$report_attribution . "_affiliation"] . 
+			class="checkbox">' . $row[$report_attribution . "_affiliation"] .
 			'</label></td>';
 	}
 

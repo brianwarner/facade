@@ -23,7 +23,7 @@
 import sys
 import MySQLdb
 import imp
-
+import time
 try:
 	imp.find_module('db')
 	from db import db,cursor
@@ -63,7 +63,7 @@ def log_activity(level,status):
 
 # Log an activity based upon urgency and user's preference
 
-	log_options = ('Error','Quiet','Info','Verbose')
+	log_options = ('Error','Quiet','Info','Verbose','Debug')
 
 	if log_options.index(level) <= log_options.index(log_level):
 		query = ("INSERT INTO utility_log (level,status) VALUES ('%s','%s')"
@@ -91,11 +91,13 @@ def update_analysis_log(repos_id,status):
 
 	cursor.execute(log_message)
 	db.commit()
+
 def check_swapped_emails(name,email):
 
 # Sometimes people mix up their name and email in their git settings
 
 	if name.find('@') >=0 and email.find('@') == -1:
+		log_activity('Debug','Found swapped email/name: %s/%s' % (email,name))
 		return email,name
 	else:
 		return name,email
@@ -106,6 +108,7 @@ def strip_extra_amp(email):
 # matching. This extra info is not used, so we discard it.
 
 	if email.count('@') > 1:
+		log_activity('Debug','Found extra @: %s' % email)
 		return email[:email.find('@',email.find('@')+1)]
 	else:
 		return email
@@ -124,41 +127,25 @@ def discover_alias(email):
 	else:
 		return email
 
-def discover_affiliation(email,date):
+def update_affiliation(email_type,email,affiliation,earliest,start_date):
 
-# Attempt to match email with who they were working for when the patch was
-# authored or committed
+# Helper function to update affiliations based upon their start date, but it
+# only updates them after the earliest NULL affiliation.  This prevents us from
+# overwriting all affiliations every time a new NULL is discovered. We just
+# start from the earliest one.
 
-	# First, see if there's an exact match
-	match = ("SELECT affiliation FROM affiliations "
-		"WHERE domain='%s' AND start_date < '%s' "
-		"ORDER BY start_date DESC LIMIT 1" % (email,date))
+	update = ("UPDATE analysis_data "
+		"SET %s_affiliation = '%s' "
+		"WHERE %s_email = '%s' "
+		"AND %s_date >= '%s' "
+		"AND %s_date >= '%s'"
+		% (email_type,affiliation,
+		email_type,email,
+		email_type,start_date,
+		email_type,earliest))
 
-	cursor.execute(match)
+	cursor.execute(update)
 	db.commit()
-
-	if cursor.rowcount:
-		return cursor.fetchone()["affiliation"]
-
-	# If we couldn't find an obvious match, try to match a pattern
-	if email.find('@') >= 0:
-		domain = email[email.find('@')+1:]
-	else:
-		# If it's not a properly formatted email, give up
-		return '(Unknown)'
-
-	# Now we go for a domain-level match
-	match = ("SELECT affiliation FROM affiliations "
-		"WHERE domain='%s' AND start_date < '%s' "
-		"ORDER BY start_date ASC LIMIT 1" % (domain,date))
-
-	cursor.execute(match)
-	db.commit()
-
-	if cursor.rowcount:
-		return cursor.fetchone()["affiliation"]
-	else:
-		return '(Unknown)'
 
 def store_working_commit(repo_id,commit):
 
@@ -172,6 +159,8 @@ def store_working_commit(repo_id,commit):
 	cursor.execute(store_commit)
 	db.commit()
 
+	log_activity('Debug','Stored working commit: %s' % commit)
+
 def trim_commit(repo_id,commit):
 
 # Quickly remove a given commit
@@ -182,6 +171,149 @@ def trim_commit(repo_id,commit):
 
 	cursor.execute(remove_commit)
 	db.commit()
+
+	log_activity('Debug','Trimmed commit: %s' % commit)
+
+def store_working_author(email):
+
+# Store the working author during affiliation discovery, in case it is
+# interrupted and needs to be trimmed.
+
+	store = "UPDATE settings SET value = '%s' WHERE setting = 'working_author'" % email
+
+	cursor.execute(store)
+	db.commit()
+
+	log_activity('Debug','Stored working author: %s' % email)
+
+def trim_author(email):
+
+# Remove the affiliations associated with an email. Used when an analysis is
+# interrupted during affiliation layering, and the data will be corrupt.
+
+	trim = ("UPDATE analysis_data "
+		"SET author_affiliation = NULL "
+		"WHERE author_email = '%s'" % email)
+
+	cursor.execute(trim)
+	db.commit()
+
+	trim = ("UPDATE analysis_data "
+		"SET committer_affiliation = NULL "
+		"WHERE committer_email = '%s'" % email)
+
+	cursor.execute(trim)
+	db.commit()
+
+	store_working_author('done')
+
+	log_activity('Debug','Trimmed working author: %s' % email)
+
+def discover_null_affiliations(attribution,email,earliest):
+
+# Affilitations with defined start dates are filled by layering.  First the
+# earliest known affiliation is applied. Then the next affiliation is applied
+# from its start date onward. This continues until all affiliation changes have
+# been processed for the domain.
+
+	find_exact_match = ("SELECT affiliation,start_date "
+		"FROM affiliations "
+		"WHERE domain = '%s' "
+		"ORDER BY start_date ASC" % email)
+
+	cursor.execute(find_exact_match)
+
+	if cursor.rowcount:
+
+		# Found an exact match
+		log_activity('Debug','Found exact affiliation match for %s' % email)
+
+		checked_start_date = False
+
+		matches = list(cursor)
+
+		for match in matches:
+
+			affiliation = match['affiliation']
+			start_date = match['start_date']
+
+			if not checked_start_date:
+
+				if start_date != '1970-01-01':
+
+					# No default entry, so fill with (Unknown)
+
+					update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
+
+					update_affiliation(attribution,email,'(Unknown)', earliest,start_date)
+
+				checked_start_date = True
+
+			# Update any author entries that match
+
+			update_affiliation(attribution,email,affiliation,earliest,start_date)
+
+	else:
+
+		# If we couldn't find an exact match, try to match a pattern
+
+		if email.find('@') < 0:
+
+			# It's not a properly formatted email, give up and call it (Unknown)
+			log_activity('Verbose','Unmatchable email: %s' % email)
+
+			update_affiliation(attribution,email,'(Unknown)',earliest,'1970-01-01')
+
+		else:
+
+			domain = email[email.find('@')+1:]
+
+			# Now we go for a domain-level match. Strip any subdomains.
+
+			find_domain = ("SELECT affiliation,start_date "
+				"FROM affiliations "
+				"WHERE domain = '%s' "
+				"ORDER BY start_date ASC" %
+				domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
+
+			cursor.execute(find_domain)
+			db.commit()
+
+			if cursor.rowcount:
+
+				# Found some matches
+				log_activity('Debug','Found domain match for %s' % email)
+
+				matches = list(cursor)
+				checked_start_date = False
+
+				for match in matches:
+
+					affiliation = match['affiliation']
+					start_date = match['start_date']
+
+					if not checked_start_date:
+
+						if start_date != '1970-01-01':
+
+							# No default entry, so fill with (Unknown)
+
+							update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
+
+							update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
+
+						checked_start_date = True
+
+					# Update any author entries that match
+
+					update_affiliation(attribution,email,affiliation,earliest,start_date)
+
+			else:
+
+				# No matches found, give up
+				log_activity('Verbose','No affiliation for %s' % email)
+
+				update_affiliation(attribution,email,'(Unknown)',earliest,'1970-01-01')
 
 def analyze_commit(repo_id,repo_loc,commit):
 
@@ -197,7 +329,7 @@ def analyze_commit(repo_id,repo_loc,commit):
 	whitespace = 0
 
 	git_log = subprocess.Popen(["git --git-dir %s log -p -M %s -n1 "
-		"--pretty=format:'" 
+		"--pretty=format:'"
 		"author_name: %%an%%nauthor_email: %%ae%%nauthor_date:%%ai%%n"
 		"committer_name: %%cn%%ncommitter_email: %%ce%%ncommitter_date: %%ci%%n"
 		"parents: %%p%%nEndPatch' "
@@ -206,7 +338,7 @@ def analyze_commit(repo_id,repo_loc,commit):
 	# Stash the commit we're going to analyze so we can back it out if something
 	# goes wrong later.
 
-	store_working_commit(repo_id,commit)
+	log_activity('Debug','Analyzing %s' % commit)
 
 	for line in git_log.stdout.read().split(os.linesep):
 		if len(line) > 0:
@@ -371,6 +503,8 @@ def store_commit(repos_id,commit,filename,
 	cursor.execute(store)
 	db.commit()
 
+	log_activity('Debug','Stored commit: %s' % commit)
+
 #### Facade main functions ####
 
 def git_repo_cleanup():
@@ -401,6 +535,14 @@ def git_repo_cleanup():
 		log_activity('Verbose','Deleted repo %s' % row['id'])
 
 		cleanup = '%s/%s%s' % (row['projects_id'],row['path'],row['name'])
+
+		# Remove the repo from the logs
+
+		remove_logs = ("DELETE FROM repos_fetch_log WHERE repos_id = %s" %
+			row['id'])
+
+		cursor.execute(remove_logs)
+		db.commit()
 
 		# Attempt to cleanup any empty parent directories
 		while (cleanup.find('/',0) > 0):
@@ -511,7 +653,7 @@ def git_repo_initialize():
 		if return_code != 0:
 			print("COULD NOT CREATE REPO DIRECTORY")
 
-			update_repo_log(row['id'],'Failed (mkdir %s)' % repo_path)
+			update_repo_log(row['id'],'Failed (mkdir)')
 			update_status('Failed (mkdir %s)' % repo_path)
 			log_activity('Error','Could not create repo directory: %s' %
 				repo_path)
@@ -573,13 +715,14 @@ def analysis():
 
 	start_date = get_setting('start_date')
 
-	repo_list = "SELECT id FROM repos WHERE status='Active'"
+	repo_list = "SELECT id,projects_id,path,name FROM repos WHERE status='Active'"
 	cursor.execute(repo_list)
 	repos = list(cursor)
 
 	for repo in repos:
 
 		update_analysis_log(repo['id'],'Beginning analysis')
+		log_activity('Verbose','Analyzing repo: %s' % repo['id'])
 
 		# First we check to see if the previous analysis didn't complete
 
@@ -591,7 +734,6 @@ def analysis():
 
 		# If there's a commit still there, the previous run was interrupted and
 		# the commit data may be incomplete. It should be trimmed, just in case.
-
 		if working_commit:
 			trim_commit(repo['id'],working_commit)
 			store_working_commit(repo['id'],'')
@@ -600,16 +742,9 @@ def analysis():
 
 		update_analysis_log(repo['id'],'Collecting data')
 
-		query = ("SELECT projects_id,path,name FROM repos WHERE id=%s"
-			% repo['id'])
-
-		cursor.execute(query)
-		repo_detail = cursor.fetchone()
-
 		repo_loc = ('%s%s/%s%s/.git' % (repo_base_directory,
-			repo_detail["projects_id"], repo_detail["path"],
-			repo_detail["name"]))
-
+			repo["projects_id"], repo["path"],
+			repo["name"]))
 		# Grab the parents of HEAD
 
 		parents = subprocess.Popen(["git --git-dir %s log --ignore-missing "
@@ -617,6 +752,12 @@ def analysis():
 			stdout=subprocess.PIPE, shell=True)
 
 		parent_commits = set(parents.stdout.read().split(os.linesep))
+
+		# If there are no commits in the range, we still get a blank entry in
+		# the set. Remove it, as it messes with the calculations
+
+		if '' in parent_commits:
+			parent_commits.remove('')
 
 		# Grab the existing commits from the database
 
@@ -634,7 +775,31 @@ def analysis():
 
 		missing_commits = parent_commits - existing_commits
 
+		log_activity('Debug','Commits missing from repo %s: %s' %
+			(repo['id'],len(missing_commits)))
+
+		if len(missing_commits):
+
+			# If we're going to deal with new data, invalidate the caches
+
+			repo_cache = ("UPDATE repos SET cached=FALSE "
+				"WHERE id=%s" % repo['id'])
+
+			cursor.execute(repo_cache)
+			db.commit()
+
+			project_cache = ("UPDATE projects SET cached=FALSE "
+				"WHERE id=%s" % repo['projects_id'])
+
+			cursor.execute(project_cache)
+			db.commit()
+
+			log_activity('Debug','Caches invalidated for repo %s and project %s'
+				% (repo['id'],repo['projects_id']))
+
 		for commit in missing_commits:
+
+			store_working_commit(repo['id'],commit)
 
 			analyze_commit(repo['id'],repo_loc,commit)
 
@@ -648,13 +813,17 @@ def analysis():
 
 		trimmed_commits = existing_commits - parent_commits
 
+		log_activity('Debug','Commits to be trimmed from repo %s: %s' %
+			(repo['id'],trimmed_commits))
+
 		for commit in trimmed_commits:
 
 			trim_commit(repo['id'],commit)
 
 		update_analysis_log(repo['id'],'Commit trimming complete')
 
-	update_analysis_log(repo['id'],'Analysis complete')
+		update_analysis_log(repo['id'],'Analysis complete')
+
 	log_activity('Info','Running analysis (complete)')
 
 def nuke_affiliations():
@@ -686,52 +855,67 @@ def fill_empty_affiliations():
 	update_status('Filling empty affiliations')
 	log_activity('Info','Filling empty affiliations')
 
-	find_null_authors = ("SELECT author_email,author_date "
+	working_author = get_setting('working_author').replace("'","\\'")
+
+	if working_author != 'done':
+		log_activity('Error','Trimming author data in affiliations: %s' %
+			working_author)
+		trim_author(working_author)
+
+	# Find any authors with NULL affiliations and fill them
+
+	find_null_authors = ("SELECT DISTINCT author_email AS email, "
+		"MIN(author_date) AS earliest "
 		"FROM analysis_data "
-		"WHERE author_affiliation IS NULL")
+		"WHERE author_affiliation IS NULL "
+		"GROUP BY author_email")
 
 	cursor.execute(find_null_authors)
 
 	authors = list(cursor)
 
+	log_activity('Debug','Authors with NULL affiliations: %s' % len(authors))
+
 	for author in authors:
-		affiliation = discover_affiliation(author['author_email'],author['author_date'])
 
-		update = ("UPDATE analysis_data SET author_affiliation = '%s' "
-			"WHERE author_email = '%s' AND author_date = '%s'"
-			% (affiliation,author['author_email'],author['author_date']))
+		email = author['email'].replace("'","\\'")
 
-		cursor.execute(update)
-		db.commit()
+		store_working_author(email)
 
-	find_null_committers = ("SELECT committer_email,committer_date "
+		discover_null_affiliations('author',email,author['earliest'])
+
+	store_working_author('done')
+
+	# Find any committers with NULL affiliations and fill them
+
+	find_null_committers = ("SELECT DISTINCT committer_email AS email, "
+		"MIN(committer_date) AS earliest "
 		"FROM analysis_data "
-		"WHERE committer_affiliation IS NULL")
+		"WHERE committer_affiliation IS NULL "
+		"GROUP BY committer_email")
 
 	cursor.execute(find_null_committers)
+
 	committers = list(cursor)
 
+	log_activity('Debug','Committers with NULL affiliations: %s' % len(committers))
+
 	for committer in committers:
-		affiliation = discover_affiliation(committer['committer_email'],committer['committer_date'])
 
-		update = ("UPDATE analysis_data SET committer_affiliation = '%s' "
-			"WHERE committer_email = '%s' AND committer_date = '%s'"
-			% (affiliation,committer['committer_email'],committer['committer_date']))
+		email = committer['email'].replace("'","\\'")
 
-		cursor.execute(update)
-		db.commit()
+		store_working_author(email)
+
+		discover_null_affiliations('committer',email,committer['earliest'])
+
+	store_working_author('done')
 
 	log_activity('Info','Filling empty affiliations (complete)')
 
-def rebuild_unknown_affiliation_and_web_caches():
+def clear_cached_tables():
 
-# When there's a lot of analysis data, calculating display data on the fly gets
-# pretty expensive. Instead, we crunch the data based upon the user's preferred
-# statistics (author or committer) and store them. We also store all records
-# with an (Unknown) affiliation for display to the user.
-
-	update_status('Caching data for display')
-	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
+	update_status('Invalidating cached data')
+	log_activity('Info','Invalidating cached unknown affiliations and web data')
 
 	# Create a temporary table for each cache, so we can swap in place.
 
@@ -787,65 +971,167 @@ def rebuild_unknown_affiliation_and_web_caches():
 	cursor.execute(query)
 	db.commit()
 
+	# Reset all cached flags
+
+	reset_repos = "UPDATE repos SET cached=FALSE"
+
+	cursor.execute(reset_repos)
+	db.commit()
+
+	reset_projects = "UPDATE projects SET cached=FALSE"
+
+	cursor.execute(reset_projects)
+	db.commit()
+
+	log_activity('Info','Invalidating cached unknown affiliations and web data (complete)')
+
+def rebuild_unknown_affiliation_and_web_caches():
+
+# When there's a lot of analysis data, calculating display data on the fly gets
+# pretty expensive. Instead, we crunch the data based upon the user's preferred
+# statistics (author or committer) and store them. We also store all records
+# with an (Unknown) affiliation for display to the user.
+
+	update_status('Caching data for display')
+	log_activity('Info','Caching unknown affiliations and web data for display')
+
 	report_date = get_setting('report_date')
 	report_attribution = get_setting('report_attribution')
 
-	# Cache unknowns
+	# If a previous caching was interrupted, clear any partial data
 
-	unknown_authors = ("SELECT r.projects_id AS projects_id, "
-		"a.author_email AS email, "
-		"SUM(a.added) AS added "
-		"FROM analysis_data a "
-		"JOIN repos r ON r.id = a.repos_id "
-		"WHERE a.author_affiliation = '(Unknown)' "
-		"GROUP BY r.projects_id,a.author_email")
+	find_uncached_projects = "SELECT id FROM projects WHERE cached=FALSE"
 
-	cursor.execute(unknown_authors)
-	unknowns = list(cursor)
+	cursor.execute(find_uncached_projects)
 
-	for unknown in unknowns:
+	uncached_projects = list(cursor)
 
-		# Isolate the domain name, and add the lines of code associated with it
-		query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
-			"VALUES ('author',%s,'%s','%s',%s)" % (unknown["projects_id"],
-			unknown["email"].replace("'","\\'"),
-			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
-			unknown["added"]))
+	log_activity('Debug','Uncached projects found: %s' % len(uncached_projects))
+
+	for uncached_project in uncached_projects:
+
+		trim_project_cache = ("DELETE FROM project_monthly_cache "
+			"WHERE projects_id = %s" % uncached_project['id'])
+
+		cursor.execute(trim_project_cache)
+		db.commit()
+
+		trim_project_cache = ("DELETE FROM project_annual_cache "
+			"WHERE projects_id = %s" % uncached_project['id'])
+
+		cursor.execute(trim_project_cache)
+		db.commit()
+
+		log_activity('Debug','Cache trimmed for project %s' % uncached_project['id'])
+
+	find_uncached_repos = "SELECT id FROM repos WHERE cached=FALSE"
+
+	cursor.execute(find_uncached_repos)
+
+	uncached_repos = list(cursor)
+
+	for uncached_repo in uncached_repos:
+
+		trim_repo_cache = ("DELETE FROM repo_monthly_cache "
+			"WHERE repos_id = %s" % uncached_repo['id'])
+
+		cursor.execute(trim_repo_cache)
+		db.commit()
+
+		trim_repo_cache = ("DELETE FROM repo_annual_cache "
+			"WHERE repos_id = %s" % uncached_repo['id'])
+
+		cursor.execute(trim_repo_cache)
+		db.commit()
+
+		log_activity('Debug','Cache trimmed for repo %s' % uncached_repo['id'])
+
+	# Cache the unknowns if any project or repo caches are incomplete
+
+	if uncached_projects or uncached_repos:
+
+		# First we get rid of any cached data
+
+		query = "CREATE TABLE IF NOT EXISTS uc LIKE unknown_cache"
 
 		cursor.execute(query)
 		db.commit()
 
-	unknown_committers = ("SELECT r.projects_id AS projects_id, "
-		"a.committer_email AS email, "
-		"SUM(a.added) AS added "
-		"FROM analysis_data a "
-		"JOIN repos r ON r.id = a.repos_id "
-		"WHERE a.committer_affiliation = '(Unknown)' "
-		"GROUP BY r.projects_id,a.committer_email")
-
-	cursor.execute(unknown_committers)
-	unknowns = list(cursor)
-
-	for unknown in unknowns:
-
-		# Isolate the domain name, and add the lines of code associated with it
-		query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
-			"VALUES ('committer',%s,'%s','%s',%s)" % (unknown["projects_id"],
-			unknown["email"].replace("'","\\'"),
-			unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
-			unknown["added"]))
+		query = ("RENAME TABLE unknown_cache TO uc_old, "
+			"uc TO unknown_cache")
 
 		cursor.execute(query)
 		db.commit()
+
+		query = "DROP TABLE uc_old"
+
+		cursor.execute(query)
+		unknowns = list(cursor)
+
+		log_activity('Debug','Unknown cache dropped due to uncached projects')
+
+		# Then we grab the unknowns
+
+		unknown_authors = ("SELECT r.projects_id AS projects_id, "
+			"a.author_email AS email, "
+			"SUM(a.added) AS added "
+			"FROM analysis_data a "
+			"JOIN repos r ON r.id = a.repos_id "
+			"WHERE a.author_affiliation = '(Unknown)' "
+			"GROUP BY r.projects_id,a.author_email")
+
+		cursor.execute(unknown_authors)
+		unknowns = list(cursor)
+
+		log_activity('Debug','Unknown authors to cache: %s' % len(unknowns))
+
+		for unknown in unknowns:
+
+			# Isolate the domain name, and add the lines of code associated with it
+			query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
+				"VALUES ('author',%s,'%s','%s',%s)" % (unknown["projects_id"],
+				unknown["email"].replace("'","\\'"),
+				unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
+				unknown["added"]))
+
+			cursor.execute(query)
+			db.commit()
+
+		unknown_committers = ("SELECT r.projects_id AS projects_id, "
+			"a.committer_email AS email, "
+			"SUM(a.added) AS added "
+			"FROM analysis_data a "
+			"JOIN repos r ON r.id = a.repos_id "
+			"WHERE a.committer_affiliation = '(Unknown)' "
+			"GROUP BY r.projects_id,a.committer_email")
+
+		cursor.execute(unknown_committers)
+		unknowns = list(cursor)
+
+		log_activity('Debug','Unknown committers to cache: %s' % len(unknowns))
+
+		for unknown in unknowns:
+
+			# Isolate the domain name, and add the lines of code associated with it
+			query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
+				"VALUES ('committer',%s,'%s','%s',%s)" % (unknown["projects_id"],
+				unknown["email"].replace("'","\\'"),
+				unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
+				unknown["added"]))
+
+			cursor.execute(query)
+			db.commit()
 
 	# Start caching by project
 
-	query = "SELECT id FROM projects"
+	query = "SELECT id,name FROM projects WHERE cached=FALSE"
 
 	cursor.execute(query)
 	projects = list(cursor)
 
 	for project in projects:
+
+		log_activity('Verbose','Caching project %s' % project['name'])
 
 		# Cache monthly data by project
 
@@ -866,6 +1152,8 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 		cursor.execute(get_emails)
 		non_excluded_emails = list(cursor)
+
+		log_activity('Debug','Emails found: %s' % len(non_excluded_emails))
 
 		for email in non_excluded_emails:
 
@@ -889,14 +1177,14 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"GROUP BY month, "
 				"year, "
 				"affiliation, "
-				"email" 
+				"email"
 				% (report_attribution,report_attribution,
 				report_date,report_date,report_attribution,
-				email['email'],project['id']))
+				email['email'].replace("'","\\'"),project['id']))
 
 			cursor.execute(get_stats)
 			db.commit()
-	
+
 			# Cache annually by project
 
 			get_stats = ("INSERT INTO project_annual_cache "
@@ -915,24 +1203,37 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"AND r.projects_id = %s "
 				"GROUP BY year, "
 				"affiliation, "
-				"email" 
+				"email"
 				% (report_attribution,report_attribution,
 				report_date,report_attribution,
-				email['email'],project['id']))
+				email['email'].replace("'","\\'"),project['id']))
 
 			cursor.execute(get_stats)
 			db.commit()
 
+		# Mark project as cached
+
+		project_cache = ("UPDATE projects SET cached=TRUE "
+			"WHERE id=%s" % project['id'])
+
+		cursor.execute(project_cache)
+		db.commit()
+
+		log_activity('Verbose','Caching project %s (complete)' % project['name'])
+
 	# Start caching by repo
 
-	query = "SELECT id FROM repos"
+	query = ("SELECT id FROM repos WHERE "
+		"cached=FALSE AND status='Active'")
 
 	cursor.execute(query)
 	repos = list(cursor)
 
 	for repo in repos:
 
-		# Cache monthly data by project
+		log_activity('Verbose','Caching repo %s' % repo['id'])
+
+		# Cache monthly data by repo
 
 		get_emails = ("SELECT DISTINCT a.author_email AS email "
 			"FROM analysis_data a "
@@ -951,6 +1252,8 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 		cursor.execute(get_emails)
 		non_excluded_emails = list(cursor)
+
+		log_activity('Debug','Emails found: %s' % len(non_excluded_emails))
 
 		for email in non_excluded_emails:
 
@@ -973,14 +1276,14 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"GROUP BY month, "
 				"year, "
 				"affiliation, "
-				"email" 
+				"email"
 				% (report_attribution,report_attribution,
 				report_date,report_date,report_attribution,
-				email['email'],repo['id']))
+				email['email'].replace("'","\\'"),repo['id']))
 
 			cursor.execute(get_stats)
 			db.commit()
-	
+
 			# Cache annually by repo
 
 			get_stats = ("INSERT INTO repo_annual_cache "
@@ -1000,12 +1303,23 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"affiliation, "
 				"email" % (report_attribution,report_attribution,
 				report_date,report_attribution,
-				email['email'],repo['id']))
+				email['email'].replace("'","\\'"),repo['id']))
 
 			cursor.execute(get_stats)
 			db.commit()
 
+		# Mark repo as cached
+
+		repo_cache = ("UPDATE repos SET cached=TRUE "
+			"WHERE id=%s" % repo['id'])
+
+		cursor.execute(repo_cache)
+		db.commit()
+
+		log_activity('Verbose','Caching repo %s (compete)' % repo['id'])
+
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
+
 ### The real program starts here ###
 
 # Figure out how much we're going to log
@@ -1019,21 +1333,23 @@ clone_repos = 0
 run_analysis = 0
 nuke_stored_affiliations = 0
 fix_affiliations = 0 #
+invalidate_caches = 0
 rebuild_caches = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcanfr')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcanfir')
 for opt in opts:
 	if opt[0] == '-h':
-		print("\nfacade-worker.py does everything by default, unless invoked\n"
-				"with one of these options. In that case, it will only do what\n"
-				"you have selected.\n\n"
+		print("\nfacade-worker.py does everything except invalidating caches by\n"
+				"default, unless invoked with one of these options. In that case,\n"
+				"it will only do what you have selected.\n\n"
 				"Options:\n"
 				"	-d	Delete marked repos\n"
 				"	-p	Run 'git pull' on repos\n"
 				"	-c	Run 'git clone' on new repos\n"
 				"	-a	Analyze git repos\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
-				"	-f	Fix affiliations when config files change\n"
+				"	-f	Fill empty affiliations\n"
+				"	-i	Invalidate caches and delete cached data\n"
 				"	-r	Rebuild unknown affiliation and web caches\n\n")
 		sys.exit(0)
 
@@ -1066,6 +1382,11 @@ for opt in opts:
 		fix_affiliations = 1
 		limited_run = 1
 		log_activity('Info','Option set: fixing affiliations.')
+
+	elif opt[0] == '-i':
+		invalidate_caches = 1
+		limited_run = 1
+		log_activity('Info','Option set: invalidating caches.')
 
 	elif opt[0] == '-r':
 		rebuild_caches = 1
@@ -1107,6 +1428,9 @@ if nuke_stored_affiliations:
 
 if not limited_run or (limited_run and fix_affiliations):
 	fill_empty_affiliations()
+
+if invalidate_caches:
+	clear_cached_tables()
 
 if not limited_run or (limited_run and rebuild_caches):
 	rebuild_unknown_affiliation_and_web_caches()

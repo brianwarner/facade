@@ -305,7 +305,7 @@ if ($_POST["confirmnew_repo"]) {
 		<p><label>Email<br><span class="text">
 		<input type="text" name="email"></span></label></p>
 		<p><input type="hidden" name="project_id" value="' . $project_id . '">
-		<input type="submit" name="new_excludeemail" 
+		<input type="submit" name="new_excludeemail"
 		value="Exclude this email from ' . $project_name . '">
 		</form>';
 
@@ -716,7 +716,137 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["export_aliases"]) {
+} elseif ($_POST["export_projects_csv"]) {
+
+	$fetch_projects = "SELECT id,name,description,website FROM projects";
+
+	$projects = query_db($db,$fetch_projects,'fetching projects');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_projects.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Project ID','Name','Description','Website'],',');
+
+	while ($project = $projects->fetch_assoc()) {
+		fputcsv($f,$project,',');
+	}
+
+} elseif ($_POST["import_projects_csv"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Project ID' &&
+					$line[1] == 'Name' &&
+					$line[2] == 'Description' &&
+					$line[3] == 'Website') {
+
+					$safe = True;
+
+					// Clear projects data when we know it's safe to import
+					$drop_projects = "DELETE FROM projects";
+
+					query_db($db,$drop_projects,'Dropping project data');
+
+				}
+			} else {
+
+				$insert = "INSERT IGNORE INTO projects
+					(id,name,description,website) VALUES ('" .
+					$line[0] . "','" . $line[1] . "','" . $line['2'] . "','" .
+					$line['3'] . "')";
+
+				query_db($db,$insert,'Importing project');
+
+			}
+		}
+	}
+
+	header("Location: projects");
+
+} elseif ($_POST["export_repos_csv"]) {
+
+	$fetch_repos = "SELECT id,projects_id,git,path,name,status FROM repos";
+
+	$repos = query_db($db,$fetch_repos,'fetching repos');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_repos.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Repo ID','Projects ID','Git','Path','Name','Status'],',');
+
+	while ($repo = $repos->fetch_assoc()) {
+		fputcsv($f,$repo,',');
+	}
+
+} elseif ($_POST["import_repos_csv"] || $_POST["import_clone_repos_csv"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Repo ID' && 
+					$line[1] == 'Projects ID' &&
+					$line[2] == 'Git' &&
+					$line[3] == 'Path' &&
+					$line[4] == 'Name' &&
+					$line[5] == 'Status') {
+
+					$safe = True;
+
+					// Clear repos data when we know it's safe to import
+					$drop_repos = "DELETE FROM repos";
+
+					query_db($db,$drop_repos,'Dropping repo data');
+
+				}
+			} else {
+
+				if ($_POST["import_clone_repos_csv"]) {
+
+					$clear = "DELETE FROM repos_fetch_log";
+
+					query_db($db,$clear,'Clearing repos fetch log');
+
+					$insert = "INSERT IGNORE INTO repos
+						(id,projects_id,git,path,name,status)
+						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
+						$line[2] . "','" . $line[3] . "','" . $line[4] . "','New')";
+
+				} else {
+
+					$insert = "INSERT IGNORE INTO repos
+						(id,projects_id,git,path,name,status)
+						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
+						$line[2] . "','" . $line[3] . "','" . $line[4] . "','" .
+						$line[5] . "')";
+
+				}
+
+				query_db($db,$insert,'Importing project');
+
+			}
+		}
+	}
+
+	header("Location: repositories");
+
+} elseif ($_POST["export_aliases_csv"]) {
 
 	$fetch_aliases = "SELECT canonical,alias FROM aliases";
 
@@ -733,7 +863,37 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$alias,',');
 	}
 
-} elseif ($_POST["export_affiliations"]) {
+} elseif ($_POST["import_aliases_csv"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Canonical email' &&
+					$line[1] == 'Alias') {
+
+					$safe = True;
+				}
+			} else {
+
+				$insert = "INSERT IGNORE INTO aliases
+					(canonical,alias) VALUES ('" .
+					$line[0] . "','" . $line[1] . "')";
+
+				query_db($db,$insert,'Importing alias');
+
+			}
+		}
+	}
+
+	header("Location: people");
+
+} elseif ($_POST["export_affiliations_csv"]) {
 
 	$fetch_affiliations = "SELECT domain,affiliation,start_date FROM affiliations";
 
@@ -750,7 +910,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$affiliation,',');
 	}
 
-} elseif ($_POST["import_aliases"]) {
+} elseif ($_POST["import_affiliations_csv"]) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -761,38 +921,10 @@ if ($_POST["confirmnew_repo"]) {
 		foreach ($import as $line) {
 
 			if (!$safe) {
-				if ($line[0] == 'Canonical email' && 
-					$line[1] == 'Alias') {
-					$safe = True;
-				}
-			} else {
-
-				$insert = "INSERT IGNORE INTO aliases
-					(canonical,alias) VALUES ('" . 
-					$line[0] . "','" . $line[1] . "')";
-
-				query_db($db,$insert,'Importing alias');
-
-			}
-		}
-	}
-
-	header("Location: people");
-
-} elseif ($_POST["import_affiliations"]) {
-
-	if ($_FILES['import_file']['error'] == 0) {
-
-		$safe = False;
-
-		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
-
-		foreach ($import as $line) {
-
-			if (!$safe) {
-				if ($line[0] == 'Domain' && 
+				if ($line[0] == 'Domain' &&
 					$line[1] == 'Affiliation' &&
 					$line[2] == 'Beginning on') {
+
 					$safe = True;
 				}
 			} else {
@@ -800,24 +932,127 @@ if ($_POST["confirmnew_repo"]) {
 				if ($line[2]) {
 
 				$insert = "INSERT IGNORE INTO affiliations
-					(domain,affiliation,start_date) VALUES ('" . 
+					(domain,affiliation,start_date) VALUES ('" .
 					$line[0] . "','" . $line[1] . "','" . $line[2] . "')";
 
 				} else {
 
 				$insert = "INSERT IGNORE INTO affiliations
-					(domain,affiliation) VALUES ('" . 
+					(domain,affiliation) VALUES ('" .
 					$line[0] . "','" . $line[1] . "')";
 
 				}
 
-				query_db($db,$insert,'Importing alias');
+				query_db($db,$insert,'Importing affiliation');
 
 			}
 		}
 	}
 
 	header("Location: people");
+
+} elseif ($_POST["export_tags_csv"]) {
+
+	$fetch_tags = "SELECT email,start_date,end_date,tag FROM special_tags";
+
+	$tags = query_db($db,$fetch_tags,'fetching tags');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_tags.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Email','Beginning on','Ending on','Tag'],',');
+
+	while ($tag = $tags->fetch_assoc()) {
+		fputcsv($f,$tag,',');
+	}
+
+} elseif ($_POST["import_tags_csv"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Email' &&
+					$line[1] == 'Beginning on' &&
+					$line[2] == 'Ending on' &&
+					$line[3] == 'Tag') {
+
+					$safe = True;
+				}
+			} else {
+
+				$insert = "INSERT IGNORE INTO special_tags
+					(email,start_date,end_date,tag) VALUES ('" .
+					$line[0] . "','" . $line[1]  . "','" . $line[2] . "','" .
+					$line[3] . "')";
+
+				query_db($db,$insert,'Importing tag');
+
+			}
+		}
+	}
+
+	header("Location: tags");
+
+} elseif ($_POST["export_settings_csv"]) {
+
+	$fetch_settings = "SELECT setting,value FROM settings";
+
+	$settings = query_db($db,$fetch_settings,'fetching settings');
+
+	header('Content-Type: application/csv');
+	header('Content-Disposition: attachment; filename="facade_settings.csv";');
+
+	$f = fopen('php://output', 'w');
+
+	fputcsv($f, ['Setting','Value'],',');
+
+	while ($setting = $settings->fetch_assoc()) {
+		fputcsv($f,$setting,',');
+	}
+
+} elseif ($_POST["import_settings_csv"]) {
+
+	if ($_FILES['import_file']['error'] == 0) {
+
+		$safe = False;
+
+		$import = array_map('str_getcsv',file($_FILES['import_file']['tmp_name']));
+
+		foreach ($import as $line) {
+
+			if (!$safe) {
+				if ($line[0] == 'Setting' &&
+					$line[1] == 'Value') {
+
+					$safe = True;
+
+					// Clear repos data when we know it's safe to import
+					$drop_settings = "DELETE FROM settings";
+
+					query_db($db,$drop_settings,'Dropping settings data');
+
+				}
+			} else {
+
+				$insert = "INSERT INTO settings
+					(setting,value) VALUES ('" .
+					$line[0] . "','" . $line[1] . "')";
+
+				query_db($db,$insert,'Importing settings');
+
+			}
+		}
+	}
+
+	header("Location: configure");
 
 } else {
 	echo "Oops, what did you want to do?\n";

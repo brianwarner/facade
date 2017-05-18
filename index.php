@@ -30,7 +30,7 @@ $query = "SELECT SUM(added) FROM analysis_data";
 $result_added = query_db($db,$query,'Getting lines of code');
 $added = $result_added->fetch_assoc();
 
-$query = "SELECT DISTINCT " . $report_attribution . "_affiliation " . 
+$query = "SELECT DISTINCT " . $report_attribution . "_affiliation " .
 	"FROM analysis_data WHERE " . $report_attribution . "_affiliation != '(Unknown)'";
 $result_affiliations = query_db($db,$query,'Getting affiliations');
 

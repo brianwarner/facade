@@ -31,10 +31,12 @@ query = ("DROP TABLE IF EXISTS pmc_old, "
 	"pac_old, "
 	"rmc_old, "
 	"rac_old, "
+	"uc_old, "
 	"pmc, "
 	"pac, "
 	"rmc, "
-	"rac")
+	"rac, "
+	"uc")
 
 cursor.execute(query)
 db.commit()

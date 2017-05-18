@@ -26,8 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 	if ($_POST["confirmedit"]) {
 
-		echo '<div class="content-block"><form action="' .
-		htmlspecialchars($_SERVER["PHP_SELF"]) . '" id="editsettings"
+		echo '<div class="content-block"><form action="configure" id="editsettings"
 		method="POST"><input type="hidden" name="setting" value="' .
 		$setting . '">';
 
@@ -76,7 +75,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				including when everything starts and finishes.</label></p>
 
 				<p><label><input type="radio" name="log_level_radio"
-				value="Verbose" id="log_level_verbose"> Log everything, which will
+				value="Verbose" id="log_level_verbose"> Generate information on
+				repo and project-specific activity.</label></p>
+
+				<p><label><input type="radio" name="log_level_radio"
+				value="Debug" id="log_level_debug"> Log everything, which will
 				generate a lot of information. Only use this when you are
 				debugging.</label></p>';
 
@@ -214,6 +217,23 @@ $last_modified = strtotime($result->fetch_assoc()['last_modified']);
 
 echo '<div class="content-block">
 
+<div class="sub-block">
+<h2>Status</h2>
+<table>
+
+<tr>
+<td class="half"><strong>Current status of facade-worker
+script</strong></td>
+<td class="half">' . stripslashes(get_setting($db,"utility_status")) . ' since
+' . date("F j, Y", $last_modified) . ' at ' . date("H:i", $last_modified) .'</td>
+</tr>
+
+</table>
+
+</div> <!-- .sub-block -->
+
+<div class="sub-block">
+
 <h2>Data collection and display</h2>
 
 <table>
@@ -243,6 +263,10 @@ edit_setting_button("report_date") . '</span></div></td>
 
 </table>
 
+</div> <!-- .sub-block -->
+
+<div class="sub-block">
+
 <h2>System</h2>
 
 <table>
@@ -262,18 +286,55 @@ edit_setting_button("repo_directory") . '</span></div></td>
 
 </table>
 
-<h2>Status</h2>
+</div> <!-- .sub-block -->
+
+<div class="sub-block">
+
+<h2>Import / Export</h2>
+
+<p>When importing projects and repos, <strong>all existing project and
+repo data will be removed</strong>. This is to ensure the mappings between
+project and repos remain consistent.</p>
+
 <table>
-
-<tr>
-<td class="half"><strong>Current status of facade-worker
-script</strong></td>
-<td class="half">' . stripslashes(get_setting($db,"utility_status")) . ' since
-' . date("F j, Y", $last_modified) . ' at ' . date("H:i", $last_modified) .'</td>
-</tr>
-
+<tr><td class="quarter">Project definitions</td>
+<td class="quarter">
+<form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_projects_csv" value="Export"></td>
+<td class="half"><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_projects_csv" value="Import"></form></td></tr>
+<tr><td>Repo definitions</td>
+<td>
+<form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_repos_csv" value="Export"</td>
+<td><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_repos_csv" value="Import">&nbsp;or&nbsp;
+<input type="submit" name="import_clone_repos_csv" value="Import and clone"><br>
+</form></td></tr>
+<tr><td>Aliases</td>
+<td>
+<form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_aliases_csv" value="Export"</td>
+<td><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_aliases_csv" value="Import"></form></td></tr>
+<tr><td>Affiliations</td>
+<td><form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_affiliations_csv" value="Export"</td>
+<td><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_affiliations_csv" value="Import"></form></td></tr>
+<tr><td>Tags</td>
+<td><form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_tags_csv" value="Export"</td>
+<td><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_tags_csv" value="Import"></form></td></tr>
+<tr><td>Facade settings</td>
+<td><form action="manage" method="post" enctype="multipart/form-data">
+<input type="submit" name="export_settings_csv" value="Export"</td>
+<td><input type="file" name="import_file" id="import_file">&nbsp;
+<input type="submit" name="import_settings_csv" value="Import"></form></td></tr>
 </table>
 
+</div> <!-- .sub-block -->
 
 </div> <!-- .content-block -->';
 

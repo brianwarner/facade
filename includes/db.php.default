@@ -93,7 +93,7 @@ function sanitize_input($db,$post_data,$input_length) {
 
 function get_setting($db,$setting) {
 
-	$query = "SELECT value FROM settings WHERE setting='" . $setting . "' ORDER BY last_modified DESC LIMIT 1";
+	$query = "SELECT value FROM settings WHERE setting='" . $setting . "' ORDER BY id DESC LIMIT 1";
 	$result = query_db($db,$query,"Getting setting for '" . $setting . "'");
 
 	$row = $result->fetch_assoc();

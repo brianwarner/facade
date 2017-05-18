@@ -51,22 +51,21 @@ if ($_GET["repo"]) {
 	}
 
 	// Determine if a specific stat was requested.
-	$stat = '';
+	$stat = 'added';
 	if ($_GET["stat"]) {
 		$stat = sanitize_input($db,$_GET["stat"],12);
 	}
 
-	write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
-//update this
-
 	// First, verify that there's data to show. If not, suppress the report displays.
 	$query = "SELECT NULL FROM repo_" . $period . "_cache " .
-		"WHERE repos_id=" . $repo_id . 
+		"WHERE repos_id=" . $repo_id .
 		$year_clause . $affiliation_clause . $email_clause;
 
 	$result = query_db($db,$query,"Check whether to display.");
 
 	if ($result->num_rows > 0) {
+
+		write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
 
 		// Show all results if details requested. Otherwise limit for readability
 		if ($_GET["detail"]) {
@@ -102,6 +101,17 @@ if ($_GET["repo"]) {
 			echo '</div> <!-- .sub-block -->';
 
 		}
+
+	} else {
+
+		// There is no analysis data cached
+
+		echo '<div class="content-block">
+			<h2>No contributor data</h2>
+			<p>Facade has not calculated any contribution data for this repo.
+			This could be because all commits are outside of the analysis range,
+			or because the analysis has not yet completed.</p>
+			<p>When data is available, it will appear here.</p>';
 	}
 
 } else {

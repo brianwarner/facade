@@ -51,8 +51,8 @@ if ($_GET["id"]) {
 	$period = 'annual';
 	if ($_GET["year"]) {
 		$year = sanitize_input($db,$_GET["year"],4);
-		$year_clause = ' AND YEAR(m.start_date) = ' . $year;
 		$period = 'monthly';
+		$period_clause = ' AND year = ' . $year;
 	}
 
 	// Determine if a specific affiliation was requested.
@@ -70,15 +70,13 @@ if ($_GET["id"]) {
 	}
 
 	// Determine if a specific stat was requested.
-	$stat = '';
+	$stat = 'added';
 	if ($_GET["stat"]) {
 		$stat = sanitize_input($db,$_GET["stat"],12);
 	}
 
-	write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
-
 	// Verify that there's data to show. If not, suppress the report displays.
-// add a clause to check by the stat requested
+
 	$query = "SELECT NULL FROM project_" . $period . "_cache " .
 		"WHERE projects_id=" . $project_id .
 		$year_clause . $affiliation_clause . $email_clause;
@@ -86,6 +84,8 @@ if ($_GET["id"]) {
 	$result = query_db($db,$query,"Figure out if there's anything to display.");
 
 	if ($result->num_rows > 0) {
+
+		write_stat_selector_submenu($_SERVER['REQUEST_URI'],$stat);
 
 		// Show all if requested, otherwise limit for readability
 		if ($_GET["detail"]) {
@@ -136,6 +136,14 @@ if ($_GET["id"]) {
 
 			echo '</div> <!-- .content-block -->';
 		}
+	} else {
+		echo '<div class="content-block">
+			<h2>No contributor data</h2>
+			<p>Facade has not calculated any contribution data for this project.
+			This could be because all commits are outside of the analysis range,
+			or because the analysis has not yet completed.</p>
+			<p>When data is available, it will appear here.</p>';
+
 	}
 
 	if ($year == 'All' && $affiliation == 'All') {

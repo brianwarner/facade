@@ -83,7 +83,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 
 	$query = "SELECT " . $type . "
 		FROM " . $cache_table .
-		" WHERE " . $year_clause . $affiliation_clause . $email_clause . 
+		" WHERE " . $year_clause . $affiliation_clause . $email_clause .
 		$scope . "s_id=" .	$id . " GROUP BY " . $type .
 		" ORDER BY " . $sort_field . " " . $sort_order .
 		$results_clause;
@@ -394,8 +394,8 @@ function list_repos ($db,$project_id) {
 
 			if ($row_repo_log["date_attempted"]) {
 				$date_attempted = strtotime($row_repo_log["date_attempted"]);
-				echo '<span class="detail-text">Last successful pull at<br>' . 
-					date("H:i", $date_attempted) . ' on ' . 
+				echo '<span class="detail-text">Last successful pull at<br>' .
+					date("H:i", $date_attempted) . ' on ' .
 					date("M j, Y", $date_attempted). '</span>';
 			}
 
@@ -473,7 +473,7 @@ function list_excludes($db,$project_id,$project_name,$type) {
 
 	$excludes = query_db($db,$get_excludes,'Getting all excluded ' . $type . 's');
 
-	if ($excludes) {
+	if ($excludes->num_rows > 0) {
 
 		// If excludes are found, print the table
 		echo '<table>
@@ -506,7 +506,7 @@ function list_excludes($db,$project_id,$project_name,$type) {
 				$project = ' AND r.projects_id = ' . $exclude['projects_id'];
 
 				// Set the 'Applies to' text for the appropriate project
-				$get_name = "SELECT name FROM projects WHERE id=" . 
+				$get_name = "SELECT name FROM projects WHERE id=" .
 					$exclude['projects_id'];
 
 				$name_result = query_db($db,$get_name,'getting name for display');
@@ -516,11 +516,11 @@ function list_excludes($db,$project_id,$project_name,$type) {
 
 			$get_details = "SELECT $stat AS stat FROM analysis_data a
 				JOIN repos r ON a.repos_id = r.id
-				WHERE " . $report_attribution . "_email 
+				WHERE " . $report_attribution . "_email
 				LIKE '%" . $exclude['type'] . "%'" . $project;
 
 			$details = query_db($db,$get_details,'Getting exclude details');
-			
+
 			$detail_stat = $details->fetch_assoc()['stat'];
 
 			if (!$detail_stat) {
@@ -647,7 +647,7 @@ function write_stat_selector_submenu($raw_uri,$stat) {
 
 	echo '<h2>Metric</h2><div id="stat-selector">
 	<span class="first item';
-	if ($stat == '') {
+	if ($stat == 'added') {
 		echo ' active';
 	}
 	echo '"><a href="' . $clean_uri . '">Lines added</a></span>

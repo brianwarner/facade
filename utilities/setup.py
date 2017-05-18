@@ -41,7 +41,7 @@ def create_settings(reset=0):
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"setting VARCHAR(32) NOT NULL,"
 		"value VARCHAR(128) NOT NULL,"
-		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -52,7 +52,8 @@ def create_settings(reset=0):
 		"('utility_status','Idle'),"
 		"('log_level','Quiet'),"
 		"('report_date','author'),"
-		"('report_attribution','author')"
+		"('report_attribution','author'),"
+		"('working_author','done')"
 		% (start_date,repo_directory))
 
 	cursor.execute(initialize)
@@ -75,7 +76,7 @@ def create_repos_fetch_log(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(64) NOT NULL,"
-		"date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+		"date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -93,7 +94,7 @@ def create_analysis_log(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS analysis_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(64) NOT NULL,"
-		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -113,7 +114,7 @@ def create_utility_log(reset=0):
 		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"level VARCHAR(8) NOT NULL,"
 		"status VARCHAR(128) NOT NULL,"
-		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+		"attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -135,7 +136,8 @@ def create_projects(reset=0):
 		"name VARCHAR(64) NOT NULL,"
 		"description VARCHAR(256),"
 		"website VARCHAR(64),"
-		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+		"cached BOOL DEFAULT FALSE,"
+		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -160,9 +162,10 @@ def create_repos(reset=0):
 		"git VARCHAR(256) NOT NULL,"
 		"path VARCHAR(256),"
 		"name VARCHAR(256),"
-		"added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+		"added TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
 		"status VARCHAR(32) NOT NULL,"
-		"working_commit VARCHAR(40))")
+		"working_commit VARCHAR(40),"
+		"cached BOOL DEFAULT FALSE)")
 
 	cursor.execute(create)
 	db.commit()
@@ -194,8 +197,7 @@ def create_affiliations(reset=0):
 		populate = ("INSERT INTO affiliations(domain,affiliation) VALUES "
 			"('samsung.com','Samsung'),"
 			"('linuxfoundation.org','Linux Foundation'),"
-			"('redhat.com','Red Hat'),"
-			"('intel.com','Intel'),"
+			"('ibm.com','IBM'),"
 			"('brian@bdwarner.com','(Hobbyist)')")
 
 		cursor.execute(populate)
@@ -231,7 +233,9 @@ def create_aliases(reset=0):
 
 	if reset:
 		populate = ("INSERT INTO aliases (canonical,alias) VALUES "
-			"('brian@bdwarner.com','bdwarner@gmail.com')")
+			"('brian@bdwarner.com','brian.warner@samsung.com'),"
+			"('brian@bdwarner.com','brian.warner@linuxfoundation.org'),"
+			"('brian@bdwarner.com','bdwarner@us.ibm.com')")
 
 		cursor.execute(populate)
 		db.commit()
@@ -259,7 +263,7 @@ def create_special_tags(reset=0):
 
 # Entries in this table are matched against email addresses found during
 # analysis categorize subsets of people.  For example, people who worked for a
-# certain organization who should be categorized separately, to benchmark 
+# certain organization who should be categorized separately, to benchmark
 # performance against the rest of a company.
 
 	if reset:
@@ -273,7 +277,8 @@ def create_special_tags(reset=0):
 		"email VARCHAR(128) NOT NULL,"
 		"start_date DATE NOT NULL,"
 		"end_date DATE,"
-		"tag VARCHAR(64) NOT NULL)")
+		"tag VARCHAR(64) NOT NULL,"
+		"UNIQUE (email,start_date,end_date,tag))")
 
 	cursor.execute(create)
 	db.commit()
@@ -305,7 +310,7 @@ def create_analysis(reset=0):
 		"removed INT UNSIGNED NOT NULL,"
 		"whitespace INT UNSIGNED NOT NULL,"
 		"filename VARCHAR(4096) NOT NULL,"
-		"date_attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -454,8 +459,8 @@ def create_auth(reset=0):
 		"user VARCHAR(64) UNIQUE NOT NULL,"
 		"email VARCHAR(64) NOT NULL,"
 		"password VARCHAR(64) NOT NULL,"
-		"created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-		"last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+		"created TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
+		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
@@ -464,7 +469,7 @@ def create_auth(reset=0):
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"user VARCHAR(64) NOT NULL,"
 		"status VARCHAR(96) NOT NULL,"
-		"attempted TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+		"attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
 	db.commit()
