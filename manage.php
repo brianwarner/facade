@@ -800,7 +800,7 @@ if ($_POST["confirmnew_repo"]) {
 		foreach ($import as $line) {
 
 			if (!$safe) {
-				if ($line[0] == 'Repo ID' && 
+				if ($line[0] == 'Repo ID' &&
 					$line[1] == 'Projects ID' &&
 					$line[2] == 'Git' &&
 					$line[3] == 'Path' &&
@@ -824,17 +824,17 @@ if ($_POST["confirmnew_repo"]) {
 					query_db($db,$clear,'Clearing repos fetch log');
 
 					$insert = "INSERT IGNORE INTO repos
-						(id,projects_id,git,path,name,status)
+						(id,projects_id,git,path,name,status,cached)
 						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
-						$line[2] . "','" . $line[3] . "','" . $line[4] . "','New')";
+						$line[2] . "','" . $line[3] . "','" . $line[4] . "','New',FALSE)";
 
 				} else {
 
 					$insert = "INSERT IGNORE INTO repos
-						(id,projects_id,git,path,name,status)
+						(id,projects_id,git,path,name,status,cached)
 						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
 						$line[2] . "','" . $line[3] . "','" . $line[4] . "','" .
-						$line[5] . "')";
+						$line[5] . "',FALSE)";
 
 				}
 
