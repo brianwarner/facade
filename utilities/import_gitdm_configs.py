@@ -64,8 +64,6 @@ def import_aliases(filename):
 					"to append the contents of this file onto a fresh aliases file\n"
 					"straight from the gitdm repository.\n\n%s\n" % filename)
 
-			sys.exit(1)
-
 def commit_affiliation(line):
 
 # Helper function to quickly commit a line to the db.
