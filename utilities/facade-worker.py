@@ -722,7 +722,7 @@ def analysis():
 	for repo in repos:
 
 		update_analysis_log(repo['id'],'Beginning analysis')
-		log_activity('Verbose','Analyzing repo: %s' % repo['id'])
+		log_activity('Verbose','Analyzing repo: %s (%s)' % (repo['id'],repo['name']))
 
 		# First we check to see if the previous analysis didn't complete
 
