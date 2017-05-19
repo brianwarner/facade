@@ -37,13 +37,13 @@ if (($_POST['user']) && ($_POST['pass']) && ($_POST['login'])) {
 
 			query_db($db,$query,'Updating history.');
 
-			echo '<meta http-equiv="refresh" content="0;/user">';
+			echo '<meta http-equiv="refresh" content="0;./user">';
 
 		} else {
-			echo '<meta http-equiv="refresh" content="0;/user?failed">';
+			echo '<meta http-equiv="refresh" content="0;./user?failed">';
 		}
 	} else {
-		echo '<meta http-equiv="refresh" content="0;/user?failed">';
+		echo '<meta http-equiv="refresh" content="0;./user?failed">';
 	}
 } elseif (($_SESSION['user']) && ($_SESSION['access_granted'])) {
 
@@ -76,15 +76,15 @@ if (($_POST['user']) && ($_POST['pass']) && ($_POST['login'])) {
 
 					query_db($db,$query,'Updating history.');
 
-					echo '<meta http-equiv="refresh" content="0;/user?emailchanged">';
+					echo '<meta http-equiv="refresh" content="0;./user?emailchanged">';
 				} else {
-					echo '<meta http-equiv="refresh" content="0;/user?emailfailed">';
+					echo '<meta http-equiv="refresh" content="0;./user?emailfailed">';
 				}
 			} else {
-				echo '<meta http-equiv="refresh" content="0;/user?emailfailed">';
+				echo '<meta http-equiv="refresh" content="0;./user?emailfailed">';
 			}
 		} else {
-			echo '<meta http-equiv="refresh" content="0;/user?emailfailed">';
+			echo '<meta http-equiv="refresh" content="0;./user?emailfailed">';
 		}
 	} elseif ($_POST['changepassword']) {
 		if (($_POST['password']) && ($_POST['new_password']) && ($_POST['con_password'])) {
@@ -117,22 +117,22 @@ if (($_POST['user']) && ($_POST['pass']) && ($_POST['login'])) {
 
 						query_db($db,$query,'Updating history.');
 
-						echo '<meta http-equiv="refresh" content="0;/user?passwordchanged">';
+						echo '<meta http-equiv="refresh" content="0;./user?passwordchanged">';
 					} else {
-						echo '<meta http-equiv="refresh" content="0;/user?passwordfailed">';
+						echo '<meta http-equiv="refresh" content="0;./user?passwordfailed">';
 					}
 				} else {
-					echo '<meta http-equiv="refresh" content="0;/user?passwordfailed">';
+					echo '<meta http-equiv="refresh" content="0;./user?passwordfailed">';
 				}
 			} else {
-				echo '<meta http-equiv="refresh" content="0;/user?passwordfailed">';
+				echo '<meta http-equiv="refresh" content="0;./user?passwordfailed">';
 			}
 		} else {
-			echo '<meta http-equiv="refresh" content="0;/user?passwordfailed">';
+			echo '<meta http-equiv="refresh" content="0;./user?passwordfailed">';
 		}
 	}
 } else {
-	echo '<meta http-equiv="refresh" content="0;/user">';
+	echo '<meta http-equiv="refresh" content="0;./user">';
 }
 
 ?>
