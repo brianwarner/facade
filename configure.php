@@ -90,7 +90,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				<p><strong>Note:</strong> This setting determines how commits
 				are organized in the web UI. They can either be counted by the
 				author date (when the patch was created) or the committer date
-				(when the patch was applied).</p>
+				(when the patch was applied). Committer date may be more
+				meaningful in general situations.</p>
 
 				<p>This does not affect data exported as a CSV, which will
 				always contain both fields.</p>
@@ -256,7 +257,7 @@ edit_setting_button("report_attribution") . '</span></div></td>
 <tr>
 <td class="half"><div class="detail"><strong>Use this date when generating
 reports that are displayed on the website</strong>
-<span class="detail-text"><i>format: author, committer<br>default: author</i></td>
+<span class="detail-text"><i>format: author, committer<br>default: committer</i></td>
 <td class="half">' . get_setting($db,"report_date") .
 edit_setting_button("report_date") . '</span></div></td>
 </tr>

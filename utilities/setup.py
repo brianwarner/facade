@@ -51,7 +51,7 @@ def create_settings(reset=0):
 		"('repo_directory','%s'),"
 		"('utility_status','Idle'),"
 		"('log_level','Quiet'),"
-		"('report_date','author'),"
+		"('report_date','committer'),"
 		"('report_attribution','author'),"
 		"('working_author','done')"
 		% (start_date,repo_directory))
