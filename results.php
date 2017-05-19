@@ -55,19 +55,6 @@ if ($result->num_rows > 0) {
 		class="custom-input hidden"></td>
 		</tr>
 
-		<tr>
-		<td>Ending on:</td>
-		<td><select id="select_end_date" name="end"
-		onchange="custom_input(this,\'custom_end_date\',\'70\')">
-		<option value="default">Default (' . get_setting($db,"end_date") .
-		')</option>
-		<option value="custom">Custom</option>
-		</select>
-
-		<input type="text" id="custom_end_date" name="end_date"
-		class="custom-input hidden"></td>
-		</tr>
-
 		</table>
 
 		</div> <!-- .sub-block -->
@@ -176,7 +163,6 @@ if ($result->num_rows > 0) {
 	</div> <!-- .content-block -->';
 
 }
-
 
 include_once "includes/footer.php";
 close_db($db);
