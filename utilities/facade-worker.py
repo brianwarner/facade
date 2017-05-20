@@ -380,16 +380,16 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 			if line.find('--- ') == 0:
 				if filename == '(Deleted) ':
-					filename = filename + line[6:]
+					filename = filename + line[6:].replace("'","\\'")
 				continue
 
 			if line.find('+++ ') == 0:
 				if not filename.find('(Deleted) ') == 0:
-					filename = line[6:]
+					filename = line[6:].replace("'","\\'")
 				continue
 
 			if line.find('rename to ') == 0:
-				filename = line[10:]
+				filename = line[10:].replace("'","\\'")
 				continue
 
 			if line.find('deleted file ') == 0:
