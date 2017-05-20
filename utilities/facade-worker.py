@@ -998,129 +998,43 @@ def rebuild_unknown_affiliation_and_web_caches():
 	report_date = get_setting('report_date')
 	report_attribution = get_setting('report_attribution')
 
-	# If a previous caching was interrupted, clear any partial data
+	# Clear the cache tables
 
-	find_uncached_projects = "SELECT id FROM projects WHERE cached=FALSE"
+	clear_cached_tables()
 
-	cursor.execute(find_uncached_projects)
+	log_activity('Verbose','Caching unknown authors and committers')
 
-	uncached_projects = list(cursor)
+	# Cache the unknown authors
 
-	log_activity('Debug','Uncached projects found: %s' % len(uncached_projects))
+	unknown_authors = ("INSERT INTO unknown_cache "
+		"SELECT 'author', "
+		"r.projects_id, "
+		"a.author_email, "
+		"SUBSTRING_INDEX(a.author_email,'@',-1), "
+		"SUM(a.added) "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"WHERE a.author_affiliation = '(Unknown)' "
+		"GROUP BY r.projects_id,a.author_email")
 
-	for uncached_project in uncached_projects:
+	cursor.execute(unknown_authors)
+	db.commit()
 
-		trim_project_cache = ("DELETE FROM project_monthly_cache "
-			"WHERE projects_id = %s" % uncached_project['id'])
+	# Cache the unknown committers
 
-		cursor.execute(trim_project_cache)
-		db.commit()
+	unknown_committers = ("INSERT INTO unknown_cache "
+		"SELECT 'committer', "
+		"r.projects_id, "
+		"a.committer_email, "
+		"SUBSTRING_INDEX(a.committer_email,'@',-1), "
+		"SUM(a.added) "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"WHERE a.committer_affiliation = '(Unknown)' "
+		"GROUP BY r.projects_id,a.committer_email")
 
-		trim_project_cache = ("DELETE FROM project_annual_cache "
-			"WHERE projects_id = %s" % uncached_project['id'])
-
-		cursor.execute(trim_project_cache)
-		db.commit()
-
-		log_activity('Debug','Cache trimmed for project %s' % uncached_project['id'])
-
-	find_uncached_repos = "SELECT id FROM repos WHERE cached=FALSE"
-
-	cursor.execute(find_uncached_repos)
-
-	uncached_repos = list(cursor)
-
-	for uncached_repo in uncached_repos:
-
-		trim_repo_cache = ("DELETE FROM repo_monthly_cache "
-			"WHERE repos_id = %s" % uncached_repo['id'])
-
-		cursor.execute(trim_repo_cache)
-		db.commit()
-
-		trim_repo_cache = ("DELETE FROM repo_annual_cache "
-			"WHERE repos_id = %s" % uncached_repo['id'])
-
-		cursor.execute(trim_repo_cache)
-		db.commit()
-
-		log_activity('Debug','Cache trimmed for repo %s' % uncached_repo['id'])
-
-	# Cache the unknowns if any project or repo caches are incomplete
-
-	if uncached_projects or uncached_repos:
-
-		# First we get rid of any cached data
-
-		query = "CREATE TABLE IF NOT EXISTS uc LIKE unknown_cache"
-
-		cursor.execute(query)
-		db.commit()
-
-		query = ("RENAME TABLE unknown_cache TO uc_old, "
-			"uc TO unknown_cache")
-
-		cursor.execute(query)
-		db.commit()
-
-		query = "DROP TABLE uc_old"
-
-		cursor.execute(query)
-		unknowns = list(cursor)
-
-		log_activity('Debug','Unknown cache dropped due to uncached projects')
-
-		# Then we grab the unknowns
-
-		unknown_authors = ("SELECT r.projects_id AS projects_id, "
-			"a.author_email AS email, "
-			"SUM(a.added) AS added "
-			"FROM analysis_data a "
-			"JOIN repos r ON r.id = a.repos_id "
-			"WHERE a.author_affiliation = '(Unknown)' "
-			"GROUP BY r.projects_id,a.author_email")
-
-		cursor.execute(unknown_authors)
-		unknowns = list(cursor)
-
-		log_activity('Debug','Unknown authors to cache: %s' % len(unknowns))
-
-		for unknown in unknowns:
-
-			# Isolate the domain name, and add the lines of code associated with it
-			query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
-				"VALUES ('author',%s,'%s','%s',%s)" % (unknown["projects_id"],
-				unknown["email"].replace("'","\\'"),
-				unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
-				unknown["added"]))
-
-			cursor.execute(query)
-			db.commit()
-
-		unknown_committers = ("SELECT r.projects_id AS projects_id, "
-			"a.committer_email AS email, "
-			"SUM(a.added) AS added "
-			"FROM analysis_data a "
-			"JOIN repos r ON r.id = a.repos_id "
-			"WHERE a.committer_affiliation = '(Unknown)' "
-			"GROUP BY r.projects_id,a.committer_email")
-
-		cursor.execute(unknown_committers)
-		unknowns = list(cursor)
-
-		log_activity('Debug','Unknown committers to cache: %s' % len(unknowns))
-
-		for unknown in unknowns:
-
-			# Isolate the domain name, and add the lines of code associated with it
-			query = ("INSERT INTO unknown_cache (type,projects_id,email,domain,added) "
-				"VALUES ('committer',%s,'%s','%s',%s)" % (unknown["projects_id"],
-				unknown["email"].replace("'","\\'"),
-				unknown["email"][unknown["email"].find('@') + 1:].replace("'","\\'"),
-				unknown["added"]))
-
-			cursor.execute(query)
-			db.commit()
+	cursor.execute(unknown_committers)
+	db.commit()
 
 	# Start caching by project
 
