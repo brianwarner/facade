@@ -1129,194 +1129,139 @@ def rebuild_unknown_affiliation_and_web_caches():
 	cursor.execute(query)
 	projects = list(cursor)
 
-	for project in projects:
+	log_activity('Verbose','Caching projects')
 
-		log_activity('Verbose','Caching project %s' % project['name'])
-
-		# Cache monthly data by project
-
-		get_emails = ("SELECT DISTINCT a.%s_email AS email "
-			"FROM analysis_data a "
-			"JOIN repos r ON r.id = a.repos_id "
-			"LEFT JOIN exclude e ON "
-				"(a.author_email = e.email "
-					"AND (r.projects_id = e.projects_id "
-						"OR e.projects_id = 0)) "
-				"OR (a.author_email LIKE CONCAT('%%',e.domain) "
-					"AND (r.projects_id = e.projects_id "
+	cache_projects_by_month = ("INSERT INTO project_monthly_cache "
+		"SELECT r.projects_id AS projects_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"MONTH(a.%s_date) AS month, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
 					"OR e.projects_id = 0)) "
-			"WHERE r.projects_id=%s "
-			"AND e.email IS NULL "
-			"AND e.domain IS NULL"
-			% (report_attribution,project['id']))
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"GROUP BY month, "
+		"year, "
+		"affiliation, "
+		"a.%s_email,"
+		"projects_id"
+		% (report_attribution,report_attribution,
+		report_date,report_date,report_attribution))
 
-		cursor.execute(get_emails)
-		non_excluded_emails = list(cursor)
+	cursor.execute(cache_projects_by_month)
+	db.commit()
 
-		log_activity('Debug','Emails found: %s' % len(non_excluded_emails))
+	cache_projects_by_year = ("INSERT INTO project_annual_cache "
+		"SELECT r.projects_id AS projects_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
+					"OR e.projects_id = 0)) "
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"GROUP BY year, "
+		"affiliation, "
+		"a.%s_email,"
+		"projects_id"
+		% (report_attribution,report_attribution,
+		report_date,report_attribution))
 
-		for email in non_excluded_emails:
-
-			# Cache monthly by project
-
-			get_stats = ("INSERT INTO project_monthly_cache "
-				"SELECT r.projects_id AS projects_id, "
-				"a.%s_email AS email, "
-				"a.%s_affiliation AS affiliation, "
-				"MONTH(a.%s_date) AS month, "
-				"YEAR(a.%s_date) AS year, "
-				"SUM(a.added) AS added, "
-				"SUM(a.removed) AS removed, "
-				"SUM(a.whitespace) AS whitespace, "
-				"COUNT(DISTINCT a.filename) AS files, "
-				"COUNT(DISTINCT a.commit) AS patches "
-				"FROM analysis_data a "
-				"JOIN repos r ON r.id = a.repos_id "
-				"WHERE a.%s_email='%s' "
-				"AND r.projects_id = %s "
-				"GROUP BY month, "
-				"year, "
-				"affiliation, "
-				"email"
-				% (report_attribution,report_attribution,
-				report_date,report_date,report_attribution,
-				email['email'].replace("'","\\'"),project['id']))
-
-			cursor.execute(get_stats)
-			db.commit()
-
-			# Cache annually by project
-
-			get_stats = ("INSERT INTO project_annual_cache "
-				"SELECT r.projects_id AS projects_id, "
-				"a.%s_email AS email, "
-				"a.%s_affiliation AS affiliation, "
-				"YEAR(a.%s_date) AS year, "
-				"SUM(a.added) AS added, "
-				"SUM(a.removed) AS removed, "
-				"SUM(a.whitespace) AS whitespace, "
-				"COUNT(DISTINCT a.filename) AS files, "
-				"COUNT(DISTINCT a.commit) AS patches "
-				"FROM analysis_data a "
-				"JOIN repos r ON r.id = a.repos_id "
-				"WHERE a.%s_email='%s' "
-				"AND r.projects_id = %s "
-				"GROUP BY year, "
-				"affiliation, "
-				"email"
-				% (report_attribution,report_attribution,
-				report_date,report_attribution,
-				email['email'].replace("'","\\'"),project['id']))
-
-			cursor.execute(get_stats)
-			db.commit()
-
-		# Mark project as cached
-
-		project_cache = ("UPDATE projects SET cached=TRUE "
-			"WHERE id=%s" % project['id'])
-
-		cursor.execute(project_cache)
-		db.commit()
-
-		log_activity('Verbose','Caching project %s (complete)' % project['name'])
+	cursor.execute(cache_projects_by_year)
+	db.commit()
 
 	# Start caching by repo
 
-	query = ("SELECT id FROM repos WHERE "
-		"cached=FALSE AND status='Active'")
+	log_activity('Verbose','Caching repos')
 
-	cursor.execute(query)
-	repos = list(cursor)
-
-	for repo in repos:
-
-		log_activity('Verbose','Caching repo %s' % repo['id'])
-
-		# Cache monthly data by repo
-
-		get_emails = ("SELECT DISTINCT a.author_email AS email "
-			"FROM analysis_data a "
-			"JOIN repos r ON r.id = a.repos_id "
-			"LEFT JOIN exclude e ON "
-				"(a.author_email = e.email "
-					"AND (r.projects_id = e.projects_id "
-						"OR e.projects_id = 0)) "
-				"OR (a.author_email LIKE CONCAT('%%',e.domain) "
-					"AND (r.projects_id = e.projects_id "
+	cache_repos_by_month = ("INSERT INTO repo_monthly_cache "
+		"SELECT a.repos_id AS repos_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"MONTH(a.%s_date) AS month, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
 					"OR e.projects_id = 0)) "
-			"WHERE r.id=%s "
-			"AND e.email IS NULL "
-			"AND e.domain IS NULL"
-			% repo['id'])
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"GROUP BY month, "
+		"year, "
+		"affiliation, "
+		"a.%s_email,"
+		"repos_id"
+		% (report_attribution,report_attribution,
+		report_date,report_date,report_attribution))
 
-		cursor.execute(get_emails)
-		non_excluded_emails = list(cursor)
+	cursor.execute(cache_repos_by_month)
+	db.commit()
 
-		log_activity('Debug','Emails found: %s' % len(non_excluded_emails))
+	cache_repos_by_year = ("INSERT INTO repo_annual_cache "
+		"SELECT a.repos_id AS repos_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
+					"OR e.projects_id = 0)) "
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"GROUP BY year, "
+		"affiliation, "
+		"a.%s_email,"
+		"repos_id"
+		% (report_attribution,report_attribution,
+		report_date,report_attribution))
 
-		for email in non_excluded_emails:
-
-			# Cache monthly by repo
-
-			get_stats = ("INSERT INTO repo_monthly_cache "
-				"SELECT repos_id, "
-				"%s_email AS email, "
-				"%s_affiliation AS affiliation, "
-				"MONTH(%s_date) AS month, "
-				"YEAR(%s_date) AS year, "
-				"SUM(added) AS added, "
-				"SUM(removed) AS removed, "
-				"SUM(whitespace) AS whitespace, "
-				"COUNT(DISTINCT filename) AS files, "
-				"COUNT(DISTINCT commit) AS patches "
-				"FROM analysis_data "
-				"WHERE %s_email='%s' "
-				"AND repos_id = %s "
-				"GROUP BY month, "
-				"year, "
-				"affiliation, "
-				"email"
-				% (report_attribution,report_attribution,
-				report_date,report_date,report_attribution,
-				email['email'].replace("'","\\'"),repo['id']))
-
-			cursor.execute(get_stats)
-			db.commit()
-
-			# Cache annually by repo
-
-			get_stats = ("INSERT INTO repo_annual_cache "
-				"SELECT repos_id, "
-				"%s_email AS email, "
-				"%s_affiliation AS affiliation, "
-				"YEAR(%s_date) AS year, "
-				"SUM(added) AS added, "
-				"SUM(removed) AS removed, "
-				"SUM(whitespace) AS whitespace, "
-				"COUNT(DISTINCT filename) AS files, "
-				"COUNT(DISTINCT commit) AS patches "
-				"FROM analysis_data "
-				"WHERE %s_email='%s' "
-				"AND repos_id = %s "
-				"GROUP BY year, "
-				"affiliation, "
-				"email" % (report_attribution,report_attribution,
-				report_date,report_attribution,
-				email['email'].replace("'","\\'"),repo['id']))
-
-			cursor.execute(get_stats)
-			db.commit()
-
-		# Mark repo as cached
-
-		repo_cache = ("UPDATE repos SET cached=TRUE "
-			"WHERE id=%s" % repo['id'])
-
-		cursor.execute(repo_cache)
-		db.commit()
-
-		log_activity('Verbose','Caching repo %s (compete)' % repo['id'])
+	cursor.execute(cache_repos_by_year)
+	db.commit()
 
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 
