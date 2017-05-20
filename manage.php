@@ -824,17 +824,17 @@ if ($_POST["confirmnew_repo"]) {
 					query_db($db,$clear,'Clearing repos fetch log');
 
 					$insert = "INSERT IGNORE INTO repos
-						(id,projects_id,git,path,name,status,cached)
+						(id,projects_id,git,path,name,status)
 						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
-						$line[2] . "','" . $line[3] . "','" . $line[4] . "','New',FALSE)";
+						$line[2] . "','" . $line[3] . "','" . $line[4] . "','New')";
 
 				} else {
 
 					$insert = "INSERT IGNORE INTO repos
-						(id,projects_id,git,path,name,status,cached)
+						(id,projects_id,git,path,name,status)
 						VALUES ('" . $line[0] . "','" . $line[1] . "','" .
 						$line[2] . "','" . $line[3] . "','" . $line[4] . "','" .
-						$line[5] . "',FALSE)";
+						$line[5] . "')";
 
 				}
 

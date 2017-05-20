@@ -136,7 +136,6 @@ def create_projects(reset=0):
 		"name VARCHAR(64) NOT NULL,"
 		"description VARCHAR(256),"
 		"website VARCHAR(64),"
-		"cached BOOL DEFAULT FALSE,"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
@@ -164,8 +163,7 @@ def create_repos(reset=0):
 		"name VARCHAR(256),"
 		"added TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
 		"status VARCHAR(32) NOT NULL,"
-		"working_commit VARCHAR(40),"
-		"cached BOOL DEFAULT FALSE)")
+		"working_commit VARCHAR(40)")
 
 	cursor.execute(create)
 	db.commit()

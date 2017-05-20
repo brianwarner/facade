@@ -778,25 +778,6 @@ def analysis():
 		log_activity('Debug','Commits missing from repo %s: %s' %
 			(repo['id'],len(missing_commits)))
 
-		if len(missing_commits):
-
-			# If we're going to deal with new data, invalidate the caches
-
-			repo_cache = ("UPDATE repos SET cached=FALSE "
-				"WHERE id=%s" % repo['id'])
-
-			cursor.execute(repo_cache)
-			db.commit()
-
-			project_cache = ("UPDATE projects SET cached=FALSE "
-				"WHERE id=%s" % repo['projects_id'])
-
-			cursor.execute(project_cache)
-			db.commit()
-
-			log_activity('Debug','Caches invalidated for repo %s and project %s'
-				% (repo['id'],repo['projects_id']))
-
 		for commit in missing_commits:
 
 			store_working_commit(repo['id'],commit)
@@ -914,8 +895,8 @@ def fill_empty_affiliations():
 
 def clear_cached_tables():
 
-	update_status('Invalidating cached data')
-	log_activity('Info','Invalidating cached unknown affiliations and web data')
+	update_status('Deleting cached data')
+	log_activity('Info','Deleting old cached unknown affiliations and web data')
 
 	# Create a temporary table for each cache, so we can swap in place.
 
@@ -971,19 +952,7 @@ def clear_cached_tables():
 	cursor.execute(query)
 	db.commit()
 
-	# Reset all cached flags
-
-	reset_repos = "UPDATE repos SET cached=FALSE"
-
-	cursor.execute(reset_repos)
-	db.commit()
-
-	reset_projects = "UPDATE projects SET cached=FALSE"
-
-	cursor.execute(reset_projects)
-	db.commit()
-
-	log_activity('Info','Invalidating cached unknown affiliations and web data (complete)')
+	log_activity('Info','Deleting old cached unknown affiliations and web data (complete)')
 
 def rebuild_unknown_affiliation_and_web_caches():
 
@@ -1037,11 +1006,6 @@ def rebuild_unknown_affiliation_and_web_caches():
 	db.commit()
 
 	# Start caching by project
-
-	query = "SELECT id,name FROM projects WHERE cached=FALSE"
-
-	cursor.execute(query)
-	projects = list(cursor)
 
 	log_activity('Verbose','Caching projects')
 
@@ -1195,7 +1159,7 @@ fix_affiliations = 0 #
 invalidate_caches = 0
 rebuild_caches = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcanfir')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcanfr')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything except invalidating caches by\n"
@@ -1208,7 +1172,6 @@ for opt in opts:
 				"	-a	Analyze git repos\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
 				"	-f	Fill empty affiliations\n"
-				"	-i	Invalidate caches and delete cached data\n"
 				"	-r	Rebuild unknown affiliation and web caches\n\n")
 		sys.exit(0)
 
@@ -1241,11 +1204,6 @@ for opt in opts:
 		fix_affiliations = 1
 		limited_run = 1
 		log_activity('Info','Option set: fixing affiliations.')
-
-	elif opt[0] == '-i':
-		invalidate_caches = 1
-		limited_run = 1
-		log_activity('Info','Option set: invalidating caches.')
 
 	elif opt[0] == '-r':
 		rebuild_caches = 1
@@ -1287,9 +1245,6 @@ if nuke_stored_affiliations:
 
 if not limited_run or (limited_run and fix_affiliations):
 	fill_empty_affiliations()
-
-if invalidate_caches:
-	clear_cached_tables()
 
 if not limited_run or (limited_run and rebuild_caches):
 	rebuild_unknown_affiliation_and_web_caches()
