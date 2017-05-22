@@ -117,13 +117,16 @@ def discover_alias(email):
 
 # Match aliases with their canonical email
 
-	alias = "SELECT canonical FROM aliases WHERE alias='%s'" % email
+	fetch_alias = "SELECT canonical FROM aliases WHERE alias='%s'" % email
 
-	cursor.execute(alias)
+	cursor.execute(fetch_alias)
 	db.commit()
 
-	if cursor.rowcount:
-		return cursor.fetchone()["canonical"]
+	aliases = list(cursor)
+
+	if aliases:
+		for alias in aliases:
+			return alias['canonical']
 	else:
 		return email
 
@@ -454,10 +457,6 @@ def store_commit(repos_id,commit,filename,
 	# Some systems append extra info after a second @
 	author_email = strip_extra_amp(author_email)
 	committer_email = strip_extra_amp(committer_email)
-
-	# Check if there's a known alias for this email
-	author_email = discover_alias(author_email)
-	committer_email = discover_alias(committer_email)
 
 	store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
 		"author_name,author_email,author_date,"
@@ -833,7 +832,7 @@ def fill_empty_affiliations():
 
 		store_working_author(email)
 
-		discover_null_affiliations('author',email)
+		discover_null_affiliations('author',discover_alias(email))
 
 	store_working_author('done')
 
@@ -858,7 +857,7 @@ def fill_empty_affiliations():
 
 		store_working_author(email)
 
-		discover_null_affiliations('committer',email)
+		discover_null_affiliations('committer',discover_alias(email))
 
 	# Now that we've matched as much as possible, fill the rest as (Unknown)
 

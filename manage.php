@@ -584,10 +584,27 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($alias && $canonical) {
 
+		// Remove any affiliations so they can be recreated next run
+
+		$clear_author = "UPDATE analysis_data
+			SET author_affiliation = NULL
+			WHERE author_email = '" . $alias . "'";
+
+		query_db($db,$clear_author,"Clearing author affiliation");
+
+		$clear_committer = "UPDATE analysis_data
+			SET committer_affiliation = NULL
+			WHERE committer_email = '" . $alias . "'";
+
+		query_db($db,$clear_author,"Clearing committer affiliation");
+
+		// Add an alias
+
 		$add_alias = "INSERT INTO aliases (alias,canonical) VALUES ('" . $alias
 			. "','" . $canonical . "')";
 
 		query_db($db,$add_alias,'Adding alias');
+
 	}
 
 	header("Location: people");
@@ -598,9 +615,29 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($id) {
 
-		$delete = "DELETE FROM aliases WHERE id=" . $id;
-		query_db($db,$delete,'Deleting alias');
+		// Remove any affiliations so they can be recreated next run
 
+		$get_alias = "SELECT alias FROM aliases WHERE id=" . $id;
+
+		$result = query_db($db,$get_alias,'Getting alias');
+
+		$alias = $result->fetch_assoc();
+
+		$clear_author = "UPDATE analysis_data
+			SET author_affiliation = NULL
+			WHERE author_email = '" . $alias['alias'] . "'";
+
+		query_db($db,$clear_author,"Clearing author affiliation");
+
+		$clear_committer = "UPDATE analysis_data
+			SET committer_affiliation = NULL
+			WHERE committer_email = '" . $alias['alias'] . "'";
+
+		query_db($db,$clear_committer,"Clearing committer affiliation");
+
+		$delete = "DELETE FROM aliases WHERE id=" . $id;
+
+		query_db($db,$delete,'Deleting alias');
 	}
 
 	header("Location: people");
@@ -660,19 +697,6 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($domain && $affiliation) {
 
-		if ($start_date) {
-			$add_affiliation = "INSERT INTO affiliations
-				(domain,affiliation,start_date) VALUES ('"
-				. $domain . "','" . $affiliation . "','" . $start_date . "')";
-
-		} else {
-			$add_affiliation = "INSERT INTO affiliations
-				(domain,affiliation) VALUES ('"
-				. $domain . "','" . $affiliation . "')";
-		}
-
-		query_db($db,$add_affiliation,'Adding affiliation');
-
 		// Delete all matching affiliations, so they will be rebuilt with
 		// corrected data next time facade-worker.py runs.
 
@@ -686,6 +710,19 @@ if ($_POST["confirmnew_repo"]) {
 
 		query_db($db,$delete,'Clearing committer info');
 
+		if ($start_date) {
+			$add_affiliation = "INSERT INTO affiliations
+				(domain,affiliation,start_date) VALUES ('"
+				. $domain . "','" . $affiliation . "','" . $start_date . "')";
+
+		} else {
+			$add_affiliation = "INSERT INTO affiliations
+				(domain,affiliation) VALUES ('"
+				. $domain . "','" . $affiliation . "')";
+		}
+
+		query_db($db,$add_affiliation,'Adding affiliation');
+
 	}
 
 	header("Location: people");
@@ -696,23 +733,28 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($id) {
 
+		// Delete all matching affiliations, so they will be rebuilt with corrected
+		// data next time facade-worker.py runs.
+
+		$get_domain = "SELECT domain FROM affiliations WHERE id=" . $id;
+
+		$result = query_db($db,$get_domain,'Getting domain');
+
+		$domain = $result->fetch_assoc();
+
+		$delete = "UPDATE analysis_data SET author_affiliation = NULL WHERE
+			author_email LIKE CONCAT('%','" . $domain['domain'] . "')";
+
+		query_db($db,$delete,'Clearing author info');
+
+		$delete = "UPDATE analysis_data SET committer_affiliation = NULL WHERE
+			committer_email LIKE CONCAT('%','" . $domain['domain'] . "')";
+
+		query_db($db,$delete,'Clearing committer info');
+
 		$delete = "DELETE FROM affiliations WHERE id=" . $id;
 		query_db($db,$delete,'Deleting affiliations');
-
 	}
-
-	// Delete all matching affiliations, so they will be rebuilt with corrected
-	// data next time facade-worker.py runs.
-
-	$delete = "UPDATE analysis_data SET author_affiliation = NULL WHERE
-		author_email LIKE CONCAT('%','" . $domain . "')";
-
-	query_db($db,$delete,'Clearing author info');
-
-	$delete = "UPDATE analysis_data SET committer_affiliation = NULL WHERE
-		committer_email LIKE CONCAT('%','" . $domain . "')";
-
-	query_db($db,$delete,'Clearing committer info');
 
 	header("Location: people");
 
