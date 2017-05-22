@@ -24,6 +24,8 @@ import sys
 import MySQLdb
 import imp
 import time
+import datetime
+
 try:
 	imp.find_module('db')
 	from db import db,cursor
@@ -1213,7 +1215,10 @@ if len(repo_base_directory) == 0:
 	sys.exit(1)
 
 # Begin working
+
+start_time = time.time()
 log_activity('Quiet','Running facade-worker.py')
+
 if not limited_run or (limited_run and delete_marked_repos):
 	git_repo_cleanup()
 
@@ -1239,6 +1244,10 @@ if not limited_run or (limited_run and rebuild_caches):
 
 update_status('Idle')
 log_activity('Quiet','facade-worker.py completed')
+
+elapsed_time = time.time() - start_time
+
+print '\nCompleted in %s\n' % datetime.timedelta(seconds=int(elapsed_time))
 
 cursor.close()
 db.close()
