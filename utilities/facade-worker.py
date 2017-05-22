@@ -206,6 +206,14 @@ def trim_author(email):
 
 def discover_null_affiliations(attribution,email):
 
+# Try a bunch of ways to match emails to attributions in the database. First it
+# trys to match exactly. If that doesn't work, it tries to match by domain. If
+# domain doesn't work, it strips subdomains from the email and tries again.
+
+	# First we see if there's an exact match. This will also catch malformed or
+	# intentionally mangled emails (e.g. "developer at domain.com") that have
+	# been added as an affiliation rather than an alias.
+
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
@@ -214,73 +222,67 @@ def discover_null_affiliations(attribution,email):
 	cursor.execute(find_exact_match)
 	db.commit
 
-	exact_matches = list(cursor)
+	matches = list(cursor)
 
-	if exact_matches:
+	if not matches and email.find('@') < 0:
 
-		# Found an exact match
-		log_activity('Debug','Found exact affiliation match for %s' % email)
+		# It's not a properly formatted email, leave it NULL and log it.
 
-		for exact_match in exact_matches:
+		log_activity('Info','Unmatchable email: %s' % email)
+
+		return
+
+	if not matches:
+
+		# Now we go for a domain-level match. Try for an exact match.
+
+		domain = email[email.find('@')+1:]
+
+		find_exact_domain = ("SELECT affiliation,start_date "
+			"FROM affiliations "
+			"WHERE domain= '%s' "
+			"ORDER BY start_date DESC" % domain)
+
+		cursor.execute(find_exact_domain)
+		db.commit()
+
+		matches = list(cursor)
+
+	if not matches:
+
+		# Then try stripping any subdomains.
+
+		find_domain = ("SELECT affiliation,start_date "
+			"FROM affiliations "
+			"WHERE domain = '%s' "
+			"ORDER BY start_date DESC" %
+			domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
+
+		cursor.execute(find_domain)
+		db.commit()
+
+		matches = list(cursor)
+
+	# Done looking. Now we process any matches that were found.
+
+	if matches:
+
+		log_activity('Debug','Found domain match for %s' % email)
+
+		for domain_match in matches:
 
 			update = ("UPDATE analysis_data "
 				"SET %s_affiliation = '%s' "
 				"WHERE %s_email = '%s' "
 				"AND %s_affiliation IS NULL "
 				"AND %s_date >= '%s'" %
-				(attribution,exact_match['affiliation'],
+				(attribution,domain_match['affiliation'],
 				attribution,email,
 				attribution,
-				attribution,exact_match['start_date']))
+				attribution,domain_match['start_date']))
 
 			cursor.execute(update)
 			db.commit()
-
-	else:
-
-		# If we couldn't find an exact match, try to match a pattern
-
-		if email.find('@') < 0:
-
-			# It's not a properly formatted email, give up and log it
-			log_activity('Info','Unmatchable email: %s' % email)
-
-		else:
-
-			domain = email[email.find('@')+1:]
-
-			# Now we go for a domain-level match. Strip any subdomains.
-
-			find_domain = ("SELECT affiliation,start_date "
-				"FROM affiliations "
-				"WHERE domain = '%s' "
-				"ORDER BY start_date DESC" %
-				domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
-
-			cursor.execute(find_domain)
-			db.commit()
-
-			domain_matches = list(cursor)
-
-			if domain_matches:
-
-				# Found some matches
-				log_activity('Debug','Found domain match for %s' % email)
-
-				for domain_match in domain_matches:
-
-					update = ("UPDATE analysis_data "
-						"SET %s_affiliation = '%s' "
-						"WHERE %s_email = '%s' "
-						"AND %s_affiliation IS NULL "
-						"AND %s_date >= '%s'" %
-						(attribution,domain_match['affiliation'],
-						attribution,email,
-						attribution,
-						attribution,domain_match['start_date']))
-
-					cursor.execute(update)
-					db.commit()
 
 def analyze_commit(repo_id,repo_loc,commit):
 
