@@ -127,22 +127,17 @@ def discover_alias(email):
 	else:
 		return email
 
-def update_affiliation(email_type,email,affiliation,earliest,start_date):
-
-# Helper function to update affiliations based upon their start date, but it
-# only updates them after the earliest NULL affiliation.  This prevents us from
-# overwriting all affiliations every time a new NULL is discovered. We just
-# start from the earliest one.
+def update_affiliation(email_type,email,affiliation,start_date):
 
 	update = ("UPDATE analysis_data "
 		"SET %s_affiliation = '%s' "
 		"WHERE %s_email = '%s' "
-		"AND %s_date >= '%s' "
-		"AND %s_date >= '%s'"
-		% (email_type,affiliation,
+		"AND %s_affiliation IS NULL "
+		"AND %s_date >= '%s'" %
+		(email_type,affiliation,
 		email_type,email,
-		email_type,start_date,
-		email_type,earliest))
+		email_type,
+		email_type,start_date))
 
 	cursor.execute(update)
 	db.commit()
@@ -209,49 +204,37 @@ def trim_author(email):
 
 	log_activity('Debug','Trimmed working author: %s' % email)
 
-def discover_null_affiliations(attribution,email,earliest):
-
-# Affilitations with defined start dates are filled by layering.  First the
-# earliest known affiliation is applied. Then the next affiliation is applied
-# from its start date onward. This continues until all affiliation changes have
-# been processed for the domain.
+def discover_null_affiliations(attribution,email):
 
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
-		"ORDER BY start_date ASC" % email)
+		"ORDER BY start_date DESC" % email)
 
 	cursor.execute(find_exact_match)
+	db.commit
 
-	if cursor.rowcount:
+	exact_matches = list(cursor)
+
+	if exact_matches:
 
 		# Found an exact match
 		log_activity('Debug','Found exact affiliation match for %s' % email)
 
-		checked_start_date = False
+		for exact_match in exact_matches:
 
-		matches = list(cursor)
+			update = ("UPDATE analysis_data "
+				"SET %s_affiliation = '%s' "
+				"WHERE %s_email = '%s' "
+				"AND %s_affiliation IS NULL "
+				"AND %s_date >= '%s'" %
+				(attribution,exact_match['affiliation'],
+				attribution,email,
+				attribution,
+				attribution,exact_match['start_date']))
 
-		for match in matches:
-
-			affiliation = match['affiliation']
-			start_date = match['start_date']
-
-			if not checked_start_date:
-
-				if start_date != '1970-01-01':
-
-					# No default entry, so fill with (Unknown)
-
-					update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
-
-					update_affiliation(attribution,email,'(Unknown)', earliest,start_date)
-
-				checked_start_date = True
-
-			# Update any author entries that match
-
-			update_affiliation(attribution,email,affiliation,earliest,start_date)
+			cursor.execute(update)
+			db.commit()
 
 	else:
 
@@ -259,10 +242,8 @@ def discover_null_affiliations(attribution,email,earliest):
 
 		if email.find('@') < 0:
 
-			# It's not a properly formatted email, give up and call it (Unknown)
-			log_activity('Verbose','Unmatchable email: %s' % email)
-
-			update_affiliation(attribution,email,'(Unknown)',earliest,'1970-01-01')
+			# It's not a properly formatted email, give up and log it
+			log_activity('Info','Unmatchable email: %s' % email)
 
 		else:
 
@@ -273,47 +254,33 @@ def discover_null_affiliations(attribution,email,earliest):
 			find_domain = ("SELECT affiliation,start_date "
 				"FROM affiliations "
 				"WHERE domain = '%s' "
-				"ORDER BY start_date ASC" %
+				"ORDER BY start_date DESC" %
 				domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
 
 			cursor.execute(find_domain)
 			db.commit()
 
-			if cursor.rowcount:
+			domain_matches = list(cursor)
+
+			if domain_matches:
 
 				# Found some matches
 				log_activity('Debug','Found domain match for %s' % email)
 
-				matches = list(cursor)
-				checked_start_date = False
+				for domain_match in domain_matches:
 
-				for match in matches:
+					update = ("UPDATE analysis_data "
+						"SET %s_affiliation = '%s' "
+						"WHERE %s_email = '%s' "
+						"AND %s_affiliation IS NULL "
+						"AND %s_date >= '%s'" %
+						(attribution,domain_match['affiliation'],
+						attribution,email,
+						attribution,
+						attribution,domain_match['start_date']))
 
-					affiliation = match['affiliation']
-					start_date = match['start_date']
-
-					if not checked_start_date:
-
-						if start_date != '1970-01-01':
-
-							# No default entry, so fill with (Unknown)
-
-							update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
-
-							update_affiliation(attribution,email,'(Unknown)',earliest,start_date)
-
-						checked_start_date = True
-
-					# Update any author entries that match
-
-					update_affiliation(attribution,email,affiliation,earliest,start_date)
-
-			else:
-
-				# No matches found, give up
-				log_activity('Verbose','No affiliation for %s' % email)
-
-				update_affiliation(attribution,email,'(Unknown)',earliest,'1970-01-01')
+					cursor.execute(update)
+					db.commit()
 
 def analyze_commit(repo_id,repo_loc,commit):
 
@@ -853,17 +820,18 @@ def fill_empty_affiliations():
 
 	cursor.execute(find_null_authors)
 
-	authors = list(cursor)
+	null_authors = list(cursor)
 
-	log_activity('Debug','Authors with NULL affiliations: %s' % len(authors))
+	log_activity('Debug','Found %s authors with NULL affiliation' %
+		len(null_authors))
 
-	for author in authors:
+	for null_author in null_authors:
 
-		email = author['email'].replace("'","\\'")
+		email = null_author['email'].replace("'","\\'")
 
 		store_working_author(email)
 
-		discover_null_affiliations('author',email,author['earliest'])
+		discover_null_affiliations('author',email)
 
 	store_working_author('done')
 
@@ -877,17 +845,34 @@ def fill_empty_affiliations():
 
 	cursor.execute(find_null_committers)
 
-	committers = list(cursor)
+	null_committers = list(cursor)
 
-	log_activity('Debug','Committers with NULL affiliations: %s' % len(committers))
+	log_activity('Debug','Found %s committers with NULL affiliation' %
+		len(null_committers))
 
-	for committer in committers:
+	for null_committer in null_committers:
 
-		email = committer['email'].replace("'","\\'")
+		email = null_committer['email'].replace("'","\\'")
 
 		store_working_author(email)
 
-		discover_null_affiliations('committer',email,committer['earliest'])
+		discover_null_affiliations('committer',email)
+
+	# Now that we've matched as much as possible, fill the rest as (Unknown)
+
+	fill_unknown_author = ("UPDATE analysis_data "
+		"SET author_affiliation = '(Unknown)' "
+		"WHERE author_affiliation IS NULL")
+
+	cursor.execute(fill_unknown_author)
+	db.commit()
+
+	fill_unknown_committer = ("UPDATE analysis_data "
+		"SET committer_affiliation = '(Unknown)' "
+		"WHERE committer_affiliation IS NULL")
+
+	cursor.execute(fill_unknown_committer)
+	db.commit()
 
 	store_working_author('done')
 
