@@ -28,7 +28,7 @@ def create_settings(reset=0):
 # Create and populate the default settings table.
 
 	# default settings
-	start_date = "2000-01-01";
+	start_date = "2014-01-01";
 	repo_directory = "/opt/facade/git-trees/";
 
 	if reset:
