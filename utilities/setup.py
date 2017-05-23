@@ -75,7 +75,7 @@ def create_repos_fetch_log(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
-		"status VARCHAR(64) NOT NULL,"
+		"status VARCHAR(128) NOT NULL,"
 		"date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
@@ -93,7 +93,7 @@ def create_analysis_log(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS analysis_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
-		"status VARCHAR(64) NOT NULL,"
+		"status VARCHAR(128) NOT NULL,"
 		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
@@ -133,9 +133,9 @@ def create_projects(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS projects ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"name VARCHAR(64) NOT NULL,"
+		"name VARCHAR(128) NOT NULL,"
 		"description VARCHAR(256),"
-		"website VARCHAR(64),"
+		"website VARCHAR(128),"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
@@ -222,8 +222,8 @@ def create_aliases(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS aliases ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-		"canonical VARCHAR(64) NOT NULL,"
-		"alias VARCHAR(64) NOT NULL,"
+		"canonical VARCHAR(128) NOT NULL,"
+		"alias VARCHAR(128) NOT NULL,"
 		"UNIQUE (canonical,alias))")
 
 	cursor.execute(create)
@@ -251,8 +251,8 @@ def create_excludes(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS exclude ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"projects_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64),"
-		"domain VARCHAR(64))")
+		"email VARCHAR(128),"
+		"domain VARCHAR(128))")
 
 	cursor.execute(create)
 	db.commit()
@@ -296,14 +296,14 @@ def create_analysis(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS analysis_data ("
 		"repos_id INT UNSIGNED NOT NULL,"
 		"commit VARCHAR(40) NOT NULL,"
-		"author_name VARCHAR(64) NOT NULL,"
-		"author_email VARCHAR(64) NOT NULL,"
+		"author_name VARCHAR(128) NOT NULL,"
+		"author_email VARCHAR(128) NOT NULL,"
 		"author_date VARCHAR(10) NOT NULL,"
-		"author_affiliation VARCHAR(64),"
-		"committer_name VARCHAR(64) NOT NULL,"
-		"committer_email VARCHAR(64) NOT NULL,"
+		"author_affiliation VARCHAR(128),"
+		"committer_name VARCHAR(128) NOT NULL,"
+		"committer_email VARCHAR(128) NOT NULL,"
 		"committer_date VARCHAR(10) NOT NULL,"
-		"committer_affiliation VARCHAR(64),"
+		"committer_affiliation VARCHAR(128),"
 		"added INT UNSIGNED NOT NULL,"
 		"removed INT UNSIGNED NOT NULL,"
 		"whitespace INT UNSIGNED NOT NULL,"
@@ -329,8 +329,8 @@ def create_unknown_caches(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS unknown_cache ("
 		"type VARCHAR(10) NOT NULL,"
 		"projects_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"domain VARCHAR(64),"
+		"email VARCHAR(128) NOT NULL,"
+		"domain VARCHAR(128),"
 		"added BIGINT UNSIGNED NOT NULL)")
 
 	cursor.execute(create)
@@ -354,8 +354,8 @@ def create_web_caches(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS project_monthly_cache ("
 		"projects_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"affiliation VARCHAR(64),"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
 		"month TINYINT UNSIGNED NOT NULL,"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
@@ -377,8 +377,8 @@ def create_web_caches(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS project_annual_cache ("
 		"projects_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"affiliation VARCHAR(64),"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
@@ -399,8 +399,8 @@ def create_web_caches(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_monthly_cache ("
 		"repos_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"affiliation VARCHAR(64),"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
 		"month TINYINT UNSIGNED NOT NULL,"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
@@ -422,8 +422,8 @@ def create_web_caches(reset=0):
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_annual_cache ("
 		"repos_id INT UNSIGNED NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
-		"affiliation VARCHAR(64),"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
 		"year SMALLINT UNSIGNED NOT NULL,"
 		"added BIGINT UNSIGNED NOT NULL,"
 		"removed BIGINT UNSIGNED NOT NULL,"
@@ -455,7 +455,7 @@ def create_auth(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS auth ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"user VARCHAR(64) UNIQUE NOT NULL,"
-		"email VARCHAR(64) NOT NULL,"
+		"email VARCHAR(128) NOT NULL,"
 		"password VARCHAR(64) NOT NULL,"
 		"created TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
