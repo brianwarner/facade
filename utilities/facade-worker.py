@@ -268,6 +268,13 @@ def discover_null_affiliations(attribution,email):
 
 		matches = list(cursor)
 
+	if not matches:
+
+		# One last check to see if it's an unmatched academic domain.
+
+		if domain[-4:] is '.edu':
+			matches.append({'affiliation':'(Academic)','start_date':'1970-01-01'})
+
 	# Done looking. Now we process any matches that were found.
 
 	if matches:
