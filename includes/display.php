@@ -285,8 +285,10 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 
 	// Displays unknown domains and email, sorted by lines of code added.
 
+	$attribution = get_setting($db,'report_attribution');
+
 	if (isset($project_id)) {
-		$project_clause = ' WHERE projects_id=' . $project_id;
+		$project_clause = ' AND projects_id=' . $project_id;
 	}
 
 	echo '<div class="sub-block">
@@ -298,7 +300,8 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 		<th>Lines of code added</th>
 		</tr>';
 
-	$query = "SELECT domain,sum(added) FROM unknown_cache"
+	$query = "SELECT domain,sum(added) FROM unknown_cache
+		WHERE type = '" . $attribution . "'"
 		. $project_clause .
 		" GROUP BY domain
 		ORDER BY sum(added) DESC LIMIT 20";
@@ -325,7 +328,8 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 		<th>Lines of code added</th>
 		</tr>';
 
-	$query = "SELECT email,added FROM unknown_cache"
+	$query = "SELECT email,added FROM unknown_cache
+		WHERE type = '" . $attribution . "'"
 		. $project_clause . "
 		ORDER BY added DESC LIMIT 20";
 

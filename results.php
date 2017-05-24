@@ -15,6 +15,8 @@ include_once "includes/db.php";
 include_once "includes/display.php";
 $db = setup_db();
 
+$attribution = get_setting($db,'report_attribution');
+
 // Make sure there is data to export
 $query = "SELECT NULL from analysis_data";
 $result = query_db($db,$query,'Checking if analysis has been run');
@@ -146,7 +148,7 @@ if ($result->num_rows > 0) {
 	if ($result->num_rows > 0) {
 
 		echo '<div class="content-block">
-			<h2>Top unknown contributors from all projects</h2>';
+			<h2>Top unknown ' . $attribution . 's from all projects</h2>';
 
 		unknown_results_as_table($db);
 

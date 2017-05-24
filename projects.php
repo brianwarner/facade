@@ -13,6 +13,8 @@ include_once "includes/db.php";
 include_once "includes/display.php";
 $db = setup_db();
 
+$attribution = get_setting($db,'report_attribution');
+
 if ($_GET["id"]) {
 
 	// Display a specific project's details.
@@ -130,7 +132,7 @@ if ($_GET["id"]) {
 		if ($unknown_result->num_rows > 0 ) {
 
 			echo '<div class="content-block">
-				<h2>Top unknown contributors</h2>';
+				<h2>Top unknown ' . $attribution . 's</h2>';
 
 			unknown_results_as_table($db,$project_id);
 
