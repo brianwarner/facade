@@ -359,12 +359,12 @@ def analyze_commit(repo_id,repo_loc,commit):
 					whitespace = 0
 				continue
 
-			if line.find('--- ') == 0:
+			if line.find('--- a/') == 0:
 				if filename == '(Deleted) ':
 					filename = filename + line[6:].replace("'","\\'")
 				continue
 
-			if line.find('+++ ') == 0:
+			if line.find('+++ b/') == 0:
 				if not filename.find('(Deleted) ') == 0:
 					filename = line[6:].replace("'","\\'")
 				continue
