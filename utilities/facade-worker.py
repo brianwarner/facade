@@ -219,21 +219,23 @@ def discover_null_affiliations(attribution,email):
 	# intentionally mangled emails (e.g. "developer at domain.com") that have
 	# been added as an affiliation rather than an alias.
 
+	match_email = discover_alias(email)
+
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
-		"ORDER BY start_date DESC" % email)
+		"ORDER BY start_date DESC" % match_email)
 
 	cursor.execute(find_exact_match)
 	db.commit
 
 	matches = list(cursor)
 
-	if not matches and email.find('@') < 0:
+	if not matches and match_email.find('@') < 0:
 
 		# It's not a properly formatted email, leave it NULL and log it.
 
-		log_activity('Info','Unmatchable email: %s' % email)
+		log_activity('Info','Unmatchable email: %s' % match_email)
 
 		return
 
@@ -241,7 +243,7 @@ def discover_null_affiliations(attribution,email):
 
 		# Now we go for a domain-level match. Try for an exact match.
 
-		domain = email[email.find('@')+1:]
+		domain = match_email[email.find('@')+1:]
 
 		find_exact_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
@@ -281,17 +283,17 @@ def discover_null_affiliations(attribution,email):
 
 		log_activity('Debug','Found domain match for %s' % email)
 
-		for domain_match in matches:
+		for match in matches:
 
 			update = ("UPDATE analysis_data "
 				"SET %s_affiliation = '%s' "
 				"WHERE %s_email = '%s' "
 				"AND %s_affiliation IS NULL "
 				"AND %s_date >= '%s'" %
-				(attribution,domain_match['affiliation'],
+				(attribution,match['affiliation'],
 				attribution,email,
 				attribution,
-				attribution,domain_match['start_date']))
+				attribution,match['start_date']))
 
 			cursor.execute(update)
 			db.commit()
@@ -841,7 +843,7 @@ def fill_empty_affiliations():
 
 		store_working_author(email)
 
-		discover_null_affiliations('author',discover_alias(email))
+		discover_null_affiliations('author',email)
 
 	store_working_author('done')
 
@@ -866,7 +868,7 @@ def fill_empty_affiliations():
 
 		store_working_author(email)
 
-		discover_null_affiliations('committer',discover_alias(email))
+		discover_null_affiliations('committer',email)
 
 	# Now that we've matched as much as possible, fill the rest as (Unknown)
 
