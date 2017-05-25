@@ -46,7 +46,7 @@ if ($result->num_rows > 0) {
 
 		<table>
 		<tr>
-		<td class="eighth">Starting on:</td><td>
+		<td class="quarter">Patches committed after:</td><td>
 		<select id="select_start_date" name="start"
 		onchange="custom_input(this,\'custom_start_date\',\'70\')">
 		<option value="default">Default (' . get_setting($db,"start_date") .

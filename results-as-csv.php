@@ -20,7 +20,7 @@ $report_attribution = get_setting($db,'report_attribution');
 // Handle custom dates
 if ($_GET["start"] == 'custom') {
 	$start_date = sanitize_input($db,$_GET["start_date"],10);
-	$date_clause = $date_clause . " AND m.start_date >= '" . $start_date . "'";
+	$date_clause = $date_clause . " AND committer_date >= '" . $start_date . "'";
 }
 
 // If dates are actually out of order, reset the clause and return everything
