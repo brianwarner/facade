@@ -7,5 +7,7 @@
 
 
 
-sudo apt-get install apache2 mysql-client mysql-server php-cli php-mysql pypy python-mysqldb libapache2-mod-php php-dom php-curl python-bcrypt
+sudo apt-get install apache2 mysql-client mysql-server php-cli php-mysql \
+python-mysqldb libapache2-mod-php php-dom php-curl python-bcrypt \
+python-xlsxwriter
 
