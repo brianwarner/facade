@@ -243,7 +243,7 @@ def discover_null_affiliations(attribution,email):
 
 		# Now we go for a domain-level match. Try for an exact match.
 
-		domain = match_email[email.find('@')+1:]
+		domain = match_email[match_email.find('@')+1:]
 
 		find_exact_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
@@ -273,7 +273,7 @@ def discover_null_affiliations(attribution,email):
 	if not matches:
 
 		# One last check to see if it's an unmatched academic domain.
-		print domain[-4:]
+
 		if domain[-4:] in '.edu':
 			matches.append({'affiliation':'(Academic)','start_date':'1970-01-01'})
 
