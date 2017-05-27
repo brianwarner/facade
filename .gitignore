@@ -11,4 +11,4 @@ db.py
 *.pyc
 
 *.swp
-files/*
+*.xlsx
