@@ -11,3 +11,4 @@ db.py
 *.pyc
 
 *.swp
+files/*
