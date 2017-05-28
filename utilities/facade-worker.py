@@ -39,6 +39,8 @@ import subprocess
 import os
 import getopt
 
+import xlsxwriter
+
 global log_level
 
 #### Helpers ####
@@ -1140,6 +1142,16 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 
+def create_xlsx_summaries():
+
+# Generates Excel files for common queries, to make data sharing easier
+
+	log_activity('Info','Creating summary Excel files')
+
+	from excel_generators import *
+
+	log_activity('Info','Creating summary Excel files (complete)')
+
 ### The real program starts here ###
 
 # Figure out how much we're going to log
@@ -1155,8 +1167,9 @@ nuke_stored_affiliations = 0
 fix_affiliations = 0 #
 invalidate_caches = 0
 rebuild_caches = 0
+create_xlsx_summary_files = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcanfr')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcanfrx')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything except invalidating caches by\n"
@@ -1169,7 +1182,8 @@ for opt in opts:
 				"	-a	Analyze git repos\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
 				"	-f	Fill empty affiliations\n"
-				"	-r	Rebuild unknown affiliation and web caches\n\n")
+				"	-r	Rebuild unknown affiliation and web caches\n"
+				"	-x	Create Excel summary files\n\n")
 		sys.exit(0)
 
 	elif opt[0] == '-d':
@@ -1206,6 +1220,11 @@ for opt in opts:
 		rebuild_caches = 1
 		limited_run = 1
 		log_activity('Info','Option set: rebuilding caches.')
+
+	elif opt[0] == '-x':
+		create_xlsx_summary_files = 1
+		limited_run = 1
+		log_activity('Info','Option set: creating Excel summary files.')
 
 # Get the location of the directory where git repos are stored
 repo_base_directory = get_setting('repo_directory')
@@ -1248,6 +1267,9 @@ if not limited_run or (limited_run and fix_affiliations):
 
 if not limited_run or (limited_run and rebuild_caches):
 	rebuild_unknown_affiliation_and_web_caches()
+
+if not limited_run or (limited_run and create_xlsx_summary_files):
+	create_xlsx_summaries()
 
 # All done
 
