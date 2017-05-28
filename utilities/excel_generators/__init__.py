@@ -11,7 +11,3 @@ for f in files:
 	if os.path.isfile(f):
 		__all__.append(os.path.basename(f)[:-3])
 
-
-print __all__
-
-
