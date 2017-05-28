@@ -1142,16 +1142,6 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 
-def create_xlsx_summaries():
-
-# Generates Excel files for common queries, to make data sharing easier
-
-	log_activity('Info','Creating summary Excel files')
-
-	from excel_generators import *
-
-	log_activity('Info','Creating summary Excel files (complete)')
-
 ### The real program starts here ###
 
 # Figure out how much we're going to log
@@ -1269,7 +1259,12 @@ if not limited_run or (limited_run and rebuild_caches):
 	rebuild_unknown_affiliation_and_web_caches()
 
 if not limited_run or (limited_run and create_xlsx_summary_files):
-	create_xlsx_summaries()
+
+	log_activity('Info','Creating summary Excel files')
+
+	from excel_generators import *
+
+	log_activity('Info','Creating summary Excel files (complete)')
 
 # All done
 
