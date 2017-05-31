@@ -14,12 +14,9 @@ import MySQLdb
 import getpass
 import imp
 import bcrypt
-
-try:
-    imp.find_module('db')
-    from db import db,cursor
-except:
-    sys.exit("Can't find db.py. Have you created it?")
+from string import Template
+import string
+import random
 
 #### Settings table ####
 
@@ -515,23 +512,146 @@ def create_auth(reset=0):
 
 # First make sure the database files have been setup
 
-if not os.path.isfile('db.py'):
-	sys.exit("It appears you haven't configured db.py yet. Please do this.")
-
-if not os.path.isfile('../includes/db.php'):
-	sys.exit("It appears you haven't configured db.php yet. Please do this.")
+working_dir = os.path.dirname(os.path.abspath(__file__))
 
 print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
-	" (I)nitialize database. This will set up your database, and will clear any existing data.\n"
+	" (C)reate database config files and initialize tables. Optionally create database and user.\n"
+	" (I)nitialize tables only. This will clear any existing data.\n"
 	" (U)pdate database while preserving settings, projects, and repos.\n")
 
-action = raw_input('(i/u): ')
+action = raw_input('(c/i/u): ').strip()
 
-if action.lower() == 'i':
+if action.lower() == 'c':
+
+	print ("========== Creating database credential files ==========\n\n"
+		"This will overwrite your existing db.py and creds.php files.\n"
+		"Are you sure?\n")
+
+	confirm_creds = raw_input('(yes): ').strip()
+
+	if confirm_creds.lower() == 'yes':
+
+		print "\n===== Facade user information =====\n"
+
+		db_user = raw_input('Facade username (leave blank for random): ').strip()
+		db_pass = getpass.getpass('Facade password (leave blank for random): ').strip()
+
+		if not db_user:
+			db_user = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+		if not db_pass:
+			db_pass = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+		print "\n===== Database information =====\n"
+
+		db_host = raw_input('Database host (default: localhost): ').strip()
+
+		if not db_host:
+			db_host = 'localhost'
+
+		db_name = raw_input('Database name (leave blank for random): ').strip()
+
+		if not db_name:
+			db_name = 'facade_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+		print ("\nShould Facade create the database? (requires root, "
+			"not needed if the database already exists)\n")
+
+		create_db = raw_input('(yes): ').strip()
+
+		if create_db.lower() == 'yes':
+
+			root_pw = getpass.getpass('mysql root password: ').strip()
+
+			try:
+
+				root_db = MySQLdb.connect( host=db_host,
+					user = 'root',
+					passwd = root_pw,
+					charset='utf8mb4')
+				root_cursor = root_db.cursor(MySQLdb.cursors.DictCursor)
+
+			except:
+
+				print 'Could not connect to database as root'
+				sys.exit(1)
+
+			try:
+
+				create_database = ("CREATE DATABASE %s "
+					"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+					% db_name)
+
+				root_cursor.execute(create_database)
+				root_db.commit()
+
+			except:
+
+				print 'Could not create database: %s' % db_name
+				sys.exit(1)
+
+			try:
+
+				create_user = ("CREATE USER '%s' IDENTIFIED BY '%s'"
+					% (db_user,db_pass))
+
+				root_cursor.execute(create_user)
+				root_db.commit()
+
+				grant_privileges = ("GRANT ALL PRIVILEGES ON %s.* to %s"
+					% (db_name,db_user))
+
+				root_cursor.execute(grant_privileges)
+				root_db.commit()
+
+				flush_privileges = ("FLUSH PRIVILEGES")
+
+				root_cursor.execute(flush_privileges)
+				root_db.commit()
+
+			except:
+
+				print 'Could not create user and grant privileges: %s' % db_user
+				sys.exit(1)
+
+			root_cursor.close()
+			root_db.close()
+
+		db_values = {'db_user': db_user,
+			'db_pass': db_pass,
+			'db_name': db_name,
+			'db_host': db_host}
+
+		db_py_template_loc = os.path.join(working_dir,'db.py.template')
+		db_py_loc = os.path.join(working_dir,'db.py')
+		creds_php_template_loc = os.path.join(working_dir,'../includes/creds.php.template')
+		creds_php_loc = os.path.join(working_dir,'../includes/creds.php')
+
+		db_py_template = string.Template(open(db_py_template_loc).read())
+
+		db_py_file = open(db_py_loc,'w')
+		db_py_file.write(db_py_template.substitute(db_values))
+		db_py_file.close()
+
+		creds_php_template = string.Template(open(creds_php_template_loc).read())
+
+		creds_php_file = open(creds_php_loc,'w')
+		creds_php_file.write(creds_php_template.substitute(db_values))
+		creds_php_file.close()
+
+		print '\nDatabase setup complete\n'
+
+try:
+    imp.find_module('db')
+    from db import db,cursor
+except:
+    sys.exit("Can't find db.py.")
+
+if action.lower() == 'i' or action.lower() == 'c':
 
 	print ("========== Initializing database tables ==========\n\n"
-		"This will set up your database, and will clear any existing data.\n"
+		"This will set up your tables, and will clear any existing data.\n"
 		"Are you sure?\n")
 
 	confirm = raw_input('(yes): ')

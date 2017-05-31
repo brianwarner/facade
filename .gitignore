@@ -6,7 +6,7 @@
 # *~
 
 # Config files
-db.php
+creds.php
 db.py
 *.pyc
 

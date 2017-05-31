@@ -8,15 +8,16 @@
 
 import MySQLdb
 
-db_name="facade"
-db_user="facade"
-db_pass="facade"
-db_host="localhost"
+db_user="$db_user"
+db_pass="$db_pass"
+db_name="$db_name"
+db_host="$db_host"
 
 db=MySQLdb.connect(	host=db_host,
 			user=db_user,
 			passwd=db_pass,
-			db=db_name)
+			db=db_name,
+			charset='utf8mb4')
 
 cursor = db.cursor(MySQLdb.cursors.DictCursor)
 
