@@ -473,7 +473,7 @@ def create_auth(reset=0):
 	email = ''
 	hashed = ''
 
-	print "Setting administrator credentials.\n"
+	print "\nSetting administrator credentials.\n"
 
 	while not user:
 		user = raw_input(' User: ').strip()
@@ -518,9 +518,10 @@ print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
 	" (C)reate database config files and initialize tables. Optionally create database and user.\n"
 	" (I)nitialize tables only. This will clear any existing data.\n"
-	" (U)pdate database while preserving settings, projects, and repos.\n")
+	" (U)pdate database while preserving settings, projects, and repos.\n"
+	" (R)eset admin credentials.\n")
 
-action = raw_input('(c/i/u): ').strip()
+action = raw_input('(c/i/u/r): ').strip()
 
 if action.lower() == 'c':
 
@@ -657,7 +658,7 @@ if action.lower() == 'i' or action.lower() == 'c':
 	confirm = raw_input('(yes): ')
 
 	if confirm == "yes":
-		print "Setting up database tables."
+		print "\nSetting up database tables.\n"
 
 		create_settings('clear')
 
@@ -681,7 +682,7 @@ if action.lower() == 'i' or action.lower() == 'c':
 		create_auth('clear')
 
 	else:
-		print "Exiting without doing anything."
+		print "\nExiting without doing anything\n."
 
 elif action.lower() == 'u':
 
@@ -694,7 +695,7 @@ elif action.lower() == 'u':
 	confirm = raw_input('(yes): ')
 
 	if confirm.lower() == "yes":
-		print "Attempting update."
+		print "\nAttempting update.\n"
 
 		create_repos_fetch_log()
 		create_analysis_log()
@@ -714,8 +715,23 @@ elif action.lower() == 'u':
 		create_web_caches('clear')
 
 	else:
-		print "Exiting without doing anything."
+		print "\nExiting without doing anything.\n"
+
+elif action.lower() == 'r':
+
+	print ("========== Resetting admin credentials ==========\n\n"
+		"Ok, so you forgot your password. It happens to the best of us.\n"
+		"Are you sure you want to reset the admin credentials?\n")
+
+	confirm = raw_input('(yes): ')
+
+	if confirm.lower() == "yes":
+
+		create_auth('clear')
+
+	else:
+		print "\nExiting without doing anything.\n"
 
 else:
 
-	print "Exiting without doing anything."
+	print "\nExiting without doing anything.\n"
