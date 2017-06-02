@@ -21,6 +21,8 @@ $report_attribution = get_setting($db,'report_attribution');
 if ($_GET["start"] == 'custom') {
 	$start_date = sanitize_input($db,$_GET["start_date"],10);
 	$date_clause = $date_clause . " AND committer_date >= '" . $start_date . "'";
+} else {
+	$date_clause = '';
 }
 
 // If dates are actually out of order, reset the clause and return everything
@@ -65,8 +67,11 @@ if (isset($_GET["affiliations"])) {
 	}
 
 	$affiliations_clause = " AND (" . $report_attribution . "_affiliation='" .
-		join("' OR " . $report_attribution . "_affiliation='",$affiliations) . "')";
+		join("' OR " . $report_attribution . "_affiliation='",$affiliations) . "') ";
+} else {
+	$affiliations_clause = '';
 }
+
 
 // Get ready for export
 $header=TRUE;
@@ -78,82 +83,99 @@ $f = fopen('php://output', 'w');
 // Walk through the project IDs
 foreach ($projects as $project) {
 
-	$get_results = "SELECT p.name AS 'Project name',
-		r.path AS 'Repo Path',
-		r.name AS 'Repo Name',
-		a.author_date AS 'Author Date',
-		a.author_name AS 'Author Name',
-		a.author_email AS 'Author Email',
-		a.author_affiliation AS 'Author Affiliation',
-		a.committer_date AS 'Committer Date',
-		a.committer_name AS 'Committer Name',
-		a.committer_email AS 'Committer Email',
-		a.committer_affiliation AS 'Committer Affiliation',
-		a.added AS 'LoC Added',
-		a.removed AS 'LoC Removed',
-		a.whitespace AS 'Whitespace changes',
-		a.commit AS 'Commit',
-		a.filename AS 'Filename'
-		FROM projects p
-		RIGHT JOIN repos r ON p.id = r.projects_id
-		RIGHT JOIN analysis_data a ON r.id = a.repos_id
-		LEFT JOIN exclude e ON (a.author_email = e.email
-			AND (r.projects_id = e.projects_id
-			OR e.projects_id = 0))
-		OR (a.author_email LIKE CONCAT('%',e.domain)
-			AND (r.projects_id = e.projects_id
-			OR e.projects_id = 0))
-		WHERE r.projects_id = $project
-		AND e.email IS NULL
-		AND e.domain IS NULL" .
-		$date_clause .
-		$affiliations_clause;
+	// PHP can run out of memory on huge projects, so export the data in chunks
 
-	$result = query_db($db,$get_results,'Fetching project data');
+	$min_record = 0;
+	$num_records = 100000;
+	$more_data = TRUE;
 
-	// Write the project-specific data
-	while ($row = $result->fetch_assoc()) {
+	while ($more_data) {
 
-		// Find any tags that match this row and apply them.
-		if (isset($_GET["tags"]) ||
-		isset($_GET["with-tags"])) {
-			foreach ($tags as $tag) {
+		$get_results = "SELECT p.name AS 'Project name',
+			r.path AS 'Repo Path',
+			r.name AS 'Repo Name',
+			a.author_date AS 'Author Date',
+			a.author_name AS 'Author Name',
+			a.author_email AS 'Author Email',
+			a.author_affiliation AS 'Author Affiliation',
+			a.committer_date AS 'Committer Date',
+			a.committer_name AS 'Committer Name',
+			a.committer_email AS 'Committer Email',
+			a.committer_affiliation AS 'Committer Affiliation',
+			a.added AS 'LoC Added',
+			a.removed AS 'LoC Removed',
+			a.whitespace AS 'Whitespace changes',
+			a.commit AS 'Commit',
+			a.filename AS 'Filename'
+			FROM projects p
+			RIGHT JOIN repos r ON p.id = r.projects_id
+			RIGHT JOIN analysis_data a ON r.id = a.repos_id
+			LEFT JOIN exclude e ON (a.author_email = e.email
+				AND (r.projects_id = e.projects_id
+				OR e.projects_id = 0))
+			OR (a.author_email LIKE CONCAT('%',e.domain)
+				AND (r.projects_id = e.projects_id
+				OR e.projects_id = 0))
+			WHERE r.projects_id = $project
+			AND e.email IS NULL
+			AND e.domain IS NULL" .
+			$date_clause .
+			$affiliations_clause . "
+			ORDER BY a.committer_date ASC
+			LIMIT " . $min_record . "," . $num_records;
 
-				// Find tags that with a start_date before this row
-				$query = "SELECT id,end_date FROM special_tags
-					WHERE email = '" . str_replace("'","\'",$row["Email"]) . "'
-					AND start_date <= '" . $row["Start Date"] . "'
-					AND tag='" . $tag . "'";
+		$result = query_db($db,$get_results,'Fetching project data');
 
-				$tags_result = query_db($db, $query, 'Getting tags');
+		// Write the project-specific data
+		while ($row = $result->fetch_assoc()) {
 
-				// Add any tags with an end_date after this row, or no end_date.
-				$add_tag = FALSE;
-				while ($tags_row = $tags_result->fetch_assoc()) {
-					if ($tags_row["end_date"] >= $row["Start Date"] ||
-					$tags_row["end_date"] == NULL) {
-						$add_tag = TRUE;
+			// Find any tags that match this row and apply them.
+			if (isset($_GET["tags"]) ||
+			isset($_GET["with-tags"])) {
+				foreach ($tags as $tag) {
+
+					// Find tags that with a start_date before this row
+					$query = "SELECT id,end_date FROM special_tags
+						WHERE email = '" . str_replace("'","\'",$row["Email"]) . "'
+						AND start_date <= '" . $row["Start Date"] . "'
+						AND tag='" . $tag . "'";
+
+					$tags_result = query_db($db, $query, 'Getting tags');
+
+					// Add any tags with an end_date after this row, or no end_date.
+					$add_tag = FALSE;
+					while ($tags_row = $tags_result->fetch_assoc()) {
+						if ($tags_row["end_date"] >= $row["Start Date"] ||
+						$tags_row["end_date"] == NULL) {
+							$add_tag = TRUE;
+						}
 					}
-				}
 
-				// Add matched tag to output, or a blank to preserve ordering.
-				// Escape single quotes in tags.
-				if ($add_tag) {
-					$row['Tag: ' . str_replace("\'","'",$tag)] = str_replace("\'","'",$tag);
-				} else {
-					$row['Tag: ' . str_replace("\'","'",$tag)] = '';
-				}
+					// Add matched tag to output, or a blank to preserve ordering.
+					// Escape single quotes in tags.
+					if ($add_tag) {
+						$row['Tag: ' . str_replace("\'","'",$tag)] = str_replace("\'","'",$tag);
+					} else {
+						$row['Tag: ' . str_replace("\'","'",$tag)] = '';
+					}
 
+				}
 			}
+
+			// Write the headers and tag columns if they haven't already been done.
+			if ($header) {
+				fputcsv($f, array_keys($row), ',');
+				$header=FALSE;
+			}
+
+				fputcsv($f, $row, ',');
 		}
 
-		// Write the headers and tag columns if they haven't already been done.
-		if ($header) {
-			fputcsv($f, array_keys($row), ',');
-			$header=FALSE;
-		}
+		$min_record += $num_records;
 
-		fputcsv($f, $row, ',');
+		if ($result->num_rows < $num_records) {
+			$more_data = FALSE;
+		}
 	}
 }
 
