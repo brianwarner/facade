@@ -24,6 +24,6 @@ $query = "INSERT INTO auth_history (user,status)
 
 query_db($db,$query,'Updating history.');
 
-echo '<meta http-equiv="refresh" content="0;/">';
+echo '<h2>Logging out...</h2><meta http-equiv="refresh" content="0;./">';
 
 ?>
