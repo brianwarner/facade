@@ -86,7 +86,7 @@ foreach ($projects as $project) {
 	// PHP can run out of memory on huge projects, so export the data in chunks
 
 	$min_record = 0;
-	$num_records = 100000;
+	$num_records = 50000;
 	$more_data = TRUE;
 
 	while ($more_data) {
