@@ -18,10 +18,8 @@ Facade is licensed under GPL v2.
 
 ### Mysql setup:
 
-1. Create a database, a user, and grant all privileges.
-2. Copy includes/db.php.default to includes/db.php, add credentials.
-3. Copy utilities/db.py.default to utilities/db.py, add credentials.
-4. Run 'python utilities/setup.py'
+1. Create a database, a user, and grant all privileges (optional).
+2. Run 'python utilities/setup.py' (can also create a database and user for you)
 
 At this point, you should be able to access facade's web interface.
 
@@ -60,8 +58,8 @@ unnecessary calculations.
 If you discover a bunch of (Unknown) affiliations, don't panic. This probably
 means you are analyzing a repo with domains that aren't in the stock domain
 mappings.  You can import config files from gitdm using the
-import_gitdm_configs.py script in utilities/ and run Facade with the -n option
-to force a rebuild of affiliation data.
+import_gitdm_configs.py script in utilities/ and run Facade with the -nfr
+options to force a rebuild of affiliation data.
 
 The main reason for tags is to be able to isolate a specific subset of data for
 a group of people, for example, your department at work.  Because people and
