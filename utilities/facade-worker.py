@@ -49,18 +49,17 @@ def get_setting(setting):
 
 # Get a setting from the database
 
-	query = ("SELECT value FROM settings WHERE setting='%s' ORDER BY "
-		"last_modified DESC LIMIT 1" % setting)
-	cursor.execute(query)
+	query = ("SELECT value FROM settings WHERE setting=%s ORDER BY "
+		"last_modified DESC LIMIT 1")
+	cursor.execute(query, (setting, ))
 	return cursor.fetchone()["value"]
 
 def update_status(status):
 
 # Update the status displayed in the UI
 
-	query = ("UPDATE settings SET value='%s' WHERE setting='utility_status'"
-		% status)
-	cursor.execute(query)
+	query = ("UPDATE settings SET value=%s WHERE setting='utility_status'")
+	cursor.execute(query, (status, ))
 	db.commit()
 
 def log_activity(level,status):
@@ -70,9 +69,8 @@ def log_activity(level,status):
 	log_options = ('Error','Quiet','Info','Verbose','Debug')
 
 	if log_options.index(level) <= log_options.index(log_level):
-		query = ("INSERT INTO utility_log (level,status) VALUES ('%s','%s')"
-			% (level,status))
-		cursor.execute(query)
+		query = ("INSERT INTO utility_log (level,status) VALUES (%s,%s)")
+		cursor.execute(query, (level, status))
 		db.commit()
 		sys.stderr.write("* %s\n" % status)
 
@@ -81,9 +79,9 @@ def update_repo_log(repos_id,status):
 # Log a repo's fetch status
 
 	log_message = ("INSERT INTO repos_fetch_log (repos_id,status) "
-		"VALUES (%s,'%s')" % (repos_id,status))
+		"VALUES (%s,%s)")
 
-	cursor.execute(log_message)
+	cursor.execute(log_message, (repos_id, status))
 	db.commit()
 
 def update_analysis_log(repos_id,status):
@@ -91,9 +89,9 @@ def update_analysis_log(repos_id,status):
 # Log a repo's analysis status
 
 	log_message = ("INSERT INTO analysis_log (repos_id,status) "
-		"VALUES (%s,'%s')" % (repos_id,status))
+		"VALUES (%s,%s)")
 
-	cursor.execute(log_message)
+	cursor.execute(log_message, (repos_id,status))
 	db.commit()
 
 def check_swapped_emails(name,email):
@@ -121,9 +119,9 @@ def discover_alias(email):
 
 # Match aliases with their canonical email
 
-	fetch_alias = "SELECT canonical FROM aliases WHERE alias='%s'" % email
+	fetch_alias = "SELECT canonical FROM aliases WHERE alias=%s"
 
-	cursor.execute(fetch_alias)
+	cursor.execute(fetch_alias, (email, ))
 	db.commit()
 
 	aliases = list(cursor)
@@ -137,16 +135,13 @@ def discover_alias(email):
 def update_affiliation(email_type,email,affiliation,start_date):
 
 	update = ("UPDATE analysis_data "
-		"SET %s_affiliation = '%s' "
-		"WHERE %s_email = '%s' "
+		"SET %s_affiliation = %%s "
+		"WHERE %s_email = %%s "
 		"AND %s_affiliation IS NULL "
-		"AND %s_date >= '%s'" %
-		(email_type,affiliation,
-		email_type,email,
-		email_type,
-		email_type,start_date))
+		"AND %s_date >= %%s" %
+		(email_type, email_type, email_type, email_type))
 
-	cursor.execute(update)
+	cursor.execute(update, (affiliation, email, start_date))
 	db.commit()
 
 def store_working_commit(repo_id,commit):
@@ -154,11 +149,10 @@ def store_working_commit(repo_id,commit):
 # Store the working commit.
 
 	store_commit = ("UPDATE repos "
-		"SET working_commit = '%s' "
-		"WHERE id = %s"
-		% (commit,repo_id))
+		"SET working_commit = %s "
+		"WHERE id = %s")
 
-	cursor.execute(store_commit)
+	cursor.execute(store_commit, (commit, repo_id))
 	db.commit()
 
 	log_activity('Debug','Stored working commit: %s' % commit)
@@ -168,10 +162,9 @@ def trim_commit(repo_id,commit):
 # Quickly remove a given commit
 
 	remove_commit = ("DELETE FROM analysis_data "
-		"WHERE repos_id=%s AND commit='%s'" %
-		(repo_id,commit))
+		"WHERE repos_id=%s AND commit=%s")
 
-	cursor.execute(remove_commit)
+	cursor.execute(remove_commit, (repo_id, commit))
 	db.commit()
 
 	log_activity('Debug','Trimmed commit: %s' % commit)
@@ -181,9 +174,9 @@ def store_working_author(email):
 # Store the working author during affiliation discovery, in case it is
 # interrupted and needs to be trimmed.
 
-	store = "UPDATE settings SET value = '%s' WHERE setting = 'working_author'" % email
+	store = "UPDATE settings SET value = %s WHERE setting = 'working_author'"
 
-	cursor.execute(store)
+	cursor.execute(store, (email, ))
 	db.commit()
 
 	log_activity('Debug','Stored working author: %s' % email)
@@ -195,16 +188,16 @@ def trim_author(email):
 
 	trim = ("UPDATE analysis_data "
 		"SET author_affiliation = NULL "
-		"WHERE author_email = '%s'" % email)
+		"WHERE author_email = %s")
 
-	cursor.execute(trim)
+	cursor.execute(trim, (email, ))
 	db.commit()
 
 	trim = ("UPDATE analysis_data "
 		"SET committer_affiliation = NULL "
-		"WHERE committer_email = '%s'" % email)
+		"WHERE committer_email = %s")
 
-	cursor.execute(trim)
+	cursor.execute(trim, (email, ))
 	db.commit()
 
 	store_working_author('done')
@@ -225,10 +218,10 @@ def discover_null_affiliations(attribution,email):
 
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
-		"WHERE domain = '%s' "
-		"ORDER BY start_date DESC" % match_email)
+		"WHERE domain = %s "
+		"ORDER BY start_date DESC")
 
-	cursor.execute(find_exact_match)
+	cursor.execute(find_exact_match, (match_email, ))
 	db.commit
 
 	matches = list(cursor)
@@ -249,10 +242,10 @@ def discover_null_affiliations(attribution,email):
 
 		find_exact_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
-			"WHERE domain= '%s' "
-			"ORDER BY start_date DESC" % domain)
+			"WHERE domain= %s "
+			"ORDER BY start_date DESC")
 
-		cursor.execute(find_exact_domain)
+		cursor.execute(find_exact_domain, (domain, ))
 		db.commit()
 
 		matches = list(cursor)
@@ -263,11 +256,10 @@ def discover_null_affiliations(attribution,email):
 
 		find_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
-			"WHERE domain = '%s' "
-			"ORDER BY start_date DESC" %
-			domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
+			"WHERE domain = %s "
+			"ORDER BY start_date DESC")
 
-		cursor.execute(find_domain)
+		cursor.execute(find_domain, (domain[domain.rfind('.',0,domain.rfind('.',0))+1:], ))
 		db.commit()
 
 		matches = list(cursor)
@@ -286,19 +278,15 @@ def discover_null_affiliations(attribution,email):
 		log_activity('Debug','Found domain match for %s' % email)
 
 		for match in matches:
-
-			update = ("UPDATE analysis_data "
-				"SET %s_affiliation = '%s' "
-				"WHERE %s_email = '%s' "
-				"AND %s_affiliation IS NULL "
-				"AND %s_date >= '%s'" %
-				(attribution,match['affiliation'],
-				attribution,email,
-				attribution,
-				attribution,match['start_date']))
-
-			cursor.execute(update)
-			db.commit()
+                        update = ("UPDATE analysis_data "
+                                "SET %s_affiliation = %%s "
+                                "WHERE %s_email = %%s "
+                                "AND %s_affiliation IS NULL "
+                                "AND %s_date >= %%s" %
+                                (attribution, attribution, attribution, attribution)
+			)
+                        cursor.execute(update, (match['affiliation'], email, match['start_date']))
+                        db.commit()
 
 def analyze_commit(repo_id,repo_loc,commit):
 
@@ -475,13 +463,15 @@ def store_commit(repos_id,commit,filename,
 		"author_name,author_email,author_date,"
 		"committer_name,committer_email,committer_date,"
 		"added,removed,whitespace) VALUES ("
-		"%s,'%s','%s','%s','%s','%s','%s','%s','%s',%s,%s,%s)"
-		% (repos_id,commit,filename,
+		"%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)")
+
+	cursor.execute(store, (
+                repos_id,commit,filename,
 		author_name,author_email,author_date,
 		committer_name,committer_email,committer_date,
-		added,removed,whitespace))
-
-	cursor.execute(store)
+		added,removed,whitespace
+                )
+        )
 	db.commit()
 
 	log_activity('Debug','Stored commit: %s' % commit)
@@ -509,8 +499,8 @@ def git_repo_cleanup():
 
 		return_code = subprocess.Popen([cmd],shell=True).wait()
 
-		query = "DELETE FROM repos WHERE id=%s" % row['id']
-		cursor.execute(query)
+		query = "DELETE FROM repos WHERE id=%s"
+		cursor.execute(query, (row['id'], ))
 		db.commit()
 
 		log_activity('Verbose','Deleted repo %s' % row['id'])
@@ -519,10 +509,9 @@ def git_repo_cleanup():
 
 		# Remove the repo from the logs
 
-		remove_logs = ("DELETE FROM repos_fetch_log WHERE repos_id = %s" %
-			row['id'])
+		remove_logs = ("DELETE FROM repos_fetch_log WHERE repos_id = %s")
 
-		cursor.execute(remove_logs)
+		cursor.execute(remove_logs, (row['id'], ))
 		db.commit()
 
 		# Attempt to cleanup any empty parent directories
@@ -605,9 +594,8 @@ def git_repo_initialize():
 			repo_name = repo_name[:repo_name.find('.git',0)]
 
 		# Check if there will be a storage path collision
-		query = ("SELECT NULL FROM repos WHERE CONCAT(projects_id,'/',path,name) "
-			"='%s/%s%s'" % (row["projects_id"],repo_relative_path,repo_name))
-		cursor.execute(query)
+		query = ("SELECT NULL FROM repos WHERE CONCAT(projects_id,'/',path,name) = %s")
+		cursor.execute(query, ('{}/{}{}'.format(row["projects_id"], repo_relative_path, repo_name), ))
 		db.commit()
 
 		# If there is a collision, append a slug to repo_name to yield a unique path
@@ -644,10 +632,10 @@ def git_repo_initialize():
 
 		update_repo_log(row['id'],'New (cloning)')
 
-		query = ("UPDATE repos SET status='New (Initializing)', path='%s', "
-			"name='%s' WHERE id=%s"	% (repo_relative_path,repo_name,row["id"]))
+		query = ("UPDATE repos SET status='New (Initializing)', path=%s, "
+			"name=%s WHERE id=%s")
 
-		cursor.execute(query)
+		cursor.execute(query, (repo_relative_path,repo_name,row["id"]))
 		db.commit()
 
 		log_activity('Verbose','Cloning: %s' % git)
@@ -657,10 +645,10 @@ def git_repo_initialize():
 
 		if (return_code == 0):
 			# If cloning succeeded, repo is ready for analysis
-			query = ("UPDATE repos SET status='Active',path='%s', name='%s' "
-				"WHERE id=%s" % (repo_relative_path,repo_name,row["id"]))
+			query = ("UPDATE repos SET status='Active',path=%s, name=%s "
+				"WHERE id=%s")
 
-			cursor.execute(query)
+			cursor.execute(query, (repo_relative_path,repo_name,row["id"]))
 			db.commit()
 
 			update_repo_log(row['id'],'Up-to-date')
@@ -670,10 +658,9 @@ def git_repo_initialize():
 			# If cloning failed, log it and set the status back to new
 			update_repo_log(row['id'],'Failed (%s)' % return_code)
 
-			query = ("UPDATE repos SET status='New (failed)' WHERE id=%s"
-				% row["id"])
+			query = ("UPDATE repos SET status='New (failed)' WHERE id=%s")
 
-			cursor.execute(query)
+			cursor.execute(query, (row['id'], ))
 			db.commit()
 
 			log_activity('Error','Could not clone %s' % git)
@@ -707,10 +694,9 @@ def analysis():
 
 		# First we check to see if the previous analysis didn't complete
 
-		get_status = ("SELECT working_commit FROM repos WHERE id=%s" %
-			repo['id'])
+		get_status = ("SELECT working_commit FROM repos WHERE id=%s")
 
-		cursor.execute(get_status)
+		cursor.execute(get_status, (repo['id'], ))
 		working_commit = cursor.fetchone()['working_commit']
 
 		# If there's a commit still there, the previous run was interrupted and
@@ -744,10 +730,9 @@ def analysis():
 
 		existing_commits = set()
 
-		find_existing = ("SELECT DISTINCT commit FROM analysis_data WHERE repos_id=%s" %
-			repo['id'])
+		find_existing = ("SELECT DISTINCT commit FROM analysis_data WHERE repos_id=%s")
 
-		cursor.execute(find_existing)
+		cursor.execute(find_existing, (repo['id'], ))
 
 		for commit in list(cursor):
 			existing_commits.add(commit['commit'])
