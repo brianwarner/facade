@@ -600,7 +600,7 @@ if ($_POST["confirmnew_repo"]) {
 
 		// Add an alias
 
-		$add_alias = "INSERT INTO aliases (alias,canonical) VALUES ('" . $alias
+		$add_alias = "INSERT IGNORE INTO aliases (alias,canonical) VALUES ('" . $alias
 			. "','" . $canonical . "')";
 
 		query_db($db,$add_alias,'Adding alias');
@@ -711,12 +711,12 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$delete,'Clearing committer info');
 
 		if ($start_date) {
-			$add_affiliation = "INSERT INTO affiliations
+			$add_affiliation = "INSERT IGNORE INTO affiliations
 				(domain,affiliation,start_date) VALUES ('"
 				. $domain . "','" . $affiliation . "','" . $start_date . "')";
 
 		} else {
-			$add_affiliation = "INSERT INTO affiliations
+			$add_affiliation = "INSERT IGNORE INTO affiliations
 				(domain,affiliation) VALUES ('"
 				. $domain . "','" . $affiliation . "')";
 		}
