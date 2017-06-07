@@ -48,14 +48,14 @@ def import_aliases(filename):
 				alias = line[:line.rfind(canonical)].strip().replace("'","\\'")
 
 				insert = ("INSERT IGNORE INTO aliases (canonical,alias) VALUES "
-					"('%s','%s')" % (canonical,alias))
+					"(%s,%s)")
 
 				# Suppress warnings about duplicate entries
 
 				with warnings.catch_warnings():
 					warnings.simplefilter("ignore")
 
-					cursor.execute(insert)
+					cursor.execute(insert, (canonical,alias))
 					db.commit()
 
 			else:
@@ -68,22 +68,25 @@ def commit_affiliation(line):
 
 # Helper function to quickly commit a line to the db.
 
+        tup = ()
 	if line[2]:
 
 		insert = ("INSERT IGNORE INTO affiliations (domain,affiliation,start_date) "
-			"VALUES ('%s','%s','%s')" % (line[0],line[1],line[2]))
+			"VALUES (%s,%s,%s)")
+                tup = (line[0],line[1],line[2])
 
 	else:
 
 		insert = ("INSERT IGNORE INTO affiliations (domain,affiliation) "
-			"VALUES ('%s','%s')" % (line[0],line[1]))
+			"VALUES (%s,%s)")
+                tup = (line[0],line[1])
 
 	# Suppress warnings about duplicate entries
 
 	with warnings.catch_warnings():
 		warnings.simplefilter("ignore")
 
-		cursor.execute(insert)
+		cursor.execute(insert, tup)
 		db.commit()
 
 def bad_config(domain,first,second,filename):
