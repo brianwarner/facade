@@ -153,12 +153,12 @@ def store_working_commit(repo_id,commit):
 
 # Store the working commit.
 
-	store_commit = ("UPDATE repos "
+	store_working_commit = ("UPDATE repos "
 		"SET working_commit = '%s' "
 		"WHERE id = %s"
 		% (commit,repo_id))
 
-	cursor.execute(store_commit)
+	cursor.execute(store_working_commit)
 	db.commit()
 
 	log_activity('Debug','Stored working commit: %s' % commit)
@@ -221,24 +221,21 @@ def discover_null_affiliations(attribution,email):
 	# intentionally mangled emails (e.g. "developer at domain.com") that have
 	# been added as an affiliation rather than an alias.
 
-	match_email = discover_alias(email)
-
-	print 'match: %s' % match_email
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
-		"ORDER BY start_date DESC" % match_email)
+		"ORDER BY start_date DESC" % email)
 
 	cursor_people.execute(find_exact_match)
 	db_people.commit
 
 	matches = list(cursor_people)
 
-	if not matches and match_email.find('@') < 0:
+	if not matches and email.find('@') < 0:
 
 		# It's not a properly formatted email, leave it NULL and log it.
 
-		log_activity('Info','Unmatchable email: %s' % match_email)
+		log_activity('Info','Unmatchable email: %s' % email)
 
 		return
 
@@ -246,7 +243,7 @@ def discover_null_affiliations(attribution,email):
 
 		# Now we go for a domain-level match. Try for an exact match.
 
-		domain = match_email[match_email.find('@')+1:]
+		domain = email[email.find('@')+1:]
 
 		find_exact_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
@@ -473,13 +470,13 @@ def store_commit(repos_id,commit,filename,
 	committer_email = strip_extra_amp(committer_email)
 
 	store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
-		"author_name,author_email,author_date,"
-		"committer_name,committer_email,committer_date,"
+		"author_name,author_raw_email,author_email,author_date,"
+		"committer_name,committer_raw_email,committer_email,committer_date,"
 		"added,removed,whitespace) VALUES ("
-		"%s,'%s','%s','%s','%s','%s','%s','%s','%s',%s,%s,%s)"
+		"%s,'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s',%s,%s,%s)"
 		% (repos_id,commit,filename,
-		author_name,author_email,author_date,
-		committer_name,committer_email,committer_date,
+		author_name,author_email,discover_alias(author_email),author_date,
+		committer_name,committer_email,discover_alias(committer_email),committer_date,
 		added,removed,whitespace))
 
 	cursor.execute(store)

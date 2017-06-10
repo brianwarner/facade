@@ -292,10 +292,12 @@ def create_analysis(reset=0):
 		"repos_id INT UNSIGNED NOT NULL,"
 		"commit VARCHAR(40) NOT NULL,"
 		"author_name VARCHAR(128) NOT NULL,"
+		"author_raw_email VARCHAR(128) NOT NULL,"
 		"author_email VARCHAR(128) NOT NULL,"
 		"author_date VARCHAR(10) NOT NULL,"
 		"author_affiliation VARCHAR(128),"
 		"committer_name VARCHAR(128) NOT NULL,"
+		"committer_raw_email VARCHAR(128) NOT NULL,"
 		"committer_email VARCHAR(128) NOT NULL,"
 		"committer_date VARCHAR(10) NOT NULL,"
 		"committer_affiliation VARCHAR(128),"
@@ -795,11 +797,14 @@ if action.lower() == 'i' or action.lower() == 'c':
 
 		# Check if there's info in the affiliations and aliases table
 
-		check_affiliations = "SELECT NULL FROM affiliations"
+		try:
+			check_affiliations = "SELECT NULL FROM affiliations"
 
-		cursor_people.execute(check_affiliations)
+			cursor_people.execute(check_affiliations)
+			affiliations = list(cursor_people)
 
-		affiliations = list(cursor_people)
+		except:
+			affiliations = ''
 
 		if affiliations:
 			print ('\nThere appears to be data in the affiliations table. If you are\n'
@@ -813,12 +818,17 @@ if action.lower() == 'i' or action.lower() == 'c':
 				create_affiliations('clear')
 			else:
 				print '\nLeaving affiliations data as it is.\n'
+		else:
+			create_affiliations('clear')
 
-		check_aliases = "SELECT NULL FROM aliases"
+		try:
+			check_aliases = "SELECT NULL FROM aliases"
 
-		cursor_people.execute(check_aliases)
+			cursor_people.execute(check_aliases)
+			aliases = list(cursor_people)
 
-		aliases = list(cursor_people)
+		except:
+			aliases = ''
 
 		if aliases:
 			print ('\nThere appears to be data in the aliases table. If you are\n'
@@ -832,6 +842,9 @@ if action.lower() == 'i' or action.lower() == 'c':
 				create_aliases('clear')
 			else:
 				print '\nLeaving alias data as it is.\n'
+		else:
+			create_aliases('clear')
+
 
 		create_auth('clear')
 

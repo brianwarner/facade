@@ -586,19 +586,22 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($alias && $canonical) {
 
-		// Remove any aliases so they can be recreated next run
+		// Remove any affiliations so they can be recreated next run, and update
+		// author_email or committer_email with the new alias.
 
 		$clear_author = "UPDATE analysis_data
-			SET author_affiliation = NULL
-			WHERE author_email = '" . $alias . "'";
+			SET author_affiliation = NULL,
+			author_email = '" . $canonical . "'
+			WHERE author_raw_email = '" . $alias . "'";
 
-		query_db($db,$clear_author,"Clearing author affiliation");
+		query_db($db,$clear_author,"Clearing author affiliation, aliasing email");
 
 		$clear_committer = "UPDATE analysis_data
-			SET committer_affiliation = NULL
-			WHERE committer_email = '" . $alias . "'";
+			SET committer_affiliation = NULL,
+			committer_email = '" . $canonical . "'
+			WHERE committer_raw_email = '" . $alias . "'";
 
-		query_db($db,$clear_author,"Clearing committer affiliation");
+		query_db($db,$clear_author,"Clearing committer affiliation, aliasing email");
 
 		// Add an alias
 
@@ -626,16 +629,18 @@ if ($_POST["confirmnew_repo"]) {
 		$alias = $result->fetch_assoc();
 
 		$clear_author = "UPDATE analysis_data
-			SET author_affiliation = NULL
-			WHERE author_email = '" . $alias['alias'] . "'";
+			SET author_affiliation = NULL,
+			author_email = author_raw_email
+			WHERE author_raw_email = '" . $alias['alias'] . "'";
 
-		query_db($db,$clear_author,"Clearing author affiliation");
+		query_db($db,$clear_author,"Clearing author affiliation, resetting email");
 
 		$clear_committer = "UPDATE analysis_data
-			SET committer_affiliation = NULL
-			WHERE committer_email = '" . $alias['alias'] . "'";
+			SET committer_affiliation = NULL,
+			committer_email = committer_raw_email
+			WHERE committer_raw_email = '" . $alias['alias'] . "'";
 
-		query_db($db,$clear_committer,"Clearing committer affiliation");
+		query_db($db,$clear_committer,"Clearing committer affiliation, resetting email");
 
 		$delete = "DELETE FROM aliases WHERE id=" . $id;
 
