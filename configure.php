@@ -12,7 +12,8 @@ $title = "Configuration";
 
 include_once "includes/header.php";
 include_once "includes/db.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 // Check if user is authenticated.  If not, bounce to login page
 if (!$_SESSION['access_granted']) {
@@ -340,5 +341,6 @@ project and repos remain consistent.</p>
 </div> <!-- .content-block -->';
 
 include_once "includes/footer.php";
-close_db($db);
+$db->close();
+$db_people->close();
 ?>

@@ -24,7 +24,16 @@ function setup_db() {
 
 	$db_conn->set_charset("utf8mb4");
 
-	return $db_conn;
+	$db_conn_people = new mysqli($db_host_people, $db_user_people,
+		$db_pass_people, $db_name_people);
+
+	if ($db_conn_people->connect_error) {
+		die ("Connection to database refused: " . $db_conn_people->connect_error);
+	}
+
+	$db_conn_people->set_charset("utf8mb4");
+
+	return array($db_conn,$db_conn_people);
 }
 
 function query_db($db_conn, $query, $description) {
@@ -45,35 +54,6 @@ function query_db($db_conn, $query, $description) {
 	}
 
 	return $result;
-
-}
-
-function multi_query_db($db_conn, $query, $description) {
-
-	$db_debug = FALSE;
-
-	// Helper function to execute queries.
-	$result = $db_conn->multi_query($query);
-
-	if ($db_conn->error) {
-		echo '<div class="error">[E] Error on query "' . $description . '": ' .
-			$db_conn->error . "</div>\n";
-	} else {
-		if ($db_debug) {
-			echo '<div class="info">[I] Query "' . $description . '" completed.'
-				. "</div>\n";}
-	}
-
-	// Flush results, since we are only using this to create tables and procedures.
-	while ($db_conn->next_result()) {;}
-
-}
-
-function close_db($db_conn) {
-
-	// Helper function to close the database.
-
-	$db_conn->close();
 
 }
 

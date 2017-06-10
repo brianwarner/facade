@@ -13,7 +13,8 @@ $title = "";
 include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 if (!empty($_SESSION['access_granted']) && !empty($_SESSION['user'])) {
 
@@ -83,5 +84,8 @@ if (!empty($_SESSION['access_granted']) && !empty($_SESSION['user'])) {
 }
 
 include_once 'includes/footer.php';
+
+$db->close();
+$db_people->close();
 
 ?>

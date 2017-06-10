@@ -12,7 +12,8 @@ $title = "";
 
 include_once 'includes/header.php';
 include_once 'includes/db.php';
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 $user = $_SESSION['user'];
 
@@ -23,6 +24,9 @@ $query = "INSERT INTO auth_history (user,status)
 	VALUES ('" . $user . "','Logged out')";
 
 query_db($db,$query,'Updating history.');
+
+$db->close();
+$db_people->close();
 
 echo '<h2>Logging out...</h2><meta http-equiv="refresh" content="0;./">';
 

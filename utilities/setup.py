@@ -56,8 +56,6 @@ def create_settings(reset=0):
 	cursor.execute(initialize)
 	db.commit()
 
-	print "Settings table created."
-
 #### Log tables ####
 
 def create_repos_fetch_log(reset=0):
@@ -175,8 +173,8 @@ def create_affiliations(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS affiliations"
 
-		cursor.execute(clear)
-		db.commit()
+		cursor_people.execute(clear)
+		db_people.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS affiliations ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -185,8 +183,8 @@ def create_affiliations(reset=0):
 		"start_date DATE NOT NULL DEFAULT '1970-01-01',"
 		"UNIQUE (domain,affiliation,start_date))")
 
-	cursor.execute(create)
-	db.commit()
+	cursor_people.execute(create)
+	db_people.commit()
 
 	if reset:
 		populate = ("INSERT INTO affiliations(domain,affiliation) VALUES "
@@ -195,16 +193,16 @@ def create_affiliations(reset=0):
 			"('ibm.com','IBM'),"
 			"('brian@bdwarner.com','(Hobbyist)')")
 
-		cursor.execute(populate)
-		db.commit()
+		cursor_people.execute(populate)
+		db_people.commit()
 
 		populate = ("INSERT INTO affiliations(domain,affiliation,start_date) VALUES "
 			"('brian@bdwarner.com','Samsung','2015-07-05'),"
 			"('brian@bdwarner.com','The Linux Foundation','2011-01-06'),"
 			"('brian@bdwarner.com','IBM','2006-05-20')")
 
-		cursor.execute(populate)
-		db.commit()
+		cursor_people.execute(populate)
+		db_people.commit()
 
 def create_aliases(reset=0):
 
@@ -214,8 +212,8 @@ def create_aliases(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS aliases"
 
-		cursor.execute(clear)
-		db.commit()
+		cursor_people.execute(clear)
+		db_people.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS aliases ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -223,8 +221,8 @@ def create_aliases(reset=0):
 		"alias VARCHAR(128) NOT NULL,"
 		"UNIQUE (canonical,alias))")
 
-	cursor.execute(create)
-	db.commit()
+	cursor_people.execute(create)
+	db_people.commit()
 
 	if reset:
 		populate = ("INSERT INTO aliases (canonical,alias) VALUES "
@@ -232,8 +230,8 @@ def create_aliases(reset=0):
 			"('brian@bdwarner.com','brian.warner@linuxfoundation.org'),"
 			"('brian@bdwarner.com','bdwarner@us.ibm.com')")
 
-		cursor.execute(populate)
-		db.commit()
+		cursor_people.execute(populate)
+		db_people.commit()
 
 def create_excludes(reset=0):
 
@@ -526,23 +524,35 @@ action = raw_input('(c/i/u/r): ').strip()
 if action.lower() == 'c':
 
 	print ("========== Creating database credential files ==========\n\n"
-		"This will overwrite your existing db.py and creds.php files.\n"
-		"Are you sure?\n")
+		"This will overwrite any existing db.py and creds.php files.\n"
+		"If you do not do this, the existing files will be used.\n"
+		"Create new setup files?\n")
 
-	confirm_creds = raw_input('(yes): ').strip()
+	confirm_creds = raw_input('yes/no: ').strip().lower()
 
-	if confirm_creds.lower() == 'yes':
+	if not confirm_creds:
+		confirm_creds = 'no'
 
-		print "\n===== Facade user information =====\n"
+	if confirm_creds == 'yes':
 
-		db_user = raw_input('Facade username (leave blank for random): ').strip()
-		db_pass = getpass.getpass('Facade password (leave blank for random): ').strip()
+		print "\n===== Facade database user information =====\n"
+
+		db_user = raw_input('Facade database username (leave blank for random): ').strip()
+		db_pass = getpass.getpass('Facade database password (leave blank for random): ').strip()
 
 		if not db_user:
 			db_user = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
 
 		if not db_pass:
 			db_pass = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+		print ("\nShould Facade create this user? (requires root, "
+			"not needed if the user already exists)\n")
+
+		create_user = raw_input('yes/no (default yes): ').strip()
+
+		if not create_user:
+			create_user = 'yes'
 
 		print "\n===== Database information =====\n"
 
@@ -557,16 +567,77 @@ if action.lower() == 'c':
 			db_name = 'facade_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
 
 		print ("\nShould Facade create the database? (requires root, "
-			"not needed if the database already exists)\n")
+			"not needed if the database already exists and uses utf8mb4)\n")
 
-		create_db = raw_input('(yes): ').strip()
+		create_db = raw_input('yes/no (default yes): ').strip()
 
-		if create_db.lower() == 'yes':
+		if not create_db:
+			create_db = 'yes'
 
-			root_pw = getpass.getpass('mysql root password: ').strip()
+		print "\nShould Facade use a different database for affiliations and aliases?\n"
+
+		people_db = raw_input('yes/no (default no): ').strip()
+
+		if not people_db:
+			people_db = 'no'
+
+		if people_db.lower() == 'yes':
+
+			db_user_people = raw_input('Affiliations and aliases database username (leave blank for random): ').strip()
+			db_pass_people = getpass.getpass('Affiliations and aliases database password (leave blank for random): ').strip()
+
+			if not db_user_people:
+				db_user_people = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+			if not db_pass_people:
+				db_pass_people = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+			print ("\nShould Facade create this user? (requires root, "
+				"not needed if the user already exists)\n")
+
+			create_user_people = raw_input('yes/no (default yes): ').strip()
+
+			if not create_user_people:
+				create_user_people = 'yes'
+
+			print "\n===== Affiliations and aliases database information =====\n"
+
+			db_host_people = raw_input('Affiliations and aliases database host (default: localhost): ').strip()
+
+			if not db_host_people:
+				db_host_people = 'localhost'
+
+			db_name_people = raw_input('Affiliations and aliases database name (leave blank for random): ').strip()
+
+			if not db_name_people:
+				db_name_people = 'facade_people_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
+
+			print ("\nShould Facade create the affiliations and aliases database? (requires root, "
+				"not needed if the database already exists and uses utf8mb4)\n")
+
+			create_db_people = raw_input('yes/no (default yes): ').strip()
+
+			if not create_db_people:
+				create_db_people = 'yes'
+
+		else:
+
+			print "\nUsing main Facade database to store affiliations and aliases\n"
+
+			db_user_people = db_user
+			db_pass_people = db_pass
+			db_host_people = db_host
+			db_name_people = db_name
+			create_db_people = 'no'
+			create_user_people = 'no'
+
+
+		if (create_db.lower() == 'yes' or create_db_people.lower() == 'yes'
+			or create_user.lower() == 'yes' or create_user_people.lower() == 'yes'):
+
+			root_pw = getpass.getpass('\nmysql root password: ').strip()
 
 			try:
-
 				root_db = MySQLdb.connect( host=db_host,
 					user = 'root',
 					passwd = root_pw,
@@ -574,47 +645,84 @@ if action.lower() == 'c':
 				root_cursor = root_db.cursor(MySQLdb.cursors.DictCursor)
 
 			except:
-
 				print 'Could not connect to database as root'
 				sys.exit(1)
 
-			try:
+			if create_db.lower() == 'yes':
 
-				create_database = ("CREATE DATABASE %s "
-					"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-					% db_name)
+				try:
+					create_database = ("CREATE DATABASE IF NOT EXISTS %s "
+						"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+						% db_name)
 
-				root_cursor.execute(create_database)
-				root_db.commit()
+					root_cursor.execute(create_database)
+					root_db.commit()
 
-			except:
+				except:
+					print 'Could not create database: %s' % db_name
+					sys.exit(1)
 
-				print 'Could not create database: %s' % db_name
-				sys.exit(1)
+			if create_db_people.lower() == 'yes':
 
-			try:
+				try:
+					create_database = ("CREATE DATABASE IF NOT EXISTS %s "
+						"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+						% db_name_people)
 
-				create_user = ("CREATE USER '%s' IDENTIFIED BY '%s'"
-					% (db_user,db_pass))
+					root_cursor.execute(create_database)
+					root_db.commit()
 
-				root_cursor.execute(create_user)
-				root_db.commit()
+				except:
+					print 'Could not create database: %s' % db_name
+					sys.exit(1)
 
-				grant_privileges = ("GRANT ALL PRIVILEGES ON %s.* to %s"
-					% (db_name,db_user))
+			if create_user.lower() == 'yes':
 
-				root_cursor.execute(grant_privileges)
-				root_db.commit()
+				try:
+					create_user = ("CREATE USER IF NOT EXISTS '%s' IDENTIFIED BY '%s'"
+						% (db_user,db_pass))
 
-				flush_privileges = ("FLUSH PRIVILEGES")
+					root_cursor.execute(create_user)
+					root_db.commit()
 
-				root_cursor.execute(flush_privileges)
-				root_db.commit()
+					grant_privileges = ("GRANT ALL PRIVILEGES ON %s.* to %s"
+						% (db_name,db_user))
 
-			except:
+					root_cursor.execute(grant_privileges)
+					root_db.commit()
 
-				print 'Could not create user and grant privileges: %s' % db_user
-				sys.exit(1)
+					flush_privileges = ("FLUSH PRIVILEGES")
+
+					root_cursor.execute(flush_privileges)
+					root_db.commit()
+
+				except:
+					print 'Could not create user and grant privileges: %s' % db_user
+					sys.exit(1)
+
+			if create_user_people.lower() == 'yes':
+
+				try:
+					create_user = ("CREATE USER IF NOT EXISTS '%s' IDENTIFIED BY '%s'"
+						% (db_user_people,db_pass_people))
+
+					root_cursor.execute(create_user)
+					root_db.commit()
+
+					grant_privileges = ("GRANT ALL PRIVILEGES ON %s.* to %s"
+						% (db_name_people,db_user_people))
+
+					root_cursor.execute(grant_privileges)
+					root_db.commit()
+
+					flush_privileges = ("FLUSH PRIVILEGES")
+
+					root_cursor.execute(flush_privileges)
+					root_db.commit()
+
+				except:
+					print 'Could not create user and grant privileges: %s' % db_user
+					sys.exit(1)
 
 			root_cursor.close()
 			root_db.close()
@@ -622,7 +730,12 @@ if action.lower() == 'c':
 		db_values = {'db_user': db_user,
 			'db_pass': db_pass,
 			'db_name': db_name,
-			'db_host': db_host}
+			'db_host': db_host,
+			'db_user_people': db_user_people,
+			'db_pass_people': db_pass_people,
+			'db_name_people': db_name_people,
+			'db_host_people': db_host_people}
+
 
 		db_py_template_loc = os.path.join(working_dir,'db.py.template')
 		db_py_loc = os.path.join(working_dir,'db.py')
@@ -645,7 +758,7 @@ if action.lower() == 'c':
 
 try:
     imp.find_module('db')
-    from db import db,cursor
+    from db import db,db_people,cursor,cursor_people
 except:
     sys.exit("Can't find db.py.")
 
@@ -655,7 +768,10 @@ if action.lower() == 'i' or action.lower() == 'c':
 		"This will set up your tables, and will clear any existing data.\n"
 		"Are you sure?\n")
 
-	confirm = raw_input('(yes): ')
+	confirm = raw_input('yes/no: ')
+
+	if not confirm:
+		confirm = 'no'
 
 	if confirm == "yes":
 		print "\nSetting up database tables.\n"
@@ -669,8 +785,6 @@ if action.lower() == 'i' or action.lower() == 'c':
 		create_projects('clear')
 		create_repos('clear')
 
-		create_affiliations('clear')
-		create_aliases('clear')
 		create_excludes('clear')
 		create_special_tags('clear')
 
@@ -678,6 +792,46 @@ if action.lower() == 'i' or action.lower() == 'c':
 
 		create_unknown_caches('clear')
 		create_web_caches('clear')
+
+		# Check if there's info in the affiliations and aliases table
+
+		check_affiliations = "SELECT NULL FROM affiliations"
+
+		cursor_people.execute(check_affiliations)
+
+		affiliations = list(cursor_people)
+
+		if affiliations:
+			print ('\nThere appears to be data in the affiliations table. If you are\n'
+				'sharing the table with another Facade instance, clearing this\n'
+				'table will also delete affiliation data for that instance too.\n'
+				'Do you want to clear this data, or keep it?\n')
+
+			clear_affiliations = raw_input('keep/clear (default keep): ').strip().lower()
+
+			if clear_affiliations == 'clear':
+				create_affiliations('clear')
+			else:
+				print '\nLeaving affiliations data as it is.\n'
+
+		check_aliases = "SELECT NULL FROM aliases"
+
+		cursor_people.execute(check_aliases)
+
+		aliases = list(cursor_people)
+
+		if aliases:
+			print ('\nThere appears to be data in the aliases table. If you are\n'
+				'sharing the table with another Facade instance, clearing this\n'
+				'table will also delete alias data for that instance too.\n'
+				'Do you want to clear this data, or keep it?\n')
+
+			clear_aliases = raw_input('keep/clear (default keep): ').strip().lower()
+
+			if clear_aliases == 'clear':
+				create_aliases('clear')
+			else:
+				print '\nLeaving alias data as it is.\n'
 
 		create_auth('clear')
 

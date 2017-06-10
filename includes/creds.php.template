@@ -13,4 +13,9 @@ $$db_host = "$db_host";
 $$db_user = "$db_user";
 $$db_pass = "$db_pass";
 
+$$db_name_people = "$db_name_people";
+$$db_host_people = "$db_host_people";
+$$db_user_people = "$db_user_people";
+$$db_pass_people = "$db_pass_people";
+
 ?>

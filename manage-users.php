@@ -13,7 +13,8 @@ $title = "";
 include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 if (($_POST['user']) && ($_POST['pass']) && ($_POST['login'])) {
 
@@ -134,5 +135,8 @@ if (($_POST['user']) && ($_POST['pass']) && ($_POST['login'])) {
 } else {
 	echo '<meta http-equiv="refresh" content="0;./user">';
 }
+
+$db->close();
+$db_people->close();
 
 ?>

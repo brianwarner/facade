@@ -10,7 +10,9 @@
 
 include_once "includes/delete.php";
 include_once "includes/db.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
+
 session_start();
 
 // Protect against unauthorized access
@@ -584,7 +586,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($alias && $canonical) {
 
-		// Remove any affiliations so they can be recreated next run
+		// Remove any aliases so they can be recreated next run
 
 		$clear_author = "UPDATE analysis_data
 			SET author_affiliation = NULL
@@ -603,7 +605,7 @@ if ($_POST["confirmnew_repo"]) {
 		$add_alias = "INSERT IGNORE INTO aliases (alias,canonical) VALUES ('" . $alias
 			. "','" . $canonical . "')";
 
-		query_db($db,$add_alias,'Adding alias');
+		query_db($db_people,$add_alias,'Adding alias');
 
 	}
 
@@ -615,11 +617,11 @@ if ($_POST["confirmnew_repo"]) {
 
 	if ($id) {
 
-		// Remove any affiliations so they can be recreated next run
+		// Remove any aliases so they can be recreated next run
 
 		$get_alias = "SELECT alias FROM aliases WHERE id=" . $id;
 
-		$result = query_db($db,$get_alias,'Getting alias');
+		$result = query_db($db_people,$get_alias,'Getting alias');
 
 		$alias = $result->fetch_assoc();
 
@@ -637,7 +639,7 @@ if ($_POST["confirmnew_repo"]) {
 
 		$delete = "DELETE FROM aliases WHERE id=" . $id;
 
-		query_db($db,$delete,'Deleting alias');
+		query_db($db_people,$delete,'Deleting alias');
 	}
 
 	header("Location: people");
@@ -721,7 +723,7 @@ if ($_POST["confirmnew_repo"]) {
 				. $domain . "','" . $affiliation . "')";
 		}
 
-		query_db($db,$add_affiliation,'Adding affiliation');
+		query_db($db_people,$add_affiliation,'Adding affiliation');
 
 	}
 
@@ -738,7 +740,7 @@ if ($_POST["confirmnew_repo"]) {
 
 		$get_domain = "SELECT domain FROM affiliations WHERE id=" . $id;
 
-		$result = query_db($db,$get_domain,'Getting domain');
+		$result = query_db($db_people,$get_domain,'Getting domain');
 
 		$domain = $result->fetch_assoc();
 
@@ -753,7 +755,7 @@ if ($_POST["confirmnew_repo"]) {
 		query_db($db,$delete,'Clearing committer info');
 
 		$delete = "DELETE FROM affiliations WHERE id=" . $id;
-		query_db($db,$delete,'Deleting affiliations');
+		query_db($db_people,$delete,'Deleting affiliations');
 	}
 
 	header("Location: people");
@@ -892,7 +894,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$fetch_aliases = "SELECT canonical,alias FROM aliases";
 
-	$aliases = query_db($db,$fetch_aliases,'fetching aliases');
+	$aliases = query_db($db_people,$fetch_aliases,'fetching aliases');
 
 	header('Content-Type: application/csv');
 	header('Content-Disposition: attachment; filename="facade_aliases.csv";');
@@ -927,7 +929,7 @@ if ($_POST["confirmnew_repo"]) {
 					(canonical,alias) VALUES ('" .
 					$line[0] . "','" . $line[1] . "')";
 
-				query_db($db,$insert,'Importing alias');
+				query_db($db_people,$insert,'Importing alias');
 
 			}
 		}
@@ -939,7 +941,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$fetch_affiliations = "SELECT domain,affiliation,start_date FROM affiliations";
 
-	$affiliations = query_db($db,$fetch_affiliations,'fetching affiliations');
+	$affiliations = query_db($db_people,$fetch_affiliations,'fetching affiliations');
 
 	header('Content-Type: application/csv');
 	header('Content-Disposition: attachment; filename="facade_affiliations.csv";');
@@ -985,7 +987,7 @@ if ($_POST["confirmnew_repo"]) {
 
 				}
 
-				query_db($db,$insert,'Importing affiliation');
+				query_db($db_people,$insert,'Importing affiliation');
 
 			}
 		}
@@ -1100,6 +1102,7 @@ if ($_POST["confirmnew_repo"]) {
 	echo "Oops, what did you want to do?\n";
 }
 
-close_db($db);
+$db->close();
+$db_people->close();
 
 ?>

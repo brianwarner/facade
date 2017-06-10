@@ -9,7 +9,8 @@
 */
 
 include_once "includes/db.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 $project = array();
 $tags = array();
@@ -179,5 +180,7 @@ foreach ($projects as $project) {
 	}
 }
 
-close_db($db);
+$db->close();
+$db_people->close();
+
 ?>

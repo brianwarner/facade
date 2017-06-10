@@ -13,7 +13,8 @@ $title = "Download Results";
 include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 $attribution = get_setting($db,'report_attribution');
 
@@ -167,5 +168,8 @@ if ($result->num_rows > 0) {
 }
 
 include_once "includes/footer.php";
-close_db($db);
+
+$db->close();
+$db_people->close();
+
 ?>

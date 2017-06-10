@@ -11,7 +11,8 @@
 include_once "includes/delete.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 $attribution = get_setting($db,'report_attribution');
 
@@ -252,5 +253,7 @@ if ($_GET["id"] && $_SESSION['access_granted']) {
 
 include_once "includes/footer.php";
 
-close_db($db);
+$db->close();
+$db_people->close();
+
 ?>

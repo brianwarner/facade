@@ -12,7 +12,8 @@ $title = "Manage tags";
 
 include_once "includes/header.php";
 include_once "includes/db.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 if (!$_SESSION['access_granted']) {
 	echo '<meta http-equiv="refresh" content="0;user">';
@@ -105,5 +106,8 @@ echo '</select><input type="text" id="new_tag" name="new_tag"
 	</div> <!-- .content-block -->';
 
 include_once "includes/footer.php";
+
+$db->close();
+$db_people->close();
 
 ?>

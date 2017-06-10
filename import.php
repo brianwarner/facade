@@ -12,10 +12,7 @@ include_once "includes/delete.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
 include_once "includes/scrape.php";
-$db = setup_db();
-
-include_once "includes/db.php";
-$db = setup_db();
+list($db,$db_people) = setup_db();
 
 $project_id = sanitize_input($db,$_POST["project_id"],11);
 $url = sanitize_input($db,$_POST["url"],256);
@@ -278,4 +275,6 @@ if ($project_id && $type == 'cgit' && $url) {
 	header("Location: projects?id=" . $project_id);
 }
 
+$db->close();
+$db_people->close();
 ?>

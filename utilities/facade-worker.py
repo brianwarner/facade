@@ -28,7 +28,7 @@ import datetime
 
 try:
 	imp.find_module('db')
-	from db import db,cursor
+	from db import db,cursor,db_people,cursor_people
 except:
 	sys.exit("Can't find db.py. Have you run setup.py?")
 
@@ -121,16 +121,16 @@ def discover_alias(email):
 
 # Match aliases with their canonical email
 
-	fetch_alias = "SELECT canonical FROM aliases WHERE alias='%s'" % email
+	fetch_canonical = "SELECT canonical FROM aliases WHERE alias='%s'" % email
 
-	cursor.execute(fetch_alias)
-	db.commit()
+	cursor_people.execute(fetch_canonical)
+	db_people.commit()
 
-	aliases = list(cursor)
+	canonical = list(cursor_people)
 
-	if aliases:
-		for alias in aliases:
-			return alias['canonical']
+	if canonical:
+		for email in canonical:
+			return email['canonical']
 	else:
 		return email
 
@@ -223,15 +223,16 @@ def discover_null_affiliations(attribution,email):
 
 	match_email = discover_alias(email)
 
+	print 'match: %s' % match_email
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
 		"ORDER BY start_date DESC" % match_email)
 
-	cursor.execute(find_exact_match)
-	db.commit
+	cursor_people.execute(find_exact_match)
+	db_people.commit
 
-	matches = list(cursor)
+	matches = list(cursor_people)
 
 	if not matches and match_email.find('@') < 0:
 
@@ -252,10 +253,10 @@ def discover_null_affiliations(attribution,email):
 			"WHERE domain= '%s' "
 			"ORDER BY start_date DESC" % domain)
 
-		cursor.execute(find_exact_domain)
-		db.commit()
+		cursor_people.execute(find_exact_domain)
+		db_people.commit()
 
-		matches = list(cursor)
+		matches = list(cursor_people)
 
 	if not matches:
 
@@ -267,10 +268,10 @@ def discover_null_affiliations(attribution,email):
 			"ORDER BY start_date DESC" %
 			domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
 
-		cursor.execute(find_domain)
-		db.commit()
+		cursor_people.execute(find_domain)
+		db_people.commit()
 
-		matches = list(cursor)
+		matches = list(cursor_people)
 
 	if not matches:
 
@@ -1276,4 +1277,6 @@ elapsed_time = time.time() - start_time
 print '\nCompleted in %s\n' % datetime.timedelta(seconds=int(elapsed_time))
 
 cursor.close()
+cursor_people.close()
 db.close()
+db_people.close()

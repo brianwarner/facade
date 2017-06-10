@@ -13,7 +13,8 @@ $title = "";
 include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 $report_attribution = get_setting($db,'report_attribution');
 
@@ -37,15 +38,7 @@ $result_affiliations = query_db($db,$query,'Getting affiliations');
 $start_date = new DateTime(get_setting($db,'start_date'));
 
 $length_of_time = $start_date->diff(new DateTime(date("y-m-d",time())));
-/*
-if ($end_date == 'yesterday') {
-	$end_date = new DateTime(date("Y-m-d",time()-60*60*24));
-} else {
-	$end_date = new DateTime($end_date);
-}
 
-$length_of_time = $start_date->diff($end_date);
-*/
 echo '<div class="content-block content-highlight">
 
 	<p>You are currently tracking <strong>' .
@@ -121,5 +114,7 @@ echo '</strong>.</div> <!-- .content-block, .content-highlight -->';
 
 include_once "includes/footer.php";
 
-close_db($db);
+$db->close();
+$db_people->close();
+
 ?>

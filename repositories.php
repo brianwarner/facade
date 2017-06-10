@@ -11,7 +11,8 @@
 include_once "includes/delete.php";
 include_once "includes/display.php";
 include_once "includes/db.php";
-$db = setup_db();
+
+list($db,$db_people) = setup_db();
 
 if ($_GET["repo"]) {
 
@@ -141,6 +142,7 @@ if ($_GET["repo"]) {
 
 include_once "includes/footer.php";
 
-close_db($db);
+$db->close();
+$db_people->close();
 
 ?>

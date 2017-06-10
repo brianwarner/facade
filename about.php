@@ -12,7 +12,7 @@ $title = "About Facade";
 
 include_once "includes/header.php";
 include_once "includes/db.php";
-$db = setup_db();
+list($db,$db_people) = setup_db();
 
 echo '<div class="content-block">
 
@@ -29,5 +29,6 @@ This is also a good place to ask for help.</p>
 
 include_once "includes/footer.php";
 
-close_db($db);
+$db->close();
+$db_people->close();
 ?>

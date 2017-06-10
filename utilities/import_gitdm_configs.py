@@ -55,8 +55,8 @@ def import_aliases(filename):
 				with warnings.catch_warnings():
 					warnings.simplefilter("ignore")
 
-					cursor.execute(insert)
-					db.commit()
+					cursor_people.execute(insert)
+					db_people.commit()
 
 			else:
 				print ("This file failed a basic test and appears not to be an aliases\n"
@@ -83,8 +83,8 @@ def commit_affiliation(line):
 	with warnings.catch_warnings():
 		warnings.simplefilter("ignore")
 
-		cursor.execute(insert)
-		db.commit()
+		cursor_people.execute(insert)
+		db_people.commit()
 
 def bad_config(domain,first,second,filename):
 
@@ -214,7 +214,7 @@ def usage():
 
 try:
     imp.find_module('db')
-    from db import db,cursor
+    from db import db_people,cursor_people
 except:
     sys.exit("Can't find db.py. Have you created it?")
 
