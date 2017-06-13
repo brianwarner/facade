@@ -1,9 +1,0 @@
-
-Things you need to do:
-
-1. Install mysql and the appropriate php connectors
-2. Create a database
-3. Create a user
-4. Grant that user access to the database
-5. Update the values in includes/db.php
-6. Update the values in utilities/db.py
