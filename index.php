@@ -16,6 +16,8 @@ include_once "includes/display.php";
 
 list($db,$db_people) = setup_db();
 
+include_once "includes/warnings.php";
+
 $report_attribution = get_setting($db,'report_attribution');
 
 $query = "SELECT NULL FROM projects";

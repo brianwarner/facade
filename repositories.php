@@ -27,6 +27,7 @@ if ($_GET["repo"]) {
 	$title = 'Repo: ' . $repo_url;
 
 	include_once "includes/header.php";
+	include_once "includes/warnings.php";
 
 	// Determine if a year was requested.
 	$year = 'All';
@@ -119,6 +120,7 @@ if ($_GET["repo"]) {
 
 	$title = "Tracked Repositories";
 	include_once "includes/header.php";
+	include_once "includes/warnings.php";
 
 	echo '<div class="content-block"><h2>All repositories</h2>';
 

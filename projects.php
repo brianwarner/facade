@@ -30,6 +30,7 @@ if ($_GET["id"]) {
 	$title = $project_name;
 
 	include_once "includes/header.php";
+	include_once "includes/warnings.php";
 
 	$query = "SELECT description,website FROM projects
 		WHERE id=" . $project_id;
@@ -186,6 +187,8 @@ if ($_GET["id"]) {
 
 	$title = "Tracked Projects";
 	include_once "includes/header.php";
+
+	include_once "includes/warnings.php";
 
 	$query = "SELECT * FROM projects ORDER BY name ASC";
 
