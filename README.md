@@ -21,6 +21,13 @@ Facade is licensed under GPL v2.
 1. Create a database, a user, and grant all privileges (optional).
 2. Run 'python utilities/setup.py' (can also create a database and user for you)
 
+You can optionally choose to use a different database for the affiliation and
+alias data, which maps email addresses to organizations. This is useful if you
+have a few instances of Facade, and only want to do these mappings once. It
+should go without saying that you shouldn't clear the affiliation and alias data
+during setup if you're choosing to use an external database for this, as you'll
+wipe out your hard work elsewhere.
+
 At this point, you should be able to access facade's web interface.
 
 ### Git repo setup:
@@ -57,7 +64,13 @@ unnecessary calculations.
 
 If you discover a bunch of (Unknown) affiliations, don't panic. This probably
 means you are analyzing a repo with domains that aren't in the stock domain
-mappings.  You can import config files from gitdm using the
+mappings.  You have a few options here.
+
+The easiest way is to enter the affiliation data on the People page. This
+causes Facade to rebuild affiliation data for anyone who matches the domain or
+email address.
+
+The more complicated but faster way is to import config files from gitdm using the
 import_gitdm_configs.py script in utilities/ and run Facade with the -nfr
 options to force a rebuild of affiliation data.
 
