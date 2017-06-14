@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# encoding = utf8
 
 # Copyright 2016 Brian Warner
 #
@@ -327,11 +328,11 @@ def analyze_commit(repo_id,repo_loc,commit):
 		if len(line) > 0:
 
 			if line.find('author_name:') == 0:
-				author_name = line[13:].replace("'","\\'")
+				author_name = unicode(line[13:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('author_email:') == 0:
-				author_email = line[14:].replace("'","\\'")
+				author_email = unicode(line[14:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('author_date:') == 0:
@@ -339,11 +340,11 @@ def analyze_commit(repo_id,repo_loc,commit):
 				continue
 
 			if line.find('committer_name:') == 0:
-				committer_name = line[16:].replace("'","\\'")
+				committer_name = unicode(line[16:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('committer_email:') == 0:
-				committer_email = line[17:].replace("'","\\'")
+				committer_email = unicode(line[17:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('committer_date:') == 0:
@@ -363,16 +364,16 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 			if line.find('--- a/') == 0:
 				if filename == '(Deleted) ':
-					filename = filename + line[6:].replace("'","\\'")
+					filename = unicode(filename + line[6:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('+++ b/') == 0:
 				if not filename.find('(Deleted) ') == 0:
-					filename = line[6:].replace("'","\\'")
+					filename = unicode(line[6:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('rename to ') == 0:
-				filename = line[10:].replace("'","\\'")
+				filename = unicode(line[10:].replace("'","\\'"),"utf8","replace")
 				continue
 
 			if line.find('deleted file ') == 0:
@@ -468,7 +469,6 @@ def store_commit(repos_id,commit,filename,
 	# Some systems append extra info after a second @
 	author_email = strip_extra_amp(author_email)
 	committer_email = strip_extra_amp(committer_email)
-
 	store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
 		"author_name,author_raw_email,author_email,author_date,"
 		"committer_name,committer_raw_email,committer_email,committer_date,"
@@ -774,7 +774,7 @@ def analysis():
 		trimmed_commits = existing_commits - parent_commits
 
 		log_activity('Debug','Commits to be trimmed from repo %s: %s' %
-			(repo['id'],trimmed_commits))
+			(repo['id'],len(trimmed_commits)))
 
 		for commit in trimmed_commits:
 
