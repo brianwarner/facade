@@ -51,7 +51,8 @@ def create_settings(reset=0):
 		"('report_date','committer'),"
 		"('report_attribution','author'),"
 		"('working_author','done'),"
-		"('processed_people',current_timestamp)"
+		"('affiliations_processed',current_timestamp(6)),"
+		"('aliases_processed',current_timestamp(6))"
 		% (start_date,repo_directory))
 
 	cursor.execute(initialize)
