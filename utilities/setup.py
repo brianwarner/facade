@@ -26,7 +26,8 @@ def create_settings(reset=0):
 
 	# default settings
 	start_date = "2014-01-01";
-	repo_directory = "/opt/facade/git-trees/";
+	working_dir = os.path.dirname(os.path.abspath(__file__))
+	repo_directory = os.path.join(working_dir,'../git-repos/')
 
 	if reset:
 		clear = "DROP TABLE IF EXISTS settings"
