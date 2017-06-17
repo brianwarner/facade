@@ -122,7 +122,10 @@ def discover_alias(email):
 
 # Match aliases with their canonical email
 
-	fetch_canonical = "SELECT canonical FROM aliases WHERE alias='%s'" % email
+	fetch_canonical = ("SELECT canonical "
+		"FROM aliases "
+		"WHERE alias='%s' "
+		"AND active = TRUE" % email)
 
 	cursor_people.execute(fetch_canonical)
 	db_people.commit()
@@ -225,6 +228,7 @@ def discover_null_affiliations(attribution,email):
 	find_exact_match = ("SELECT affiliation,start_date "
 		"FROM affiliations "
 		"WHERE domain = '%s' "
+		"AND active = TRUE "
 		"ORDER BY start_date DESC" % email)
 
 	cursor_people.execute(find_exact_match)
@@ -249,6 +253,7 @@ def discover_null_affiliations(attribution,email):
 		find_exact_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
 			"WHERE domain= '%s' "
+			"AND active = TRUE "
 			"ORDER BY start_date DESC" % domain)
 
 		cursor_people.execute(find_exact_domain)
@@ -263,6 +268,7 @@ def discover_null_affiliations(attribution,email):
 		find_domain = ("SELECT affiliation,start_date "
 			"FROM affiliations "
 			"WHERE domain = '%s' "
+			"AND active = TRUE "
 			"ORDER BY start_date DESC" %
 			domain[domain.rfind('.',0,domain.rfind('.',0))+1:])
 
@@ -814,6 +820,115 @@ def fill_empty_affiliations():
 
 	update_status('Filling empty affiliations')
 	log_activity('Info','Filling empty affiliations')
+
+	# Process any changes to the affiliations or aliases, and set any existing
+	# entries in analysis_data to NULL so they are filled properly.
+
+	# First, get the time we started fetching since we'll need it later
+
+	cursor.execute("SELECT current_timestamp(6) as fetched")
+
+	affiliations_fetched = cursor.fetchone()['fetched']
+
+	# Now find the last time we worked on affiliations, to figure out what's new
+
+	affiliations_processed = get_setting('affiliations_processed')
+
+	get_changed_affiliations = ("SELECT domain FROM affiliations WHERE "
+		"last_modified >= '%s'" % affiliations_processed)
+
+	cursor_people.execute(get_changed_affiliations)
+
+	changed_affiliations = list(cursor_people)
+
+	# Process any affiliations which changed since we last checked
+
+	for changed_affiliation in changed_affiliations:
+
+		log_activity('Debug','Resetting affiliation for %s' %
+			changed_affiliation['domain'])
+
+		set_author_to_null = ("UPDATE analysis_data SET author_affiliation = NULL "
+			"WHERE author_email LIKE '%%%s'" % changed_affiliation['domain'])
+
+		cursor.execute(set_author_to_null)
+		db.commit()
+
+		set_committer_to_null = ("UPDATE analysis_data SET committer_affiliation = NULL "
+			"WHERE committer_email LIKE '%%%s'" % changed_affiliation['domain'])
+
+		cursor.execute(set_committer_to_null)
+		db.commit()
+
+	# Update the last fetched date, so we know where to start next time.
+
+	update_affiliations_date = ("UPDATE settings SET value='%s' "
+		"WHERE setting = 'affiliations_processed'" % affiliations_fetched)
+
+	cursor.execute(update_affiliations_date)
+	db.commit()
+
+	# On to the aliases, now
+
+	# First, get the time we started fetching since we'll need it later
+
+	cursor.execute("SELECT current_timestamp(6) as fetched")
+
+	aliases_fetched = cursor.fetchone()['fetched']
+
+	# Now find the last time we worked on aliases, to figure out what's new
+
+	aliases_processed = get_setting('aliases_processed')
+
+	get_changed_aliases = ("SELECT alias FROM aliases WHERE "
+		"last_modified >= '%s'" % aliases_processed)
+
+	cursor_people.execute(get_changed_aliases)
+
+	changed_aliases = list(cursor_people)
+
+	# Process any aliases which changed since we last checked
+
+	for changed_alias in changed_aliases:
+
+		log_activity('Debug','Resetting affiliation for %s' %
+			changed_alias['alias'])
+
+		set_author_to_null = ("UPDATE analysis_data SET author_affiliation = NULL "
+			"WHERE author_email LIKE '%%%s'" % changed_alias['alias'])
+
+		cursor.execute(set_author_to_null)
+		db.commit()
+
+		set_committer_to_null = ("UPDATE analysis_data SET committer_affiliation = NULL "
+			"WHERE committer_email LIKE '%%%s'" % changed_alias['alias'])
+
+		cursor.execute(set_committer_to_null)
+		db.commit()
+
+		reset_author = ("UPDATE analysis_data "
+			"SET author_email = author_raw_email "
+			"WHERE author_email = '%s'" % changed_alias['alias'])
+
+		cursor.execute(reset_author)
+		db.commit
+
+		reset_committer = ("UPDATE analysis_data "
+			"SET committer_email = committer_raw_email "
+			"WHERE committer_email = '%s'" % changed_alias['alias'])
+
+		cursor.execute(reset_author)
+		db.commit
+
+	# Update the last fetched date, so we know where to start next time.
+
+	update_aliases_date = ("UPDATE settings SET value='%s' "
+		"WHERE setting = 'aliases_processed'" % aliases_fetched)
+
+	cursor.execute(update_aliases_date)
+	db.commit()
+
+	# Now rebuild the affiliation data
 
 	working_author = get_setting('working_author').replace("'","\\'")
 

@@ -50,7 +50,8 @@ def create_settings(reset=0):
 		"('log_level','Quiet'),"
 		"('report_date','committer'),"
 		"('report_attribution','author'),"
-		"('working_author','done')"
+		"('working_author','done'),"
+		"('processed_people',current_timestamp)"
 		% (start_date,repo_directory))
 
 	cursor.execute(initialize)
@@ -181,6 +182,8 @@ def create_affiliations(reset=0):
 		"domain VARCHAR (64) NOT NULL,"
 		"affiliation VARCHAR (64) NOT NULL,"
 		"start_date DATE NOT NULL DEFAULT '1970-01-01',"
+		"active BOOL NOT NULL DEFAULT TRUE,"
+		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),"
 		"UNIQUE (domain,affiliation,start_date))")
 
 	cursor_people.execute(create)
@@ -219,6 +222,8 @@ def create_aliases(reset=0):
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
 		"canonical VARCHAR(128) NOT NULL,"
 		"alias VARCHAR(128) NOT NULL,"
+		"active BOOL NOT NULL DEFAULT TRUE,"
+		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),"
 		"UNIQUE (canonical,alias))")
 
 	cursor_people.execute(create)

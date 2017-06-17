@@ -43,12 +43,12 @@ def import_aliases(filename):
 				line = line[:line.find('#')]
 
 			if safe:
+				canonical = unicode(line.split()[-1].replace("'","\\'"),"utf8","replace")
+				alias = unicode(line[:line.rfind(canonical)].strip().replace("'","\\'"),"utf8","replace")
 
-				canonical = line.split()[-1].replace("'","\\'")
-				alias = line[:line.rfind(canonical)].strip().replace("'","\\'")
-
-				insert = ("INSERT IGNORE INTO aliases (canonical,alias) VALUES "
-					"('%s','%s')" % (canonical,alias))
+				insert = ("INSERT INTO aliases (canonical,alias) VALUES "
+					"('%s','%s') "
+					"ON DUPLICATE KEY UPDATE active = TRUE" % (canonical,alias))
 
 				# Suppress warnings about duplicate entries
 
@@ -70,14 +70,17 @@ def commit_affiliation(line):
 
 	if line[2]:
 
-		insert = ("INSERT IGNORE INTO affiliations (domain,affiliation,start_date) "
-			"VALUES ('%s','%s','%s')" % (line[0],line[1],line[2]))
+		insert = ("INSERT INTO affiliations (domain,affiliation,start_date) "
+			"VALUES ('%s','%s','%s') "
+			"ON DUPLICATE KEY UPDATE active = TRUE" % (line[0],line[1],line[2]))
 
 	else:
 
-		insert = ("INSERT IGNORE INTO affiliations (domain,affiliation) "
-			"VALUES ('%s','%s')" % (line[0],line[1]))
+		insert = ("INSERT INTO affiliations (domain,affiliation) "
+			"VALUES ('%s','%s') "
+			"ON DUPLICATE KEY UPDATE active = TRUE" % (line[0],line[1]))
 
+	print insert
 	# Suppress warnings about duplicate entries
 
 	with warnings.catch_warnings():
