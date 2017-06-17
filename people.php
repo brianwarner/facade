@@ -38,7 +38,7 @@ to see changes take effect.</p> </div> <!-- .content-block -->
 
 
 // Show aliases
-$get_aliases = "SELECT * FROM aliases ORDER BY canonical ASC";
+$get_aliases = "SELECT * FROM aliases WHERE active = TRUE ORDER BY canonical ASC";
 
 $result = query_db($db_people,$get_aliases,'Fetching aliases');
 
@@ -76,7 +76,7 @@ echo '</div> <!-- .content-block --> <div class="content-block">
 
 // Show domain name mappings first
 $get_affiliations = "SELECT * FROM affiliations WHERE domain NOT LIKE '%@%'
-	ORDER BY domain ASC";
+	AND active = TRUE ORDER BY domain ASC";
 
 $result = query_db($db_people,$get_affiliations,'Fetching affiliations');
 
@@ -113,7 +113,7 @@ if ($result->num_rows > 0) {
 
 // Next show email mappings
 $get_affiliations = "SELECT * FROM affiliations WHERE domain LIKE '%@%'
-	ORDER BY domain ASC, start_date DESC";
+	AND active = TRUE ORDER BY domain ASC, start_date DESC";
 
 $result = query_db($db_people,$get_affiliations,'Fetching affiliations');
 

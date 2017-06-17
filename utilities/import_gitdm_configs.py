@@ -80,7 +80,6 @@ def commit_affiliation(line):
 			"VALUES ('%s','%s') "
 			"ON DUPLICATE KEY UPDATE active = TRUE" % (line[0],line[1]))
 
-	print insert
 	# Suppress warnings about duplicate entries
 
 	with warnings.catch_warnings():

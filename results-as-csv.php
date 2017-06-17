@@ -81,6 +81,8 @@ header('Content-Disposition: attachment; filename="facade_results.csv";');
 
 $f = fopen('php://output', 'w');
 
+fputs($f, $bom =( chr(0xEF) . chr(0xBB) . chr(0xBF) ));
+
 // Walk through the project IDs
 foreach ($projects as $project) {
 
