@@ -95,7 +95,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				meaningful in general situations.</p>
 
 				<p>This does not affect data exported as a CSV, which will
-				always contain both fields.</p>
+				always contain both fields. However, to see the changes you will
+				need to re-run facade-worker.py</p>
 
 				<p><label><input type="radio" name="date_radio" value="author"
 				id="author_date" checked="checked">Author</label></p>
@@ -113,7 +114,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				(who applied the patch).</p>
 
 				<p>This does not affect data exported as a CSV, which will
-				always contain both fields.</p>
+				always contain both fields. However, to see the changes you will
+				need to re-run facade-worker.py</p>
 
 				<p><label><input type="radio" name="attribution_radio" value="author"
 				id="author_email" checked="checked">Author</label></p>
