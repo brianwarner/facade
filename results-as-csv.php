@@ -17,6 +17,19 @@ $tags = array();
 $affiliations = array();
 
 $report_attribution = get_setting($db,'report_attribution');
+$report_date = get_setting($db,'report_date');
+
+if ($report_attribution == 'author') {
+	$tag_author = 'Author Email';
+} else {
+	$tag_author = 'Committer Email';
+}
+
+if ($report_date == 'author') {
+	$tag_date = 'Author Date';
+} else {
+	$tag_date = 'Committer Date';
+}
 
 // Handle custom dates
 if ($_GET["start"] == 'custom') {
@@ -76,7 +89,7 @@ if (isset($_GET["affiliations"])) {
 
 // Get ready for export
 $header=TRUE;
-header('Content-Type: application/csv');
+header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename="facade_results.csv";');
 
 $f = fopen('php://output', 'w');
@@ -141,8 +154,8 @@ foreach ($projects as $project) {
 
 					// Find tags that with a start_date before this row
 					$query = "SELECT id,end_date FROM special_tags
-						WHERE email = '" . str_replace("'","\'",$row["Email"]) . "'
-						AND start_date <= '" . $row["Start Date"] . "'
+						WHERE email = '" . str_replace("'","\'",$row[$tag_author]) . "'
+						AND start_date <= '" . $row[$tag_date] . "'
 						AND tag='" . $tag . "'";
 
 					$tags_result = query_db($db, $query, 'Getting tags');
@@ -150,9 +163,10 @@ foreach ($projects as $project) {
 					// Add any tags with an end_date after this row, or no end_date.
 					$add_tag = FALSE;
 					while ($tags_row = $tags_result->fetch_assoc()) {
-						if ($tags_row["end_date"] >= $row["Start Date"] ||
+						if ($tags_row["end_date"] >= $row[$tag_date] ||
 						$tags_row["end_date"] == NULL) {
 							$add_tag = TRUE;
+
 						}
 					}
 
@@ -172,7 +186,6 @@ foreach ($projects as $project) {
 				fputcsv($f, array_keys($row), ',');
 				$header=FALSE;
 			}
-
 				fputcsv($f, $row, ',');
 		}
 
