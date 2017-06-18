@@ -711,7 +711,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$projects = query_db($db,$fetch_projects,'fetching projects');
 
-	header('Content-Type: application/csv');
+	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="facade_projects.csv";');
 
 	$f = fopen('php://output', 'w');
@@ -771,7 +771,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$repos = query_db($db,$fetch_repos,'fetching repos');
 
-	header('Content-Type: application/csv');
+	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="facade_repos.csv";');
 
 	$f = fopen('php://output', 'w');
@@ -908,7 +908,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$affiliations = query_db($db_people,$fetch_affiliations,'fetching affiliations');
 
-	header('Content-Type: application/csv');
+	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="facade_affiliations.csv";');
 
 	$f = fopen('php://output', 'w');
@@ -973,7 +973,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$tags = query_db($db,$fetch_tags,'fetching tags');
 
-	header('Content-Type: application/csv');
+	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="facade_tags.csv";');
 
 	$f = fopen('php://output', 'w');
@@ -1033,7 +1033,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	$settings = query_db($db,$fetch_settings,'fetching settings');
 
-	header('Content-Type: application/csv');
+	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="facade_settings.csv";');
 
 	$f = fopen('php://output', 'w');
