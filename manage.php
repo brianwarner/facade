@@ -997,7 +997,7 @@ if ($_POST["confirmnew_repo"]) {
 		foreach ($import as $line) {
 
 			if (!$safe) {
-				if ($line[0] == 'Email' &&
+				if (strpos($line[0],'Email') &&
 					$line[1] == 'Beginning on' &&
 					$line[2] == 'Ending on' &&
 					$line[3] == 'Tag') {
