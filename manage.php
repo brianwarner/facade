@@ -1006,10 +1006,18 @@ if ($_POST["confirmnew_repo"]) {
 				}
 			} else {
 
-				$insert = "INSERT IGNORE INTO special_tags
-					(email,start_date,end_date,tag) VALUES ('" .
-					$line[0] . "','" . $line[1]  . "','" . $line[2] . "','" .
-					$line[3] . "')";
+				// Handle tags without an end date
+
+				if (!$line[2]) {
+					$insert = "INSERT IGNORE INTO special_tags
+						(email,start_date,tag) VALUES ('" .
+						$line[0] . "','" . $line[1]  . "','" . $line[3] . "')";
+				} else {
+					$insert = "INSERT IGNORE INTO special_tags
+						(email,start_date,end_date,tag) VALUES ('" .
+						$line[0] . "','" . $line[1]  . "','" . $line[2] . "','" .
+						$line[3] . "')";
+				}
 
 				query_db($db,$insert,'Importing tag');
 
