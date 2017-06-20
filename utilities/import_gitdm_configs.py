@@ -47,15 +47,15 @@ def import_aliases(filename):
 				alias = unicode(line[:line.rfind(canonical)].strip().replace("'","\\'"),"utf8","replace")
 
 				insert = ("INSERT INTO aliases (canonical,alias) VALUES "
-					"('%s','%s') "
-					"ON DUPLICATE KEY UPDATE active = TRUE" % (canonical,alias))
+					"(%s,%s) "
+					"ON DUPLICATE KEY UPDATE active = TRUE")
 
 				# Suppress warnings about duplicate entries
 
 				with warnings.catch_warnings():
 					warnings.simplefilter("ignore")
 
-					cursor_people.execute(insert)
+					cursor_people.execute(insert, (canonical,alias))
 					db_people.commit()
 
 			else:
@@ -68,24 +68,29 @@ def commit_affiliation(line):
 
 # Helper function to quickly commit a line to the db.
 
+	values = ()
 	if line[2]:
 
 		insert = ("INSERT INTO affiliations (domain,affiliation,start_date) "
-			"VALUES ('%s','%s','%s') "
-			"ON DUPLICATE KEY UPDATE active = TRUE" % (line[0],line[1],line[2]))
+			"VALUES (%s,%s,%s) "
+			"ON DUPLICATE KEY UPDATE active = TRUE")
+
+		values = (line[0],line[1],line[2])
 
 	else:
 
 		insert = ("INSERT INTO affiliations (domain,affiliation) "
-			"VALUES ('%s','%s') "
-			"ON DUPLICATE KEY UPDATE active = TRUE" % (line[0],line[1]))
+			"VALUES (%s,%s) "
+			"ON DUPLICATE KEY UPDATE active = TRUE")
+
+		values = (line[0],line[1])
 
 	# Suppress warnings about duplicate entries
 
 	with warnings.catch_warnings():
 		warnings.simplefilter("ignore")
 
-		cursor_people.execute(insert)
+		cursor_people.execute(insert, values)
 		db_people.commit()
 
 def bad_config(domain,first,second,filename):
@@ -215,10 +220,10 @@ def usage():
 		"	python import_gitdm_configs.py -a <filename> -e <filename>\n\n")
 
 try:
-    imp.find_module('db')
-    from db import db_people,cursor_people
+	imp.find_module('db')
+	from db import db_people,cursor_people
 except:
-    sys.exit("Can't find db.py. Have you created it?")
+	sys.exit("Can't find db.py. Have you created it?")
 
 if not os.path.isfile('db.py'):
 	sys.exit("It appears you haven't configured db.py yet. Please do this.")
