@@ -716,6 +716,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	$f = fopen('php://output', 'w');
 
+	fprintf($f, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 	fputcsv($f, ['Project ID','Name','Description','Website'],',');
 
@@ -1038,6 +1039,8 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	header('Content-Disposition: attachment; filename="facade_settings.csv";');
 
 	$f = fopen('php://output', 'w');
+
+	fprintf($f, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 	fputcsv($f, ['Setting','Value'],',');
 
