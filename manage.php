@@ -16,13 +16,13 @@ list($db,$db_people) = setup_db();
 session_start();
 
 // Protect against unauthorized access
-if (!$_SESSION['access_granted']) {
+if (!ISSET($_SESSION['access_granted'])) {
 	echo '<meta http-equiv="refresh" content="0;/user">';
 	die;
 }
 
 
-if ($_POST["confirmnew_repo"]) {
+if (ISSET($_POST["confirmnew_repo"])) {
 
 	$title = "Add a git repo";
 	include_once "includes/header.php";
@@ -48,7 +48,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_repo"]) {
+} elseif (ISSET($_POST["new_repo"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -64,7 +64,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["confirmdelete_repo"]) {
+} elseif (ISSET($_POST["confirmdelete_repo"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -89,7 +89,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["delete_repo"]) {
+} elseif (ISSET($_POST["delete_repo"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -97,7 +97,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["confirmnew_project"]) {
+} elseif (ISSET($_POST["confirmnew_project"])) {
 
 	$title = "Add a new project";
 	include_once "includes/header.php";
@@ -116,7 +116,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_project"]) {
+} elseif (ISSET($_POST["new_project"])) {
 
 	$project_name = sanitize_input($db,$_POST["project_name"],64);
 	$project_website = sanitize_input($db,$_POST["project_website"],64);
@@ -133,7 +133,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects");
 
-} elseif ($_POST["confirmedit_project"]) {
+} elseif (ISSET($_POST["confirmedit_project"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -176,7 +176,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["edit_name"]) {
+} elseif (ISSET($_POST["edit_name"])) {
 
 	$project_id = sanitize_input($db,$_POST["id"],11);
 
@@ -193,7 +193,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["edit_description"]) {
+} elseif (ISSET($_POST["edit_description"])) {
 
 	$project_id = sanitize_input($db,$_POST["id"],11);
 
@@ -206,7 +206,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["edit_website"]) {
+} elseif (ISSET($_POST["edit_website"])) {
 
 	$project_id = sanitize_input($db,$_POST["id"],11);
 
@@ -219,7 +219,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["confirmdelete_project"]) {
+} elseif (ISSET($_POST["confirmdelete_project"])) {
 
 	$title = "Deleting project";
 	include_once "includes/header.php";
@@ -241,13 +241,13 @@ if ($_POST["confirmnew_repo"]) {
 		</form></p>';
 
 
-} elseif ($_POST["delete_project"]) {
+} elseif (ISSET($_POST["delete_project"])) {
 
 	delete_project ($db,sanitize_input($db,$_POST["project_id"],11));
 
 	header("Location: projects");
 
-} elseif ($_POST["confirmnew_excludedomain"]) {
+} elseif (ISSET($_POST["confirmnew_excludedomain"])) {
 
 	$title = "Exclude a domain from analysis and results";
 	include_once "includes/header.php";
@@ -266,7 +266,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_excludedomain"]) {
+} elseif (ISSET($_POST["new_excludedomain"])) {
 
 	// add a new domain to the exclude list and return to the project details pages.
 
@@ -285,7 +285,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["delete_excludedomain"]) {
+} elseif (ISSET($_POST["delete_excludedomain"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 	$exclude_id = sanitize_input($db,$_POST["exclude_id"],11);
@@ -295,7 +295,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["confirmnew_excludeemail"]) {
+} elseif (ISSET($_POST["confirmnew_excludeemail"])) {
 
 	$title = "Exclude an email from analysis and results";
 	include_once "includes/header.php";
@@ -313,7 +313,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_excludeemail"]) {
+} elseif (ISSET($_POST["new_excludeemail"])) {
 
 	// add a new email to the exclude list and return to the project details pages.
 
@@ -332,7 +332,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["delete_excludeemail"]) {
+} elseif (ISSET($_POST["delete_excludeemail"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 	$exclude_id = sanitize_input($db,$_POST["exclude_id"],11);
@@ -342,7 +342,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["add_tag"]) {
+} elseif (ISSET($_POST["add_tag"])) {
 
 	$tag = sanitize_input($db,$_POST["select_tag"],64);
 	$start_date = sanitize_input($db,$_POST["start_date"],10);
@@ -386,7 +386,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: tags");
 
-} elseif ($_POST["delete_tag"]) {
+} elseif (ISSET($_POST["delete_tag"])) {
 
 	$tag_id = sanitize_input($db,$_POST["id"],11);
 
@@ -397,7 +397,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: tags");
 
-} elseif ($_POST["confirmimport_cgit"]) {
+} elseif (ISSET($_POST["confirmimport_cgit"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -426,7 +426,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once 'includes/footer.php';
 
-} elseif ($_POST["confirmimport_gerrit"]) {
+} elseif (ISSET($_POST["confirmimport_gerrit"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -483,7 +483,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once 'includes/footer.php';
 
-} elseif ($_POST["confirmimport_github"]) {
+} elseif (ISSET($_POST["confirmimport_github"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -526,7 +526,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once 'includes/footer.php';
 
-} elseif ($_POST["import_repos"]) {
+} elseif (ISSET($_POST["import_repos"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
@@ -548,7 +548,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects?id=" . $project_id);
 
-} elseif ($_POST["confirmnew_alias"]) {
+} elseif (ISSET($_POST["confirmnew_alias"])) {
 
 	$title = "Add an alias";
 	include_once "includes/header.php";
@@ -579,7 +579,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_alias"]) {
+} elseif (ISSET($_POST["new_alias"])) {
 
 	$alias = sanitize_input($db,$_POST['alias'],64);
 	$canonical = sanitize_input($db,$_POST['canonical'],64);
@@ -598,7 +598,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["delete_alias"]) {
+} elseif (ISSET($_POST["delete_alias"])) {
 
 	$id = sanitize_input($db,$_POST['id'],11);
 
@@ -614,7 +614,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["confirmnew_affiliation"]) {
+} elseif (ISSET($_POST["confirmnew_affiliation"])) {
 
 	$title = "Add an affiliation";
 	include_once "includes/header.php";
@@ -661,7 +661,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	include_once "includes/footer.php";
 
-} elseif ($_POST["new_affiliation"]) {
+} elseif (ISSET($_POST["new_affiliation"])) {
 
 	$domain = sanitize_input($db,$_POST['domain'],64);
 	$affiliation = sanitize_input($db,$_POST['affiliation'],64);
@@ -690,7 +690,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["delete_affiliation"]) {
+} elseif (ISSET($_POST["delete_affiliation"])) {
 
 	$id = sanitize_input($db,$_POST['id'],11);
 
@@ -705,7 +705,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["export_projects_csv"]) {
+} elseif (ISSET($_POST["export_projects_csv"])) {
 
 	$fetch_projects = "SELECT id,name,description,website FROM projects";
 
@@ -723,7 +723,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$project,',');
 	}
 
-} elseif ($_POST["import_projects_csv"]) {
+} elseif (ISSET($_POST["import_projects_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -765,7 +765,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: projects");
 
-} elseif ($_POST["export_repos_csv"]) {
+} elseif (ISSET($_POST["export_repos_csv"])) {
 
 	$fetch_repos = "SELECT id,projects_id,git,path,name,status FROM repos";
 
@@ -784,7 +784,8 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$repo,',');
 	}
 
-} elseif ($_POST["import_repos_csv"] || $_POST["import_clone_repos_csv"]) {
+} elseif (ISSET($_POST["import_repos_csv"]) ||
+	ISSET($_POST["import_clone_repos_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -844,7 +845,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: repositories");
 
-} elseif ($_POST["export_aliases_csv"]) {
+} elseif (ISSET($_POST["export_aliases_csv"])) {
 
 	// Only export active aliases. When imported, they'll be active by default.
 
@@ -865,7 +866,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$alias,',');
 	}
 
-} elseif ($_POST["import_aliases_csv"]) {
+} elseif (ISSET($_POST["import_aliases_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -899,7 +900,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["export_affiliations_csv"]) {
+} elseif (ISSET($_POST["export_affiliations_csv"])) {
 
 	// Only export active affiliations. When imported, they'll be active by default.
 
@@ -921,7 +922,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$affiliation,',');
 	}
 
-} elseif ($_POST["import_affiliations_csv"]) {
+} elseif (ISSET($_POST["import_affiliations_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -967,7 +968,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: people");
 
-} elseif ($_POST["export_tags_csv"]) {
+} elseif (ISSET($_POST["export_tags_csv"])) {
 
 	$fetch_tags = "SELECT email,start_date,end_date,tag FROM special_tags";
 
@@ -986,7 +987,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$tag,',');
 	}
 
-} elseif ($_POST["import_tags_csv"]) {
+} elseif (ISSET($_POST["import_tags_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
@@ -1027,7 +1028,7 @@ if ($_POST["confirmnew_repo"]) {
 
 	header("Location: tags");
 
-} elseif ($_POST["export_settings_csv"]) {
+} elseif (ISSET($_POST["export_settings_csv"])) {
 
 	$fetch_settings = "SELECT setting,value FROM settings";
 
@@ -1044,7 +1045,7 @@ if ($_POST["confirmnew_repo"]) {
 		fputcsv($f,$setting,',');
 	}
 
-} elseif ($_POST["import_settings_csv"]) {
+} elseif (ISSET($_POST["import_settings_csv"])) {
 
 	if ($_FILES['import_file']['error'] == 0) {
 
