@@ -903,7 +903,7 @@ def fill_empty_affiliations():
 			"SET committer_email = %s "
 			"WHERE committer_raw_email = %s")
 
-		cursor.execute(reset_committer, (discover_alias(changed_alias['alias'],changed_alias['alias'])))
+		cursor.execute(reset_committer, (discover_alias(changed_alias['alias']),changed_alias['alias']))
 		db.commit
 
 	# Update the last fetched date, so we know where to start next time.
