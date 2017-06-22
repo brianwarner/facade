@@ -73,7 +73,8 @@ def create_repos_fetch_log(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(128) NOT NULL,"
-		"date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
+		"date TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
+		"INDEX (repos_id,status))")
 
 	cursor.execute(create)
 	db.commit()
@@ -91,7 +92,8 @@ def create_analysis_log(reset=0):
 	create = ("CREATE TABLE IF NOT EXISTS analysis_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
 		"status VARCHAR(128) NOT NULL,"
-		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
+		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
+		"INDEX (repos_id))")
 
 	cursor.execute(create)
 	db.commit()
@@ -185,7 +187,8 @@ def create_affiliations(reset=0):
 		"start_date DATE NOT NULL DEFAULT '1970-01-01',"
 		"active BOOL NOT NULL DEFAULT TRUE,"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),"
-		"UNIQUE (domain,affiliation,start_date))")
+		"UNIQUE (domain,affiliation,start_date),"
+		"INDEX (domain,active))")
 
 	cursor_people.execute(create)
 	db_people.commit()
@@ -225,7 +228,8 @@ def create_aliases(reset=0):
 		"alias VARCHAR(128) NOT NULL,"
 		"active BOOL NOT NULL DEFAULT TRUE,"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),"
-		"UNIQUE (canonical,alias))")
+		"UNIQUE (canonical,alias),"
+		"INDEX (alias,active))")
 
 	cursor_people.execute(create)
 	db_people.commit()
@@ -311,7 +315,14 @@ def create_analysis(reset=0):
 		"removed INT UNSIGNED NOT NULL,"
 		"whitespace INT UNSIGNED NOT NULL,"
 		"filename VARCHAR(4096) NOT NULL,"
-		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6))")
+		"date_attempted TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
+		"INDEX (author_email,author_affiliation,author_date),"
+		"INDEX (committer_email,committer_affiliation,committer_date),"
+		"INDEX (repos_id,commit),"
+		"INDEX (author_raw_email),"
+		"INDEX (committer_raw_email),"
+		"INDEX (author_affiliation),"
+		"INDEX (committer_affiliation))")
 
 	cursor.execute(create)
 	db.commit()
@@ -334,7 +345,8 @@ def create_unknown_caches(reset=0):
 		"projects_id INT UNSIGNED NOT NULL,"
 		"email VARCHAR(128) NOT NULL,"
 		"domain VARCHAR(128),"
-		"added BIGINT UNSIGNED NOT NULL)")
+		"added BIGINT UNSIGNED NOT NULL,"
+		"INDEX (type,projects_id))")
 
 	cursor.execute(create)
 	db.commit()
@@ -365,7 +377,11 @@ def create_web_caches(reset=0):
 		"removed BIGINT UNSIGNED NOT NULL,"
 		"whitespace BIGINT UNSIGNED NOT NULL,"
 		"files BIGINT UNSIGNED NOT NULL,"
-		"patches BIGINT UNSIGNED NOT NULL)")
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX (projects_id,year,affiliation),"
+		"INDEX (projects_id,year,email),"
+		"INDEX (projects_id,affiliation),"
+		"INDEX (projects_id,email))")
 
 	cursor.execute(create)
 	db.commit()
@@ -387,7 +403,9 @@ def create_web_caches(reset=0):
 		"removed BIGINT UNSIGNED NOT NULL,"
 		"whitespace BIGINT UNSIGNED NOT NULL,"
 		"files BIGINT UNSIGNED NOT NULL,"
-		"patches BIGINT UNSIGNED NOT NULL)")
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX (projects_id,affiliation),"
+		"INDEX (projects_id,email))")
 
 	cursor.execute(create)
 	db.commit()
@@ -410,7 +428,11 @@ def create_web_caches(reset=0):
 		"removed BIGINT UNSIGNED NOT NULL,"
 		"whitespace BIGINT UNSIGNED NOT NULL,"
 		"files BIGINT UNSIGNED NOT NULL,"
-		"patches BIGINT UNSIGNED NOT NULL)")
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX (repos_id,year,affiliation),"
+		"INDEX (repos_id,year,email),"
+		"INDEX (repos_id,affiliation),"
+		"INDEX (repos_id,email))")
 
 	cursor.execute(create)
 	db.commit()
@@ -432,7 +454,9 @@ def create_web_caches(reset=0):
 		"removed BIGINT UNSIGNED NOT NULL,"
 		"whitespace BIGINT UNSIGNED NOT NULL,"
 		"files BIGINT UNSIGNED NOT NULL,"
-		"patches BIGINT UNSIGNED NOT NULL)")
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX (repos_id,affiliation),"
+		"INDEX (repos_id,email))")
 
 	cursor.execute(create)
 	db.commit()
