@@ -103,7 +103,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 				echo '<h3>Whitespace changes by ';
             } elseif ($stat == 'patches') {
                 echo '<h3>Patched landed by ';
-            } elseif ($stat == 'filees') {
+            } elseif ($stat == 'files') {
                 echo '<h3>Files changed by ';
             } else {
                 echo '<h3>Lines of code added by ';
@@ -396,8 +396,8 @@ function list_repos ($db,$project_id) {
 
 			$row_repo_log = $result_repo_log->fetch_assoc();
 
-			if ($row_repo_log["date_attempted"]) {
-				$date_attempted = strtotime($row_repo_log["date_attempted"]);
+			if ($row_repo_log["date"]) {
+				$date_attempted = strtotime($row_repo_log["date"]);
 				echo '<span class="detail-text">Last successful pull at<br>' .
 					date("H:i", $date_attempted) . ' on ' .
 					date("M j, Y", $date_attempted). '</span>';
@@ -408,7 +408,6 @@ function list_repos ($db,$project_id) {
 			if ($row_repo['status'] == "Delete") {
 				echo '<br><span style="color:red">Marked for removal</span>';
 			}
-
 
 			echo '</div><!-- .detail -->
 				</td>

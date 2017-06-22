@@ -26,16 +26,21 @@ $result_projects = query_db($db,$query,'Getting number of projects');
 $query = "SELECT NULL FROM repos";
 $result_repos = query_db($db,$query,'Getting number of repos');
 
-$query = "SELECT DISTINCT " . $report_attribution . "_email FROM analysis_data";
+$query = "SELECT COUNT(DISTINCT email) AS total
+	FROM project_annual_cache";
 $result_email = query_db($db,$query,'Getting number of developers');
+$emails = $result_email->fetch_assoc();
 
-$query = "SELECT SUM(added) FROM analysis_data";
+$query = "SELECT SUM(added) AS total
+	FROM project_annual_cache";
 $result_added = query_db($db,$query,'Getting lines of code');
 $added = $result_added->fetch_assoc();
 
-$query = "SELECT DISTINCT " . $report_attribution . "_affiliation " .
-	"FROM analysis_data WHERE " . $report_attribution . "_affiliation != '(Unknown)'";
+$query = "SELECT COUNT(DISTINCT affiliation) AS total
+	FROM project_annual_cache
+	WHERE affiliation != '(Unknown)'";
 $result_affiliations = query_db($db,$query,'Getting affiliations');
+$affiliations = $result_affiliations->fetch_assoc();
 
 $start_date = new DateTime(get_setting($db,'start_date'));
 
@@ -44,23 +49,23 @@ $length_of_time = $start_date->diff(new DateTime(date("y-m-d",time())));
 echo '<div class="content-block content-highlight">
 
 	<p>You are currently tracking <strong>' .
-	number_format($added['SUM(added)']) . ' line';
+	number_format($added['total']) . ' line';
 
-if ($added['SUM(added)'] != 1) {
+if ($added['total'] != 1) {
 	echo 's';
 }
 
 echo ' of code</strong>, committed by <strong>' .
-	number_format($result_email->num_rows) . ' developer';
+	number_format($emails['total']) . ' developer';
 
-if ($result_email->num_rows != 1) {
+if ($emails['total'] != 1) {
 	echo 's';
 }
 
 echo '</strong>,<br>from <strong>' .
-	number_format($result_affiliations->num_rows) . ' known organization';
+	number_format($affiliations['total']) . ' known organization';
 
-if ($result_affiliations->num_rows != 1) {
+if ($affiliations['total'] != 1) {
 	echo 's';
 }
 
@@ -78,11 +83,7 @@ if ($result_projects->num_rows != 1) {
 	echo 's';
 }
 
-echo '</strong><br>over ';
-
-if (get_setting($db,'end_date') == 'yesterday') {
-	echo 'the last ';
-}
+echo '</strong><br>over the last ';
 
 if ($length_of_time->y) {
 
