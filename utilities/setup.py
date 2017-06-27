@@ -17,6 +17,7 @@ import bcrypt
 from string import Template
 import string
 import random
+import warnings
 
 #### Settings table ####
 
@@ -30,10 +31,16 @@ def create_settings(reset=0):
 	repo_directory = os.path.join(working_dir,'../git-repos/')
 
 	if reset:
+
 		clear = "DROP TABLE IF EXISTS settings"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS settings ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -67,8 +74,13 @@ def create_repos_fetch_log(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS repos_fetch_log"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repos_fetch_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
@@ -86,8 +98,13 @@ def create_analysis_log(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS analysis_log"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS analysis_log ("
 		"repos_id INT UNSIGNED NOT NULL,"
@@ -106,8 +123,13 @@ def create_utility_log(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS utility_log"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS utility_log ("
 		"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -127,8 +149,13 @@ def create_projects(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS projects"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS projects ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -151,8 +178,13 @@ def create_repos(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS repos"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repos ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -177,8 +209,13 @@ def create_affiliations(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS affiliations"
 
-		cursor_people.execute(clear)
-		db_people.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor_people.execute(clear)
+			db_people.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS affiliations ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -219,8 +256,13 @@ def create_aliases(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS aliases"
 
-		cursor_people.execute(clear)
-		db_people.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor_people.execute(clear)
+			db_people.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS aliases ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -250,8 +292,13 @@ def create_excludes(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS exclude"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS exclude ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -272,8 +319,13 @@ def create_special_tags(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS special_tags"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS special_tags ("
 		"id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -295,8 +347,13 @@ def create_analysis(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS analysis_data"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS analysis_data ("
 		"repos_id INT UNSIGNED NOT NULL,"
@@ -337,8 +394,13 @@ def create_unknown_caches(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS unknown_cache"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS unknown_cache ("
 		"type VARCHAR(10) NOT NULL,"
@@ -364,8 +426,13 @@ def create_web_caches(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS project_monthly_cache"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS project_monthly_cache ("
 		"projects_id INT UNSIGNED NOT NULL,"
@@ -391,8 +458,13 @@ def create_web_caches(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS project_annual_cache"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS project_annual_cache ("
 		"projects_id INT UNSIGNED NOT NULL,"
@@ -415,8 +487,13 @@ def create_web_caches(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS repo_monthly_cache"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_monthly_cache ("
 		"repos_id INT UNSIGNED NOT NULL,"
@@ -442,8 +519,13 @@ def create_web_caches(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS repo_annual_cache"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 	create = ("CREATE TABLE IF NOT EXISTS repo_annual_cache ("
 		"repos_id INT UNSIGNED NOT NULL,"
@@ -470,13 +552,23 @@ def create_auth(reset=0):
 	if reset:
 		clear = "DROP TABLE IF EXISTS auth"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 		clear = "DROP TABLE IF EXISTS auth_history"
 
-		cursor.execute(clear)
-		db.commit()
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
 
 
 	create = ("CREATE TABLE IF NOT EXISTS auth ("
