@@ -16,8 +16,11 @@ and include the following in a GitHub issue:
  - The exact error message
  - The previous 10 lines of output
 
-5) If something's confusing or broken, please come find me.
+5) Even under the best of circumstances, analyses can take a long time. We keep
+track of progress and commit changes to the database often, so that if the
+script exits mid-run, we don't have to start back at the beginning. Please keep
+this in mind if you're proposing changes to facade-worker.py.
 
-Brian Warner
-brian@bdwarner.com
-@RealBrianWarner
+6) If something's confusing or broken, please come find me.
+
+Brian
