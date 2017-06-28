@@ -18,8 +18,8 @@ Facade is licensed under Apache 2.0.
 
 ### Mysql setup:
 
-1. Create a database, a user, and grant all privileges (optional, or Facade can
-do this for you during setup if you have the root mysql password).
+1. [Optional] Create a database, a user, and grant all privileges (or Facade can
+do this for you during setup, if you have the root mysql password).
 2. Run 'python utilities/setup.py'
 
 You can optionally choose to use a different database for the affiliation and
