@@ -964,7 +964,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 				} else {
 
-				$insert = "INSERT IGNORE INTO affiliations
+				$insert = "INSERT INTO affiliations
 					(domain,affiliation) VALUES ('" .
 					$line[0] . "','" . $line[1] . "')
 					ON DUPLICATE KEY UPDATE active = TRUE";
