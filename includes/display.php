@@ -51,11 +51,11 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 	}
 
 	if ($affiliation != 'All') {
-		$affiliation_clause = "affiliation = '" . $affiliation . "' AND ";
+		$affiliation_clause = "affiliation = '" . $db->real_escape_string($affiliation) . "' AND ";
 	}
 
 	if ($email != 'All') {
-		$email_clause = "email = '" . $email . "' AND ";
+		$email_clause = "email = '" . $db->real_escape_string($email) . "' AND ";
 	}
 
 	if ($stat == 'contributors') {
@@ -182,7 +182,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 				$period . " AS period
 				FROM " . $cache_table . "
 				WHERE " . $year_clause . $scope . "s_id=" . $id . "
-				AND " . $type . "='" . $list[$type] . "'
+				AND " . $type . "='" . $db->real_escape_string($list[$type]) . "'
 				GROUP BY period ORDER BY period ASC";
 
 			$result_data = query_db($db,$query,"Get data");
@@ -220,7 +220,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 				$query = "SELECT " . $stat_clause . " AS stat
 					FROM " . $cache_table . "
 					WHERE " . $year_clause . $scope . "s_id=" . $id . "
-					AND " . $type . "='" . $list[$type] . "'";
+					AND " . $type . "='" . $db->real_escape_string($list[$type]) . "'";
 
 				$result_contribs = query_db($db,$query,"Get data");
 
