@@ -7,7 +7,7 @@ using a web interface, and provides some basic data summaries.  For more
 advanced analysis, you can export the contributor data as a CSV.  While there is
 basic authentication, it's probably best to run it on a private machine.
 
-Facade is licensed under GPL v2.
+Facade is licensed under Apache 2.0.
 
 ### Server setup:
 
@@ -19,7 +19,7 @@ Facade is licensed under GPL v2.
 ### Mysql setup:
 
 1. Create a database, a user, and grant all privileges (optional, or Facade can
-do it for you during setup if you have the root mysql password).
+do this for you during setup if you have the root mysql password).
 2. Run 'python utilities/setup.py'
 
 You can optionally choose to use a different database for the affiliation and
@@ -50,6 +50,9 @@ everything on the spot.
 
 ### Some tips and tricks
 
+Facade is known to work on Linux Mint 18, with Apache 2.4.18, Python 2.7.12, PHP
+7.0.18, and mysql 5.7.17. For best results, try these versions (or higher).
+
 Facade works by cloning a git repo, calculating the parents of HEAD (bounded by
 the start date), and scraping each patch for statistics. It calculates lines
 added and removed, whitespace changes, patch counts, and unique contributors
@@ -58,12 +61,12 @@ the parents and trims any commits that have disappeared (for example, if the
 start date changes or something was reverted) or that were introduced (new
 commits or a freshly-merged branch).
 
-facade-worker.py will not run if it thinks a previous instance is still
-running.  This could happen when you're doing the initial clone and building of
-data for large repos (like the kernel) or if you have a cron job running
-facade-worker.py too frequently.  If for some reason facade-worker.py fails and
-exits early, you will need to run reset-status.py before it will run again.  You
-may also want to decrease the frequency of your cron job.
+facade-worker.py will not run if it thinks a previous instance is still running.
+This could happen when you're doing the initial clone and building of data for
+large repos (like the kernel) or if you have a cron job running facade-worker.py
+too frequently.  If for some reason facade-worker.py fails and exits early, you
+will need to run reset-status.py before it will run again.  You may also want to
+decrease the frequency of your cron job.
 
 The command line options for facade-worker.py are documented, and you can run
 the various parts of the analysis separately. Use the -h flag to find out what
@@ -81,8 +84,8 @@ mappings.  You have a few options here:
 causes Facade to rebuild affiliation data for anyone who matches the domain or
 email address.
 
-2. The more complicated but faster way is to import config files from gitdm using the
-import_gitdm_configs.py script in utilities/
+2. The more complicated but faster way is to import config files from gitdm
+using the import_gitdm_configs.py script in utilities/
 
 After you do one of the two, you MUST run facade-worker.py at least once for the
 changes to be reflected in the web UI.
