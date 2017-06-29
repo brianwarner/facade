@@ -45,8 +45,6 @@ function delete_repository ($db,$repo_id) {
 
 		query_db($db,$query,"Removing uninitialized repo");
 
-		echo '<div class="info">Repo "' . $name . '" removed.</div>';
-
 	} else {
 		// Clear analysis data, mark for deletion so facade-worker.py removes files
 
@@ -60,7 +58,6 @@ function delete_repository ($db,$repo_id) {
 
 		query_db($db,$query,"Marking repo for deletion with ID ". $repo_id);
 
-		echo '<div class="info">Repo "' . $name . '" marked for deletion.</div>';
 	}
 }
 
@@ -95,8 +92,6 @@ function delete_project ($db,$project_id) {
 		WHERE id=" . $project_id;
 
 	query_db($db,$query,"Deleting project with ID " . $project_id);
-
-	echo '<div class="info">Project "' . $name . '" deleted.</div>';
 
 }
 
