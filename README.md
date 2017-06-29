@@ -12,14 +12,18 @@ Facade is licensed under Apache 2.0.
 ### Server setup:
 
 1. Install Apache, PHP, Python, and Mysql. On Debian, run install_deps.sh
+
 2. Make sure mod_php and mod_rewrite are enabled.
+
 3. Change Overrides None to Overrides All in your site configuration.
+
 4. Move the Facade files to your webroot.
 
 ### Mysql setup:
 
 1. [Optional] Create a database, a user, and grant all privileges (or Facade can
 do this for you during setup, if you have the root mysql password).
+
 2. Run 'python utilities/setup.py'
 
 You can optionally choose to use a different database for the affiliation and
@@ -35,15 +39,16 @@ At this point, you should be able to access facade's web interface.
 
 1. By default, Facade will clone git repos into its own directory. You can
 change this in the web configuration.
+
 2. Ensure the user account that will run facade-worker.py has r/w permissions.
 
 ### Worker script setup:
 
-Set up a cron job to run utilities/facade-worker.py daily.  It can run more
-or less often, and will generally Do The Right Thing to get caught up on
-analysis data.  The first run is very resource intensive, because it must scrape
-every commit.  After that it'll detect the commits it hasn't already processed,
-and just scrape those.  Things get much faster at that point.
+Set up a cron job to run utilities/facade-worker.py daily.  It can run more or
+less often, and will generally Do The Right Thing to get caught up on analysis
+data.  The first run is very resource intensive, because it must scrape every
+commit.  After that it'll detect the commits it hasn't already processed, and
+just scrape those.  Things get much faster at that point.
 
 You can also just run facade-worker.py whenever you want, and it'll update
 everything on the spot.
@@ -109,6 +114,28 @@ Finally, you can choose whether you want statistics on the web UI organized by
 author or committer email, and by author or committer date. The default is
 author email and committer date, but you can change it up on the configuration
 page. You'll need to run facade-worker.py at least once to see the changes.
+
+### I think I found a problem
+
+It's entirely possible. The most likely symptom is that facade-worker.py appears
+to run forever. If this happens, you'll need to run utilities/reset-status.py. I
+also recommend you set logging to "Debug" and run facade-worker.py at least once
+from the terminal. This will give you a lot more info about what went wrong.
+
+Here are a few known situations where Facade doesn't do so well:
+
+1. A git repo requires authentication. facade-worker.py will just wait for a
+username and password. I have not yet found a workaround to bypass this, besides
+running the script manually.
+
+2. A git pull results in a merge. Again, facade-worker.py will just wait for you
+to enter a merge commit message. I have not found a fix for this yet either.
+
+3. Wonky characters and mangled fields in the commit message. Every time I think
+I've handled all possible forms of brokenness, someone shows up with an
+apostrophe in their email address or some weird unicode character as their @, or
+whatever. Please file an issue when you find an unhandled corner case, so I can
+address it.
 
 I hope this is helpful to you.  Apologies in advance for inconsistent coding
 styles or cumbersome logic.  Contributions and fixes are welcomed!
