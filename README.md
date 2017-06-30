@@ -7,51 +7,11 @@ using a web interface, and provides some basic data summaries.  For more
 advanced analysis, you can export the contributor data as a CSV.  While there is
 basic authentication, it's probably best to run it on a private machine.
 
+To get up and running quickly, check out the 
+<a href="https://github.com/brianwarner/facade/wiki/Getting-started">Getting
+Started</a> guide.
+
 Facade is licensed under Apache 2.0.
-
-### Server setup:
-
-1. Install Apache, PHP, Python, and Mysql. On Debian, run install_deps.sh
-
-2. Make sure mod_php and mod_rewrite are enabled.
-
-3. Change Overrides None to Overrides All in your site configuration.
-
-4. Move the Facade files to your webroot.
-
-### Mysql setup:
-
-1. [Optional] Create a database, a user, and grant all privileges (or Facade can
-do this for you during setup, if you have the root mysql password).
-
-2. Run 'python utilities/setup.py'
-
-You can optionally choose to use a different database for the affiliation and
-alias data, which maps email addresses to organizations. This is useful if you
-have a few instances of Facade, and only want to do these mappings once. It
-should go without saying that you shouldn't clear the affiliation and alias data
-during setup if you're choosing to use an external database for this, as you'll
-wipe out your hard work elsewhere.
-
-At this point, you should be able to access facade's web interface.
-
-### Git repo setup:
-
-1. By default, Facade will clone git repos into its own directory. You can
-change this in the web configuration.
-
-2. Ensure the user account that will run facade-worker.py has r/w permissions.
-
-### Worker script setup:
-
-Set up a cron job to run utilities/facade-worker.py daily.  It can run more or
-less often, and will generally Do The Right Thing to get caught up on analysis
-data.  The first run is very resource intensive, because it must scrape every
-commit.  After that it'll detect the commits it hasn't already processed, and
-just scrape those.  Things get much faster at that point.
-
-You can also just run facade-worker.py whenever you want, and it'll update
-everything on the spot.
 
 ### Some tips and tricks
 
