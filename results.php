@@ -31,7 +31,7 @@ include_once "includes/warnings.php";
 $attribution = get_setting($db,'report_attribution');
 
 // Make sure there is data to export
-$query = "SELECT NULL from analysis_data";
+$query = "SELECT NULL FROM analysis_data LIMIT 1";
 $result = query_db($db,$query,'Checking if analysis has been run');
 
 // Make sure the data isn't changing
