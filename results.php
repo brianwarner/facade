@@ -21,10 +21,10 @@
 $title = "Download Results";
 
 include_once "includes/db.php";
-include_once "includes/header.php";
 include_once "includes/display.php";
-
 list($db,$db_people) = setup_db();
+
+include_once "includes/header.php";
 
 include_once "includes/warnings.php";
 

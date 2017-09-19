@@ -20,10 +20,10 @@
 
 $title = "";
 
-include_once 'includes/header.php';
 include_once 'includes/db.php';
-
 list($db,$db_people) = setup_db();
+
+include_once 'includes/header.php';
 
 $user = $_SESSION['user'];
 

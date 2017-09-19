@@ -20,11 +20,11 @@
 
 $title = "Affiliations and Aliases";
 
-include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-
 list($db,$db_people) = setup_db();
+
+include_once "includes/header.php";
 
 // Protect against unauthorized access
 if (!$_SESSION['access_granted']) {

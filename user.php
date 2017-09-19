@@ -20,11 +20,11 @@
 
 $title = "";
 
-include_once "includes/header.php";
 include_once "includes/db.php";
 include_once "includes/display.php";
-
 list($db,$db_people) = setup_db();
+
+include_once "includes/header.php";
 
 if (!empty($_SESSION['access_granted']) && !empty($_SESSION['user'])) {
 

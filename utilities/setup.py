@@ -70,7 +70,8 @@ def create_settings(reset=0):
 		"('report_attribution','author'),"
 		"('working_author','done'),"
 		"('affiliations_processed',current_timestamp(6)),"
-		"('aliases_processed',current_timestamp(6))")
+		"('aliases_processed',current_timestamp(6)),"
+		"('google_analytics','disabled')")
 
 	cursor.execute(initialize, (start_date,repo_directory))
 	db.commit()

@@ -20,10 +20,10 @@
 
 $title = "Configuration";
 
-include_once "includes/header.php";
 include_once "includes/db.php";
-
 list($db,$db_people) = setup_db();
+
+include_once "includes/header.php";
 
 // Check if user is authenticated.  If not, bounce to login page
 if (!$_SESSION['access_granted']) {
@@ -133,6 +133,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				<p><label><input type="radio" name="attribution_radio" value="committer"
 				id="committer_email">Committer</label></p>';
 
+		} elseif ($setting == "google_analytics") {
+
+			echo '<h2>What is your Google Analytics tracking code?</h2>
+
+			<p><strong>Note:</strong> This can be found in your Google Analytics
+			account, and is	usually in the format <i>UA-#######-#</i>. Copy and
+			paste that code here.</p>
+
+			<p>To remove the tracking code, leave this field blank.</p>
+
+			<p>Google Analytics tracking code:
+			<span class="text"><input type="text" name="google_analytics"></span></p>';
+
 		} else {
 			echo '<div class="info">Unknown setting.</div>';
 		}
@@ -153,6 +166,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 		if ($setting == "report_attribution") {
 			$value = sanitize_input($db,$_POST["attribution_radio"],11);
+		}
+
+		if ($setting == "google_analytics") {
+
+			if (strlen($_POST["google_analytics"]) == 0) {
+				$value = 'disabled';
+			} else {
+				$value = sanitize_input($db,$_POST["google_analytics"],15);
+			}
 		}
 
 		if ($value) {
@@ -298,6 +320,22 @@ edit_setting_button("repo_directory") . '</span></div></td>
 '</span></div></td>
 </tr>
 
+</table>
+
+</div> <!-- .sub-block -->
+
+<div class="sub-block">
+
+<h2>Google Analytics</h2>
+
+<table>
+<tr>
+<td class="half"><div class="detail"<strong>Google Analytics tracking
+ID</strong><span class="detail-text"><i>Typically something like
+UA-#######-#</i></span></div></td>
+<td class="half">' . get_setting($db,"google_analytics") .
+edit_setting_button("google_analytics") . '</td>
+</tr>
 </table>
 
 </div> <!-- .sub-block -->

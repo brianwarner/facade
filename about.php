@@ -20,9 +20,9 @@
 
 $title = "About Facade";
 
-include_once "includes/header.php";
 include_once "includes/db.php";
 list($db,$db_people) = setup_db();
+include_once "includes/header.php";
 
 echo '<div class="content-block">
 

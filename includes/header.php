@@ -27,6 +27,27 @@ session_start();
 <title>Facade</title>
 <link type="text/css" rel="stylesheet" media="all" href="/style.css">
 
+<?php
+
+$analytics = get_setting($db,"google_analytics");
+
+if ($analytics != "disabled") {
+
+	echo '<!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=' .
+$analytics . '"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag(\'js\', new Date());
+
+  gtag(\'config\', \'' . $analytics . '\');
+</script>
+';
+
+}
+?>
+
 <script language="javascript">
 	function toggle_projects(source) {
 		checkboxes = document.getElementsByName('projects[]');
