@@ -65,6 +65,9 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	// add a new repo and return to the project details pages.
 	$git = sanitize_input($db,$_POST["git"],256);
 
+	// Trim any trailing slashes
+	$git = rtrim($git,'/');
+
 	// Only do something if valid input was submitted
 	if ($git) {
 		$query = "INSERT INTO repos (projects_id,git,status) VALUES ('" .
