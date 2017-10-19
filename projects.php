@@ -180,10 +180,10 @@ if ($_GET["id"]) {
 				<p><input type="hidden" name="project_id" value="' . $project_id . '">
 				<input type="submit" name="confirmimport_gerrit" value="Import from gerrit">
 				</form></p>
-				<!--<form action="manage" id="github" method="post">
+				<form action="manage" id="github" method="post">
 				<p><input type="hidden" name="project_id" value="' . $project_id . '">
 				<input type="submit" name="confirmimport_github" value="Import from GitHub">
-				</form></p>-->';
+				</form></p>';
 
 		}
 		echo '</div> <!-- .content-block -->';

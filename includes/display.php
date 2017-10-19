@@ -587,11 +587,12 @@ function list_excludes($db,$project_id,$project_name,$type) {
 function write_import_table_header() {
 	echo '<div class="content-block">
 		<h2>Add new repos</h2>
-		<form action="manage" onClick="toggle_select(event)"
+		<form action="manage"
 		id="import_repos" method="post">
 		<table>
 		<tr>
-		<th class="quarter">&nbsp;</th>
+		<th class="quarter"><input type="checkbox" onClick="toggle_repos(this)"
+			class="checkbox">&nbsp;</th>
 		<th>&nbsp;</th>
 		</tr>';
 }
@@ -617,7 +618,7 @@ function write_import_table_row($repo_name,$git_links,$is_already_used) {
 		echo ' value="' . $repo_name . '"';
 	}
 
-	echo '> ' . $repo_name . '</td><td>';
+	echo ' onClick="toggle_select(event)"> ' . $repo_name . '</td><td>';
 
 	// Present options, disable rows where git repo is already in the database
 	foreach ($git_links as $git_link) {

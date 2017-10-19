@@ -70,6 +70,28 @@ $analytics . '"></script>
 		}
 	}
 
+	function toggle_repos(source) {
+		checkboxes = document.getElementsByName('repos[]');
+		for(var i=0, n=checkboxes.length;i<n;i++) {
+			if (!checkboxes[i].disabled) {
+				checkboxes[i].checked = source.checked;
+
+				radiobuttons = document.getElementsByName('radio_' + checkboxes[i].getAttribute('value'));
+				if (source.checked) {
+					radiobuttons[0].checked = source.checked;
+					for (var j=0, m=radiobuttons.length; j<m; j++) {
+						radiobuttons[j].removeAttribute('disabled');
+					}
+				} else {
+					for (var j=0, m=radiobuttons.length; j<m; j++) {
+						radiobuttons[j].setAttribute('disabled','disabled');
+						radiobuttons[j].checked = source.checked;
+					}
+				}
+			}
+		}
+	}
+
 	function custom_input(source,input_id,width) {
 		if (source.value=='custom') {
 			document.getElementById(input_id).style.visibility='visible';

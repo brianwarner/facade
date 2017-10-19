@@ -171,10 +171,32 @@ if ($project_id && $type == 'cgit' && $url) {
 		$github_entity = $github_user;
 	}
 
-	$url = 'https://api.github.com/' . $github_category . '/' . $github_entity .
-		'/repos?type=all';
+	$github_page_results = 100;
 
-	$github_contents = json_decode(fetch_page($url));
+	$url = 'https://api.github.com/' . $github_category . '/' . $github_entity .
+		'/repos?type=all&per_page=' . $github_page_results;
+
+	// Grab the first page of results
+	$github_page_contents = json_decode(fetch_page($url));
+
+	$github_contents = $github_page_contents;
+
+	// Check if we might have more pages of data to accumulate
+	if (count($github_contents) == $github_page_results) {
+
+		$github_page_number = 2;
+
+		while (count($github_page_contents) == $github_page_results) {
+
+			$github_page_contents = json_decode(fetch_page($url .
+				"&page=" . $github_page_number));
+
+			$github_contents = array_merge($github_contents,$github_page_contents);
+
+			$github_page_number+=1;
+
+		}
+	}
 
 	// Make sure we got something valid
 	if ($github_contents) {
