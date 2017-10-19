@@ -104,6 +104,13 @@ if ($project_id && $type == 'cgit' && $url) {
 								$repo_page_git_links = $repo_page_xpath->
 									query("//a[contains(@rel, 'vcs-git')]");
 
+								// Older cgits do not use the vcs-git rel tag
+								if ($repo_page_git_links->length == 0) {
+
+									$repo_page_git_links = $repo_page_xpath->
+										query("//a[contains(@href, 'git://')]");
+								}
+
 								// Collect the listed repo URLs
 								if ($repo_page_git_links->length > 0) {
 
@@ -131,6 +138,7 @@ if ($project_id && $type == 'cgit' && $url) {
 									write_import_table_row($repo_name,$git_links,$is_already_used);
 
 								} else {
+
 									echo "<p>Couldn't find any valid git repo
 										links.</p>";
 								}
