@@ -33,6 +33,13 @@ too frequently.  If for some reason facade-worker.py fails and exits early, you
 will need to run reset-status.py before it will run again.  You may also want to
 decrease the frequency of your cron job.
 
+Facade is designed to be run frequently as a cron job. This helps ensure that
+when you add or change something, it analyzes it quickly. You will set the
+interval between analysis runs, and it will skip any repos which have been
+recently analyzed. This is to respect the owners of the repos you're analyzing.
+The most frequent option is to run every 4 hours, though 24 hours is
+recommended.
+
 The command line options for facade-worker.py are documented, and you can run
 the various parts of the analysis separately. Use the -h flag to find out what
 your options are.

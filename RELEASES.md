@@ -6,7 +6,7 @@ The first decimal is the major number, and it denotes database compatibility. If
 for any reason a database changes (e.g. adding or removing tables or columns, or
 changing the way the database is accessed), the major number will be
 incremented. A migration path must be provided from the previous database schema
-to the new one.
+to the new one in setup.py under the "update" function.
 
 The second decimal is the feature number, and it denotes a release which adds
 new features but where the database structure is unchanged.  Examples include
