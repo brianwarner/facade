@@ -71,7 +71,8 @@ def create_settings(reset=0):
 		"('working_author','done'),"
 		"('affiliations_processed',current_timestamp(6)),"
 		"('aliases_processed',current_timestamp(6)),"
-		"('google_analytics','disabled')")
+		"('google_analytics','disabled'),"
+		"('update_frequency,'24')")
 
 	cursor.execute(initialize, (start_date,repo_directory))
 	db.commit()
@@ -182,9 +183,11 @@ def create_repos(reset=0):
 
 # Each project could have multiple repos. When a new repo is added, "status"
 # will be set to "New" so that the first action is a git clone.  When it
-# succeeds, "status" will be set to "Active" so that subsequent updates use git
-# pull. When a repo is deleted, status will be set to "Delete" and it will be
-# cleared the next time repo-management.py runs.
+# succeeds, "status" will be changed so that subsequent updates use git
+# pull. When it's time to update the repo, "status" will be set to "Update".
+# When the repo has been updated, it will be set to "Current". When a repo is
+# deleted, status will be set to "Delete" and it will be cleared the next time
+# repo-management.py runs.
 
 	if reset:
 		clear = "DROP TABLE IF EXISTS repos"

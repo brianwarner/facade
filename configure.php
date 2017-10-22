@@ -146,6 +146,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			<p>Google Analytics tracking code:
 			<span class="text"><input type="text" name="google_analytics"></span></p>';
 
+		} elseif ($setting == "update_frequency") {
+
+		echo '<h2>How often should Facade attempt to update analysis data?</h2>
+
+		<p><strong>Note:</strong> This determines the frequency at which Facade
+		analyzes a repo. You must also have a cron job which runs facade-worker.py
+		on at least the same frequency as this setting.</p>
+
+		<p>A shorter interval here means more network traffic, as Facade will check
+		for updates in the upstream repos each time. However, it also means
+		analysis jobs will finish more quickly and the stats will be less out of
+		date.</p>
+
+		<p>Newly added repos will always be cloned the next time
+		facade-worker.py runs, and repos which have been manually triggered will
+		also run. For this reason, a (much) higher cron job frequency is
+		recommended, so you see your changes sooner.</p>
+
+		<p><label><input type="radio" name="update_radio" value="4"
+		id="update_4">Every 4 hours</label></p>
+
+		<p><label><input type="radio" name="update_radio" value="12"
+		id="update_12">Every 12 hours</label></p>
+
+		<p><label><input type="radio" name="update_radio" value="24"
+		id="update_24" checked="checked">Every 24 hours (recommended)</label></p>';
+
 		} else {
 			echo '<div class="info">Unknown setting.</div>';
 		}
@@ -175,6 +202,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			} else {
 				$value = sanitize_input($db,$_POST["google_analytics"],15);
 			}
+		}
+
+		if ($setting == "update_frequency") {
+			$value = sanitize_input($db,$_POST["update_radio"],2);
 		}
 
 		if ($value) {
@@ -313,6 +344,10 @@ the analysis)</strong><span class="detail-text"><i>format: system path<br>defaul
 <td class="half">' . get_setting($db,"repo_directory") .
 edit_setting_button("repo_directory") . '</span></div></td>
 </tr>
+<tr>
+<td class="half"><div class="detail"><strong>Hours between attempted updates</strong><span class="detail-text"><i>default: 24 hours</i></td>
+<td class="half">' . get_setting($db,"update_frequency") . edit_setting_button("update_frequency") .'</span></div></td>
+</tr>
 
 <tr>
 <td class="half"><div class="detail"><strong>Log level</strong><span class="detail-text"><i>default: Quiet</i></td>
@@ -330,7 +365,7 @@ edit_setting_button("repo_directory") . '</span></div></td>
 
 <table>
 <tr>
-<td class="half"><div class="detail"<strong>Google Analytics tracking
+<td class="half"><div class="detail"><strong>Google Analytics tracking
 ID</strong><span class="detail-text"><i>Typically something like
 UA-#######-#</i></span></div></td>
 <td class="half">' . get_setting($db,"google_analytics") .

@@ -535,6 +535,57 @@ def git_repo_cleanup():
 
 	log_activity('Info','Processing deletions (complete)')
 
+def check_for_repo_updates():
+
+# Check the last time a repo was updated and if it's longer than the
+# update_frequency, mark it for updating during the next analysis.
+
+	update_status('Checking if any repos need to update')
+	log_activity('Info','Checking repos to update')
+
+	update_frequency = get_setting('update_frequency')
+
+	get_initialized_repos = ("SELECT id FROM repos WHERE status NOT LIKE 'New%' "
+		"AND status!='Delete'")
+	cursor.execute(get_initialized_repos)
+
+	repos = list(cursor)
+
+	for repo in repos:
+
+		# Figure out which repos have been updated within the waiting period
+
+		get_last_update = ("SELECT NULL FROM repos_fetch_log WHERE "
+			"repos_id=%s AND status='Up-to-date' AND "
+			"date >= CURRENT_TIMESTAMP(6) - INTERVAL %s HOUR ")
+
+		cursor.execute(get_last_update, (repo['id'], update_frequency))
+		last_update = cursor.fetchone()
+
+		# If the repo has not been updated within the waiting period, mark it.
+		if not last_update:
+
+			mark_repo = ("UPDATE repos SET status='Update' WHERE "
+				"id=%s" % repo['id'])
+			cursor.execute(mark_repo)
+			db.commit()
+
+	log_activity('Info','Checking repos to update (complete)')
+
+def force_repo_updates():
+
+# Set the status of all non-new repos to "Update".
+
+	update_status('Forcing all non-new repos to update')
+	log_activity('Info','Forcing repos to update')
+
+	get_repo_ids = ("UPDATE repos SET status='Update' WHERE status "
+		"NOT LIKE 'New%' AND STATUS!='Delete'")
+	cursor.execute(get_repo_ids)
+	db.commit()
+
+	log_activity('Info','Forcing repos to update (complete)')
+
 def git_repo_updates():
 
 # Update existing repos
@@ -545,7 +596,7 @@ def git_repo_updates():
 	repo_base_directory = get_setting('repo_directory')
 
 	query = ("SELECT id,projects_id,git,name,path FROM repos WHERE "
-		"status='Active'");
+		"status='Update'");
 	cursor.execute(query)
 
 	existing_repos = list(cursor)
@@ -561,6 +612,11 @@ def git_repo_updates():
 		return_code = subprocess.Popen([cmd],shell=True).wait()
 
 		if return_code == 0:
+
+			set_to_analyze = "UPDATE repos SET status='Analyze' WHERE id=%s"
+			cursor.execute(set_to_analyze, (row['id'], ))
+			db.commit()
+
 			update_repo_log(row['id'],'Up-to-date')
 			log_activity('Verbose','Updated %s' % row["git"])
 		else:
@@ -654,7 +710,7 @@ def git_repo_initialize():
 
 		if (return_code == 0):
 			# If cloning succeeded, repo is ready for analysis
-			query = ("UPDATE repos SET status='Active',path=%s, name=%s "
+			query = ("UPDATE repos SET status='Update',path=%s, name=%s "
 				"WHERE id=%s")
 
 			cursor.execute(query, (repo_relative_path,repo_name,row["id"]))
@@ -692,7 +748,7 @@ def analysis():
 
 	start_date = get_setting('start_date')
 
-	repo_list = "SELECT id,projects_id,path,name FROM repos WHERE status='Active'"
+	repo_list = "SELECT id,projects_id,path,name FROM repos WHERE status='Analyze'"
 	cursor.execute(repo_list)
 	repos = list(cursor)
 
@@ -776,9 +832,13 @@ def analysis():
 
 			trim_commit(repo['id'],commit)
 
+		set_complete = "UPDATE repos SET status='Complete' WHERE id=%s"
+
+		cursor.execute(set_complete, (repo['id'], ))
+
 		update_analysis_log(repo['id'],'Commit trimming complete')
 
-		update_analysis_log(repo['id'],'Analysis complete')
+		update_analysis_log(repo['id'],'Complete')
 
 	log_activity('Info','Running analysis (complete)')
 
@@ -1255,6 +1315,8 @@ limited_run = 0
 delete_marked_repos = 0
 pull_repos = 0
 clone_repos = 0
+check_updates = 0
+force_updates = 0
 run_analysis = 0
 nuke_stored_affiliations = 0
 fix_affiliations = 0 #
@@ -1262,7 +1324,7 @@ invalidate_caches = 0
 rebuild_caches = 0
 create_xlsx_summary_files = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcanfrx')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcuUanfrx')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything except invalidating caches by\n"
@@ -1270,6 +1332,8 @@ for opt in opts:
 				"it will only do what you have selected.\n\n"
 				"Options:\n"
 				"	-d	Delete marked repos\n"
+				"	-u	Check if any repos should be marked for updating\n"
+				"	-U	Force all repos to be marked for updating\n"
 				"	-p	Run 'git pull' on repos\n"
 				"	-c	Run 'git clone' on new repos\n"
 				"	-a	Analyze git repos\n"
@@ -1283,6 +1347,16 @@ for opt in opts:
 		delete_marked_repos = 1
 		limited_run = 1
 		log_activity('Info','Option set: delete marked repos.')
+
+	elif opt[0] == '-u':
+		check_updates = 1
+		limited_run = 1
+		log_activity('Info','Option set: checking for repo updates')
+
+	elif opt[0] == '-U':
+		force_updates = 1
+		limited_run = 1
+		log_activity('Info','Option set: forcing repo updates')
 
 	elif opt[0] == '-p':
 		pull_repos = 1
@@ -1342,6 +1416,12 @@ log_activity('Quiet','Running facade-worker.py')
 
 if not limited_run or (limited_run and delete_marked_repos):
 	git_repo_cleanup()
+
+if not limited_run or (limited_run and check_updates):
+	check_for_repo_updates()
+
+if not limited_run or (limited_run and force_updates):
+	force_repo_updates()
 
 if not limited_run or (limited_run and pull_repos):
 	git_repo_updates()

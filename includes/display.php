@@ -434,14 +434,18 @@ function list_repos ($db,$project_id) {
 
 			// Get the analysis status
 
-			$query = "SELECT status FROM analysis_log WHERE repos_id = " .
+			$query = "SELECT status,date_attempted FROM analysis_log WHERE repos_id = " .
 				$row_repo['id'] . " ORDER BY date_attempted DESC";
 
 			$result_analysis = query_db($db,$query,'Get last analysis status');
 			$analysis_status = $result_analysis->fetch_assoc();
 
 			if ($analysis_status) {
-				echo '<strong>' . $analysis_status['status'] . '</strong>';
+				echo '<strong>' . $analysis_status['status'] . '</strong><span
+				class="detail-text">Last attempted at<br>' .
+				date("H:i", strtotime($analysis_status['date_attempted'])) . '
+				on ' . date("M j, Y", strtotime($analysis_status['date_attempted'])) .
+				'</span>';
 			} else {
 				// If the return is empty, there must be no status
 				echo '<strong><span style="color:green">New</span></strong>';
