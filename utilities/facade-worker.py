@@ -1355,7 +1355,6 @@ for opt in opts:
 
 	elif opt[0] == '-U':
 		force_updates = 1
-		limited_run = 1
 		log_activity('Info','Option set: forcing repo updates')
 
 	elif opt[0] == '-p':
@@ -1420,7 +1419,7 @@ if not limited_run or (limited_run and delete_marked_repos):
 if not limited_run or (limited_run and check_updates):
 	check_for_repo_updates()
 
-if not limited_run or (limited_run and force_updates):
+if force_updates:
 	force_repo_updates()
 
 if not limited_run or (limited_run and pull_repos):
