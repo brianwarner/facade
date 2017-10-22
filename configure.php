@@ -348,13 +348,15 @@ edit_setting_button("repo_directory") . '</span></div></td>
 <td class="half"><div class="detail"><strong>Hours between attempted updates</strong><span class="detail-text"><i>default: 24 hours</i></td>
 <td class="half">' . get_setting($db,"update_frequency") . edit_setting_button("update_frequency") .'</span></div></td>
 </tr>
-
 <tr>
 <td class="half"><div class="detail"><strong>Log level</strong><span class="detail-text"><i>default: Quiet</i></td>
 <td class="half">' . get_setting($db,"log_level") . edit_setting_button("log_level") .
 '</span></div></td>
 </tr>
-
+<tr>
+<td class="half"><div class="detail"><strong>Database version</strong><span class="detail-text"><i>Run setup.py and choose "u" to update.</i></td>
+<td class="half">' . get_setting($db,"database_version") . '</span></div></td>
+</tr>
 </table>
 
 </div> <!-- .sub-block -->
