@@ -607,8 +607,8 @@ def git_repo_cleanup():
 
 def check_for_repo_updates():
 
-# Check the last time a repo was updated and if it's longer than the
-# update_frequency, mark it for updating during the next analysis.
+# Check the last time a repo was updated and if it has been longer than the
+# update_frequency, mark its project for updating during the next analysis.
 
 	update_status('Checking if any repos need to update')
 	log_activity('Info','Checking repos to update')
@@ -616,9 +616,8 @@ def check_for_repo_updates():
 	update_frequency = get_setting('update_frequency')
 
 	get_initialized_repos = ("SELECT id FROM repos WHERE status NOT LIKE 'New%' "
-		"AND status!='Delete'")
+		"AND status != 'Delete'")
 	cursor.execute(get_initialized_repos)
-
 	repos = list(cursor)
 
 	for repo in repos:
@@ -633,12 +632,24 @@ def check_for_repo_updates():
 		last_update = cursor.fetchone()
 
 		# If the repo has not been updated within the waiting period, mark it.
+		# Also mark any other repos in the project, so we only recache the
+		# project once per waiting period.
+
 		if not last_update:
 
-			mark_repo = ("UPDATE repos SET status='Update' WHERE "
-				"id=%s" % repo['id'])
+			mark_repo = ("UPDATE repos r JOIN projects p ON p.id = r.projects_id "
+				"SET status='Update' WHERE "
+				"id=%s " % repo['id'])
 			cursor.execute(mark_repo)
 			db.commit()
+
+	# Mark the entire project for an update, so that under normal
+	# circumstances caches are rebuilt only once per waiting period.
+
+	update_project_status = ("UPDATE repos r LEFT JOIN repos s ON r.projects_id=s.projects_id "
+		"SET r.status='Update' WHERE s.status='Update'")
+	cursor.execute(update_project_status)
+	db.commit()
 
 	log_activity('Info','Checking repos to update (complete)')
 
