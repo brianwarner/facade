@@ -51,7 +51,7 @@ global log_level
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 1
+upstream_db = 2
 
 #### Database update functions ####
 
@@ -86,6 +86,14 @@ def update_db(version):
 		db.commit
 
 		increment_db(1)
+
+	if version < 2:
+		add_recache_to_projects = ("ALTER TABLE projects ADD COLUMN "
+			"recache BOOL DEFAULT TRUE")
+		cursor.execute(add_recache_to_projects)
+		db.commit
+
+		increment_db(2)
 
 	print "No further database updates.\n"
 
@@ -544,10 +552,31 @@ def git_repo_cleanup():
 
 	for row in delete_repos:
 
+		# Remove the files on disk
+
 		cmd = ("rm -rf %s%s/%s%s"
 			% (repo_base_directory,row['projects_id'],row['path'],row['name']))
 
 		return_code = subprocess.Popen([cmd],shell=True).wait()
+
+		# Remove cached repo data
+
+		remove_repo_monthly_cache = "DELETE FROM repo_monthly_cache WHERE repos_id=%s"
+		cursor.execute(remove_repo_monthly_cache, (row['id'], ))
+		db.commit()
+
+		remove_repo_annual_cache = "DELETE FROM repo_annual_cache WHERE repos_id=%s"
+		cursor.execute(remove_repo_annual_cache, (row['id'], ))
+		db.commit()
+
+		# Set project to be recached
+
+		set_project_recache = ("UPDATE projects SET recache=TRUE "
+			"WHERE id=%s")
+		cursor.execute(set_project_recache,(row['projects_id'], ))
+		db.commit()
+
+		# Remove the entry from the repos table
 
 		query = "DELETE FROM repos WHERE id=%s"
 		cursor.execute(query, (row['id'], ))
@@ -1028,6 +1057,17 @@ def fill_empty_affiliations():
 			working_author)
 		trim_author(working_author)
 
+	# Figure out which projects have NULL affiliations so they can be recached
+
+	set_recache = ("UPDATE projects p "
+		"JOIN repos r ON p.id = r.projects_id "
+		"JOIN analysis_data a ON r.id = a.repos_id "
+		"SET recache=TRUE WHERE "
+		"author_affiliation IS NULL OR "
+		"committer_affiliation IS NULL")
+	cursor.execute(set_recache)
+	db.commit()
+
 	# Find any authors with NULL affiliations and fill them
 
 	find_null_authors = ("SELECT DISTINCT author_email AS email, "
@@ -1155,7 +1195,26 @@ def clear_cached_tables():
 	cursor.execute(query)
 	db.commit()
 
+	# Set all projects to recache so tables are rebuilt
+
+	set_recache = "UPDATE projects SET recache=TRUE"
+	cursor.execute(set_recache)
+	db.commit()
+
 	log_activity('Info','Deleting old cached unknown affiliations and web data (complete)')
+
+def invalidate_caches():
+
+# Invalidate all caches
+
+	update_status('Invalidating caches')
+	log_activity('Info','Invalidating caches')
+
+	invalidate_cache = "UPDATE projects SET recache = TRUE"
+	cursor.execute(invalidate_cache)
+	db.commit()
+
+	log_activity('Info','Invalidating caches (complete)')
 
 def rebuild_unknown_affiliation_and_web_caches():
 
@@ -1170,9 +1229,39 @@ def rebuild_unknown_affiliation_and_web_caches():
 	report_date = get_setting('report_date')
 	report_attribution = get_setting('report_attribution')
 
-	# Clear the cache tables
+	# Clear stale caches
 
-	clear_cached_tables()
+	clear_project_monthly_cache = ("DELETE c.* FROM project_monthly_cache c "
+		"JOIN projects p ON c.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_project_monthly_cache)
+	db.commit()
+
+	clear_project_annual_cache = ("DELETE c.* FROM project_annual_cache c "
+		"JOIN projects p ON c.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_project_annual_cache)
+	db.commit()
+
+	clear_repo_monthly_cache = ("DELETE c.* FROM repo_monthly_cache c "
+		"JOIN repos r ON c.repos_id = r.id "
+		"JOIN projects p ON r.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_repo_monthly_cache)
+	db.commit()
+
+	clear_repo_annual_cache = ("DELETE c.* FROM repo_annual_cache c "
+		"JOIN repos r ON c.repos_id = r.id "
+		"JOIN projects p ON r.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_repo_annual_cache)
+	db.commit()
+
+	clear_unknown_cache = ("DELETE c.* FROM unknown_cache c "
+		"JOIN projects p ON c.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_unknown_cache)
+	db.commit()
 
 	log_activity('Verbose','Caching unknown authors and committers')
 
@@ -1186,7 +1275,9 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"SUM(a.added) "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"WHERE a.author_affiliation = '(Unknown)' "
+		"AND p.recache = TRUE "
 		"GROUP BY r.projects_id,a.author_email")
 
 	cursor.execute(unknown_authors)
@@ -1202,7 +1293,9 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"SUM(a.added) "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"WHERE a.committer_affiliation = '(Unknown)' "
+		"AND p.recache = TRUE "
 		"GROUP BY r.projects_id,a.committer_email")
 
 	cursor.execute(unknown_committers)
@@ -1225,6 +1318,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"COUNT(DISTINCT a.commit) AS patches "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"LEFT JOIN exclude e ON "
 			"(a.author_email = e.email "
 				"AND (e.projects_id = r.projects_id "
@@ -1234,6 +1328,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"OR e.projects_id = 0)) "
 		"WHERE e.email IS NULL "
 		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
 		"GROUP BY month, "
 		"year, "
 		"affiliation, "
@@ -1257,6 +1352,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"COUNT(DISTINCT a.commit) AS patches "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"LEFT JOIN exclude e ON "
 			"(a.author_email = e.email "
 				"AND (e.projects_id = r.projects_id "
@@ -1266,6 +1362,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"OR e.projects_id = 0)) "
 		"WHERE e.email IS NULL "
 		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
 		"GROUP BY year, "
 		"affiliation, "
 		"a.%s_email,"
@@ -1293,6 +1390,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"COUNT(DISTINCT a.commit) AS patches "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"LEFT JOIN exclude e ON "
 			"(a.author_email = e.email "
 				"AND (e.projects_id = r.projects_id "
@@ -1302,6 +1400,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"OR e.projects_id = 0)) "
 		"WHERE e.email IS NULL "
 		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
 		"GROUP BY month, "
 		"year, "
 		"affiliation, "
@@ -1325,6 +1424,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"COUNT(DISTINCT a.commit) AS patches "
 		"FROM analysis_data a "
 		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
 		"LEFT JOIN exclude e ON "
 			"(a.author_email = e.email "
 				"AND (e.projects_id = r.projects_id "
@@ -1334,6 +1434,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 				"OR e.projects_id = 0)) "
 		"WHERE e.email IS NULL "
 		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
 		"GROUP BY year, "
 		"affiliation, "
 		"a.%s_email,"
@@ -1342,6 +1443,12 @@ def rebuild_unknown_affiliation_and_web_caches():
 		report_date,report_attribution))
 
 	cursor.execute(cache_repos_by_year)
+	db.commit()
+
+	# Reset cache flags
+
+	reset_recache = "UPDATE projects SET recache = FALSE"
+	cursor.execute(reset_recache)
 	db.commit()
 
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
@@ -1375,11 +1482,12 @@ force_updates = 0
 run_analysis = 0
 nuke_stored_affiliations = 0
 fix_affiliations = 0 #
-invalidate_caches = 0
+force_invalidate_caches = 0
 rebuild_caches = 0
+force_invalidate_caches = 0
 create_xlsx_summary_files = 0
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcuUanfrx')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcuUanfIrx')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything by default except invalidating caches\n"
@@ -1394,6 +1502,7 @@ for opt in opts:
 				"	-a	Analyze git repos\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
 				"	-f	Fill empty affiliations\n"
+				"	-I	Invalidate caches\n"
 				"	-r	Rebuild unknown affiliation and web caches\n"
 				"	-x	Create Excel summary files\n\n")
 		sys.exit(0)
@@ -1436,6 +1545,11 @@ for opt in opts:
 		fix_affiliations = 1
 		limited_run = 1
 		log_activity('Info','Option set: fixing affiliations.')
+
+	elif opt[0] == '-I':
+		force_invalidate_caches = 1
+		limited_run = 1
+		log_activity('Info','Option set: Invalidate caches.')
 
 	elif opt[0] == '-r':
 		rebuild_caches = 1
@@ -1491,6 +1605,9 @@ if nuke_stored_affiliations:
 
 if not limited_run or (limited_run and fix_affiliations):
 	fill_empty_affiliations()
+
+if force_invalidate_caches:
+	invalidate_caches()
 
 if not limited_run or (limited_run and rebuild_caches):
 	rebuild_unknown_affiliation_and_web_caches()
