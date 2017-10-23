@@ -644,17 +644,6 @@ def create_auth(reset=0):
 	cursor.execute(query, (user, ))
 	db.commit()
 
-def increment_db(version):
-
-# Helper function to increment the database number
-
-	increment_db = ("INSERT INTO settings (setting,value) "
-		"VALUES ('database_version',%s)")
-	cursor.execute(increment_db, (version, ))
-	db.commit()
-
-	print "Database updated to version: %s" % version
-
 # ==== The real program starts here ==== #
 
 # First make sure the database files have been setup
@@ -665,10 +654,9 @@ print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
 	" (C)reate database config files and initialize tables. Optionally create database and user.\n"
 	" (I)nitialize tables only. This will clear any existing data.\n"
-	" (U)pdate database while preserving settings, projects, and repos.\n"
 	" (R)eset admin credentials.\n")
 
-action = raw_input('(c/i/u/r): ').strip()
+action = raw_input('(c/i/r): ').strip()
 
 if action.lower() == 'c':
 
@@ -995,44 +983,6 @@ if action.lower() == 'i' or action.lower() == 'c':
 
 
 		create_auth('clear')
-
-	else:
-		print "\nExiting without doing anything.\n"
-
-elif action.lower() == 'u':
-
-	print ("========== Updating database tables ==========\n\n"
-		"This will attempt to update database tables while preserving your major settings.\n"
-		"It may reset your analysis data, in which case it would be rebuilt the next time\n"
-		"facade-worker.py runs.\n\n"
-		"Are you sure you want to continue?\n")
-
-	confirm = raw_input('(yes): ')
-
-	if confirm.lower() == "yes":
-		print "\nAttempting update.\n"
-
-		# Figure out the installed database's version. If it's not current,
-		# proceed incrementally through update operations until it is.
-
-		get_db_version = ("SELECT value FROM settings "
-			"WHERE setting='database_version' "
-			"ORDER BY last_modified DESC LIMIT 1")
-		cursor.execute(get_db_version)
-		db_version = int(cursor.fetchone()["value"])
-
-		print "Current database version: %s\n" % db_version
-
-		if db_version < 1:
-			# for commit f49b2f0e46b32997a72508bc83a6b1e834069588
-			add_update_frequency = ("INSERT INTO settings (setting,value) "
-				"VALUES ('update_frequency',24)")
-			cursor.execute(add_update_frequency)
-			db.commit
-
-			increment_db(1)
-
-		print "No further database updates.\n"
 
 	else:
 		print "\nExiting without doing anything.\n"

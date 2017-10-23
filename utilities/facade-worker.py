@@ -48,6 +48,47 @@ import xlsxwriter
 
 global log_level
 
+# Important: Do not modify the database number unless you've also added an
+# update clause to update_db!
+
+upstream_db = 1
+
+#### Database update functions ####
+
+def increment_db(version):
+
+	# Helper function to increment the database number
+
+	increment_db = ("INSERT INTO settings (setting,value) "
+		"VALUES ('database_version',%s)")
+	cursor.execute(increment_db, (version, ))
+	db.commit()
+
+	print "Database updated to version: %s" % version
+
+def update_db(version):
+
+	# This function should incrementally step any version of the database up to
+	# the current schema. After executing the database operations, call
+	# increment_db to bring it up to the version with which it is now compliant.
+
+	print "Attempting database update"
+
+	if version < 0:
+
+		increment_db(0)
+
+	if version < 1:
+		# for commit f49b2f0e46b32997a72508bc83a6b1e834069588
+		add_update_frequency = ("INSERT INTO settings (setting,value) "
+			"VALUES ('update_frequency',24)")
+		cursor.execute(add_update_frequency)
+		db.commit
+
+		increment_db(1)
+
+	print "No further database updates.\n"
+
 #### Helpers ####
 
 def get_setting(setting):
@@ -1310,6 +1351,20 @@ def rebuild_unknown_affiliation_and_web_caches():
 # Figure out how much we're going to log
 log_level = get_setting('log_level')
 
+# Check if the database is current and update it if necessary
+try:
+	current_db = int(get_setting('database_version'))
+except:
+	# Catch databases which existed before database versioning
+	current_db = -1
+
+if current_db < upstream_db:
+
+	print ("Current database version: %s\nUpstream database version %s\n" %
+		(current_db, upstream_db))
+
+	update_db(current_db);
+
 # Figure out what we need to do
 limited_run = 0
 delete_marked_repos = 0
@@ -1327,9 +1382,9 @@ create_xlsx_summary_files = 0
 opts,args = getopt.getopt(sys.argv[1:],'hdpcuUanfrx')
 for opt in opts:
 	if opt[0] == '-h':
-		print("\nfacade-worker.py does everything except invalidating caches by\n"
-				"default, unless invoked with one of these options. In that case,\n"
-				"it will only do what you have selected.\n\n"
+		print("\nfacade-worker.py does everything by default except invalidating caches\n"
+				"and forcing updates, unless invoked with one of the following options.\n"
+				"In those cases, it will only do what you have selected.\n\n"
 				"Options:\n"
 				"	-d	Delete marked repos\n"
 				"	-u	Check if any repos should be marked for updating\n"
