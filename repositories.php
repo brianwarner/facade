@@ -28,7 +28,7 @@ if ($_GET["repo"]) {
 
 	$repo_id = sanitize_input($db,$_GET["repo"],11);
 
-	$query = "SELECT git FROM repos WHERE id=" . $repo_id;
+	$query = "SELECT git,projects_id FROM repos WHERE id=" . $repo_id;
 	$result = query_db($db,$query,"Get url of repo");
 
 	$name = $result->fetch_assoc();
@@ -38,6 +38,16 @@ if ($_GET["repo"]) {
 
 	include_once "includes/header.php";
 	include_once "includes/warnings.php";
+
+	// Check if cache has been invalidated
+
+	$check_cache = "SELECT recache FROM projects WHERE id=" . $name["projects_id"];
+	$result = query_db($db,$check_cache,"Checking cache");
+
+	if ($result->fetch_assoc()['recache']) {
+		echo '<div class="info">WARNING: The data displayed below is outdated,
+		and will be rebuilt automatically the next time Facade runs.</div>';
+	}
 
 	// Determine if a year was requested.
 	$year = 'All';

@@ -42,6 +42,16 @@ if ($_GET["id"]) {
 	include_once "includes/header.php";
 	include_once "includes/warnings.php";
 
+	// Check if cache has been invalidated
+
+	$check_cache = "SELECT recache FROM projects WHERE id=" . $project_id;
+	$result = query_db($db,$check_cache,"Checking cache");
+
+	if ($result->fetch_assoc()['recache']) {
+		echo '<div class="info">WARNING: The data displayed below is outdated,
+			and will be rebuilt automatically the next time Facade runs.</div>';
+	}
+
 	$query = "SELECT description,website FROM projects
 		WHERE id=" . $project_id;
 	$result = query_db($db,$query,"Getting project description");
