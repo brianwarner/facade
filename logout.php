@@ -23,6 +23,14 @@ $title = "";
 include_once 'includes/db.php';
 list($db,$db_people) = setup_db();
 
+session_start();
+
+// Protect against unauthorized access
+if (!ISSET($_SESSION['access_granted'])) {
+	echo '<meta http-equiv="refresh" content="0;user">';
+	die;
+}
+
 include_once 'includes/header.php';
 
 $user = $_SESSION['user'];
