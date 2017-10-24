@@ -30,13 +30,12 @@ facade-worker.py will not run if it thinks a previous instance is still running.
 This could happen when you're doing the initial clone and building of data for
 large repos (like the kernel) or if you have a cron job running facade-worker.py
 too frequently.  If for some reason facade-worker.py fails and exits early, you
-will need to run reset-status.py before it will run again.  You may also want to
-decrease the frequency of your cron job.
+will need to run reset-status.py before it will run again.
 
 Facade is designed to be run frequently as a cron job. This helps ensure that
 when you add or change something, it analyzes it quickly. You will set the
-interval between analysis runs, and it will skip any repos which have been
-recently analyzed. This is to respect the owners of the repos you're analyzing.
+interval between repo updates, and it will skip any repos which have been
+recently updated. This is to respect the owners of the repos you're analyzing.
 The most frequent option is to run every 4 hours, though 24 hours is
 recommended.
 
