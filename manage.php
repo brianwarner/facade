@@ -189,6 +189,25 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	include_once "includes/footer.php";
 
+} elseif (ISSET($_POST["updateprojectrepos"])) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	$set_repos_update = "UPDATE repos SET status='Update'
+		WHERE projects_id = " . $project_id;
+	query_db($db,$set_repos_update,"Forcing repo update");
+
+	header("Location: projects?id=" . $project_id);
+
+} elseif (ISSET($_POST["recacheproject"])) {
+
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
+
+	$recache_project = "UPDATE projects SET recache = TRUE WHERE id = " . $project_id;
+	query_db($db,$recache_project,"Recaching project");
+
+	header("Location: projects?id=" . $project_id);
+
 } elseif (ISSET($_POST["edit_name"])) {
 
 	$project_id = sanitize_input($db,$_POST["id"],11);

@@ -250,12 +250,30 @@ list_excludes($db,$project_id,$project_name,'email');
 echo '</div> <!-- .content-block -->';
 
 if ($_GET["id"] && $_SESSION['access_granted']) {
+
 	echo '<div class="content-block">
+	<h2>Overrides</h2>
+
+	<p><form action="manage" id="updateprojectrepos" method="post">
+	<input type="submit" name="updateprojectrepos"
+	value="force all repos to check for updates">
+	<input type="hidden" name="project_id" value="' . $project_id . '"></form></p>
+
+	<p><form action="manage" id="recacheproject" method="post">
+	<input type="submit" name="recacheproject"
+	value="force caches to be rebuilt">
+	<input type="hidden" name="project_id" value="' . $project_id . '"></form></p>
+
+	</div> <!-- .content-block -->
+
+	<div class="content-block">
 	<h2>Manage</h2>
+
 	<p><form action="manage" id="editdelproject" method="post">
 	<input type="submit" name="confirmedit_project"
 	value="edit this project\'s name and description">
-	<input type="hidden" name="project_id" value="' . $project_id . '"></p>
+	<input type="hidden" name="project_id" value="' . $project_id . '"></form></p>
+
 	<p><form action="manage" id="editdelproject" method="post">
 	<input type="submit" name="confirmdelete_project"
 	value="delete this project and all its data">
