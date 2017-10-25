@@ -72,7 +72,7 @@ def create_settings(reset=0):
 		"('affiliations_processed',current_timestamp(6)),"
 		"('aliases_processed',current_timestamp(6)),"
 		"('google_analytics','disabled'),"
-		"('update_frequency,'24')")
+		"('update_frequency','24')")
 
 	cursor.execute(initialize, (start_date,repo_directory))
 	db.commit()
