@@ -24,6 +24,14 @@ include_once "includes/display.php";
 include_once "includes/scrape.php";
 list($db,$db_people) = setup_db();
 
+session_start();
+
+// Protect against unauthorized access
+if (!ISSET($_SESSION['access_granted'])) {
+	echo '<meta http-equiv="refresh" content="0;user">';
+	die;
+}
+
 $project_id = sanitize_input($db,$_POST["project_id"],11);
 $url = sanitize_input($db,$_POST["url"],256);
 $type = sanitize_input($db,$_POST["input_type"],6);

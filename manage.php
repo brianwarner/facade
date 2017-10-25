@@ -27,7 +27,7 @@ session_start();
 
 // Protect against unauthorized access
 if (!ISSET($_SESSION['access_granted'])) {
-	echo '<meta http-equiv="refresh" content="0;/user">';
+	echo '<meta http-equiv="refresh" content="0;user">';
 	die;
 }
 
