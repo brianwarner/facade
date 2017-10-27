@@ -72,7 +72,8 @@ def create_settings(reset=0):
 		"('affiliations_processed',current_timestamp(6)),"
 		"('aliases_processed',current_timestamp(6)),"
 		"('google_analytics','disabled'),"
-		"('update_frequency','24')")
+		"('update_frequency','24'),"
+		"('database_version','2')")
 
 	cursor.execute(initialize, (start_date,repo_directory))
 	db.commit()
@@ -174,6 +175,7 @@ def create_projects(reset=0):
 		"name VARCHAR(128) NOT NULL,"
 		"description VARCHAR(256),"
 		"website VARCHAR(128),"
+		"recache BOOL DEFAULT TRUE,"
 		"last_modified TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))")
 
 	cursor.execute(create)
