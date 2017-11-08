@@ -746,17 +746,15 @@ def check_for_repo_updates():
 			"date >= CURRENT_TIMESTAMP(6) - INTERVAL %s HOUR ")
 
 		cursor.execute(get_last_update, (repo['id'], update_frequency))
-		last_update = cursor.fetchone()
 
 		# If the repo has not been updated within the waiting period, mark it.
 		# Also mark any other repos in the project, so we only recache the
 		# project once per waiting period.
 
-		if not last_update:
-
+		if cursor.rowcount == 0:
 			mark_repo = ("UPDATE repos r JOIN projects p ON p.id = r.projects_id "
 				"SET status='Update' WHERE "
-				"p.id=%s ")
+				"r.id=%s ")
 			cursor.execute(mark_repo, (repo['id'], ))
 			db.commit()
 
