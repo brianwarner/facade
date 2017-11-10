@@ -321,11 +321,17 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 	while ($row = $result->fetch_assoc()) {
 		echo '<tr>
 			<td>' . $row["domain"] . '</td>
-			<td>' . number_format($row["sum(added)"]) . '
-			<span class="button"><form action="manage" method="post" class="short">
-			<input type=hidden name="domain" value="' . $row["domain"] . '">
-			<input type=submit value="add an affiliation" name="confirmnew_affiliation">
-			</form></span></td>
+			<td>' . number_format($row["sum(added)"]);
+
+			if ($_SESSION['access_granted']) {
+
+				echo '<span class="button"><form action="manage" method="post" class="short">
+					<input type=hidden name="domain" value="' . $row["domain"] . '">
+					<input type=submit value="add an affiliation" name="confirmnew_affiliation">
+					</form></span>';
+			}
+
+			echo '</td>
 			</tr>';
 	}
 
@@ -352,12 +358,16 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 	while ($row = $result->fetch_assoc()) {
 		echo '<tr>
 			<td>' . $row["email"] . '</td>
-			<td>' . number_format($row["added"]) . '
-			<span class="button"><form action="manage" method="post" class="short">
-			<input type=hidden name="domain" value="' . $row["email"] . '">
-			<input type=submit value="add as an alias" name="confirmnew_alias">
-			<input type=submit value="add an affiliation" name="confirmnew_affiliation">
-			</form></span>
+			<td>' . number_format($row["added"]);
+
+			if ($_SESSION['access_granted']) {
+				echo '<span class="button"><form action="manage" method="post" class="short">
+					<input type=hidden name="domain" value="' . $row["email"] . '">
+					<input type=submit value="add as an alias" name="confirmnew_alias">
+					<input type=submit value="add an affiliation" name="confirmnew_affiliation">
+					</form></span>';
+				}
+			echo '</td>
 			</tr>';
 	}
 
