@@ -33,7 +33,7 @@ href="https://github.com/brianwarner/facade">https://github.com/brianwarner/faca
 This is also a good place to ask for help.</p>
 <p>Facade comes with no warranties, express or implied.</p>
 
-<p>&copy; Brian Warner 2016 - ' . date("Y") . '</p>
+<p>&copy; <a href="http://bdwarner.com">Brian Warner</a> 2016 - ' . date("Y") . '</p>
 
 </div> <!-- .content-block -->';
 
