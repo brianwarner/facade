@@ -105,6 +105,10 @@ a:link, a:visited {
 	padding-bottom: 20px;
 }
 
+form.short {
+	margin-bottom: 0px;
+}
+
 .text input {
 	width: 470px;
 }

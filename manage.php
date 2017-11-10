@@ -586,6 +586,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	include_once "includes/header.php";
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
+	$email = sanitize_input($db,$_POST["domain"],128);
 
 	echo '<div class="content-block"><div class="sub-block"><p>Alias mapping
 		help ensure that developers with multiple email addresses get full
@@ -596,7 +597,8 @@ if (ISSET($_POST["confirmnew_repo"])) {
 		<table>
 		<tr>
 		<td class="quarter"><label for="alias">This email: </label></td>
-		<td class="quarter"><span class="text"><input type="text" name="alias"></span></td>
+		<td class="quarter"><span class="text"><input type="text" name="alias"
+		value="' . $email . '"></span></td>
 		<td class="half">&nbsp;</td>
 		</tr>
 		<tr>
@@ -652,6 +654,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	include_once "includes/header.php";
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
+	$domain = sanitize_input($db,$_POST["domain"],128);
 
 	echo '<div class="content-block"><div class="sub-block"><p>Affiliation
 		mappings help trace work back to specific companies, based upon the
@@ -668,7 +671,8 @@ if (ISSET($_POST["confirmnew_repo"])) {
 		<table>
 		<tr>
 		<td class="quarter"><label for="domain">This email or domain: </label></td>
-		<td class="quarter"><span class="text"><input type="text" name="domain"></span></td>
+		<td class="quarter"><span class="text"><input type="text" name="domain"
+		value="'. $domain . '"></span></td>
 		<td class="half">&nbsp;</td>
 		</tr>
 		<tr>
