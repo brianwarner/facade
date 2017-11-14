@@ -28,7 +28,12 @@ if ($_SESSION['access_granted']) {
 	echo '<span class="menu-item"><a href="people">People</a></span>
 <span class="menu-item"><a href="tags">Tags</a></span>';
 }
-echo '<span class="menu-item"><a href="results">Results</a></span>';
+
+if ((get_setting($db,'results_visibility') == 'show') ||
+	($_SESSION['access_granted'])) {
+
+	echo '<span class="menu-item"><a href="results">Results</a></span>';
+}
 
 if ($_SESSION['access_granted']) {
 	echo '<span class="menu-item"><a href="configure">Configure</a></span>

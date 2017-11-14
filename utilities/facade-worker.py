@@ -51,7 +51,7 @@ global log_level
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 2
+upstream_db = 3
 
 #### Database update functions ####
 
@@ -94,6 +94,14 @@ def update_db(version):
 		db.commit
 
 		increment_db(2)
+
+	if version < 3:
+		add_results_setting = ("INSERT INTO settings (setting,value) "
+			"VALUES ('results_visibility','show')")
+		cursor.execute(add_results_setting)
+		db.commit
+
+		increment_db(3)
 
 	print "No further database updates.\n"
 

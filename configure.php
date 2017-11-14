@@ -21,6 +21,7 @@
 $title = "Configuration";
 
 include_once "includes/db.php";
+
 list($db,$db_people) = setup_db();
 
 include_once "includes/header.php";
@@ -38,8 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 	if ($_POST["confirmedit"]) {
 
 		echo '<div class="content-block"><form action="configure" id="editsettings"
-		method="POST"><input type="hidden" name="setting" value="' .
-		$setting . '">';
+			method="POST"><input type="hidden" name="setting" value="' . $setting . '">';
 
 		if ($setting == "start_date") {
 
@@ -57,7 +57,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 		} elseif ($setting == "repo_directory") {
 
 			echo '<h2>Where are you keeping the data?</h2>
-
 				<p><strong>Note:</strong> You should pause your repo maintenance
 				cron job until this is set. If you are moving your repositories,
 				copy them to the new location and then change this. Changing
@@ -76,7 +75,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 		} elseif ($setting == "log_level") {
 
 			echo '<h2>How much info do you want to collect?</h2>
-
 				<p><label><input type="radio" name="log_level_radio"
 				value="Quiet" id="log_level_quiet" checked="checked">Only log
 				errors.</label></p>
@@ -137,41 +135,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 			echo '<h2>What is your Google Analytics tracking code?</h2>
 
-			<p><strong>Note:</strong> This can be found in your Google Analytics
-			account, and is	usually in the format <i>UA-#######-#</i>. Copy and
-			paste that code here.</p>
+				<p><strong>Note:</strong> This can be found in your Google Analytics
+				account, and is	usually in the format <i>UA-#######-#</i>. Copy and
+				paste that code here.</p>
 
-			<p>To remove the tracking code, leave this field blank.</p>
+				<p>To remove the tracking code, leave this field blank.</p>
 
-			<p>Google Analytics tracking code:
-			<span class="text"><input type="text" name="google_analytics"></span></p>';
+				<p>Google Analytics tracking code:
+				<span class="text"><input type="text" name="google_analytics"></span></p>';
 
 		} elseif ($setting == "update_frequency") {
 
-		echo '<h2>How often should Facade attempt to update analysis data?</h2>
+			echo '<h2>How often should Facade attempt to update analysis data?</h2>
 
-		<p><strong>Note:</strong> This determines the frequency at which Facade
-		analyzes a repo. You must also have a cron job which runs facade-worker.py
-		on at least the same frequency as this setting.</p>
+				<p><strong>Note:</strong> This determines the frequency at which Facade
+				analyzes a repo. You must also have a cron job which runs facade-worker.py
+				on at least the same frequency as this setting.</p>
 
-		<p>A shorter interval here means more network traffic, as Facade will check
-		for updates in the upstream repos each time. However, it also means
-		analysis jobs will finish more quickly and the stats will be less out of
-		date.</p>
+				<p>A shorter interval here means more network traffic, as Facade will check
+				for updates in the upstream repos each time. However, it also means
+				analysis jobs will finish more quickly and the stats will be less out of
+				date.</p>
 
-		<p>Newly added repos will always be cloned the next time
-		facade-worker.py runs, and repos which have been manually triggered will
-		also run. For this reason, a (much) higher cron job frequency is
-		recommended, so you see your changes sooner.</p>
+				<p>Newly added repos will always be cloned the next time
+				facade-worker.py runs, and repos which have been manually triggered will
+				also run. For this reason, a (much) higher cron job frequency is
+				recommended, so you see your changes sooner.</p>
 
-		<p><label><input type="radio" name="update_radio" value="4"
-		id="update_4">Every 4 hours</label></p>
+				<p><label><input type="radio" name="update_radio" value="4"
+				id="update_4">Every 4 hours</label></p>
 
-		<p><label><input type="radio" name="update_radio" value="12"
-		id="update_12">Every 12 hours</label></p>
+				<p><label><input type="radio" name="update_radio" value="12"
+				id="update_12">Every 12 hours</label></p>
 
-		<p><label><input type="radio" name="update_radio" value="24"
-		id="update_24" checked="checked">Every 24 hours (recommended)</label></p>';
+				<p><label><input type="radio" name="update_radio" value="24"
+				id="update_24" checked="checked">Every 24 hours (recommended)</label></p>';
+
+		} elseif ($setting == "results_visibility") {
+
+			echo '<h2>Should the results page be visible to unauthenticated users?</h2>
+
+				<p>This setting adjusts how much anonymous users can see.
+				Generating results is computationally intensive and can really
+				eat up bandwidth, so you may want to hide the results tab for
+				externally facing instances.</p>
+
+				<p>All configuration options will only be available to authenticated
+				users, regardless of this setting.</p>
+
+				<p><label><input type="radio" name="access_radio" value="show"
+				id="access_true" checked="checked">Show the results tab</label></p>
+
+				<p><label><input type="radio" name="access_radio" value="hide"
+				id="access_false">Hide the results tab</label></p>';
 
 		} else {
 			echo '<div class="info">Unknown setting.</div>';
@@ -208,6 +224,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 			$value = sanitize_input($db,$_POST["update_radio"],2);
 		}
 
+		if ($setting == "results_visibility") {
+			$value = sanitize_input($db,$_POST["access_radio"],4);
+		}
+
 		if ($value) {
 
 			$safe_setting = TRUE;
@@ -218,8 +238,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				if ($value > date("Y-m-d",time())) {
 
 					echo '<div class="info"><p>Check your start date,
-					as it appears to be in the future.</p></div>';
-
+						as it appears to be in the future.</p></div>';
 				}
 			}
 
@@ -228,16 +247,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				if (sanitize_input($db,$_POST["rebuild_repos"],1)) {
 					$query = "UPDATE repos SET status='New'";
 					query_db($db,$query,"Preparing to rebuid repos");
-
 				}
 
 				if (substr($value,0,1) != '/') {
 
 					echo '<div class="info"><p><strong>WARNING:</strong><br>You
-					appear to be using a relative path. This is not
-					safe.</p></div>';
+						appear to be using a relative path. This is not
+						safe.</p></div>';
 					$safe_setting = FALSE;
-
 				}
 
 				if ($value == '/') {
@@ -267,7 +284,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 			echo '<div class="info"><p>Cowardly refusing to apply an empty
 				setting.</p></div>';
-
 		}
 
 	}
@@ -328,6 +344,13 @@ reports that are displayed on the website</strong>
 edit_setting_button("report_date") . '</span></div></td>
 </tr>
 
+<tr>
+<td class="half"><div class="detail"><strong>Display the results page for
+unauthenticated users</strong>
+<span class="detail-text"><i>format: true, false<br>default: true</i></td>
+<td class="half">' . get_setting($db,"results_visibility") .
+edit_setting_button("results_visibility") . '</span></div></td>
+</tr>
 </table>
 
 </div> <!-- .sub-block -->

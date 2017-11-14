@@ -26,6 +26,15 @@ list($db,$db_people) = setup_db();
 
 include_once "includes/header.php";
 
+// Check if user should be authenticated
+if ((get_setting($db,'results_visibility') == 'hide') &&
+	(!$_SESSION['access_granted'])) {
+
+	echo '<meta http-equiv="refresh" content="0;user">';
+	die;
+}
+
+
 include_once "includes/warnings.php";
 
 $attribution = get_setting($db,'report_attribution');
