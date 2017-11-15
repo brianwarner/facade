@@ -181,7 +181,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 			$query = "SELECT " . $stat_clause . " AS stat," .
 				$period . " AS period
 				FROM " . $cache_table . "
-				WHERE " . $year_clause . $scope . "s_id=" . $id . "
+				WHERE " . $year_clause . $email_clause . $scope . "s_id=" . $id . "
 				AND " . $type . "='" . $db->real_escape_string($list[$type]) . "'
 				GROUP BY period ORDER BY period ASC";
 
