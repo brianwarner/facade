@@ -567,6 +567,11 @@ def git_repo_cleanup():
 
 		return_code = subprocess.Popen([cmd],shell=True).wait()
 
+		# Remove the analysis data
+
+		remove_analysis_data = "DELETE FROM analysis_data WHERE repos_id=%s"
+		cursor.execute(remove_analysis_data, (row['id'], ))
+
 		# Remove cached repo data
 
 		remove_repo_monthly_cache = "DELETE FROM repo_monthly_cache WHERE repos_id=%s"
@@ -602,6 +607,7 @@ def git_repo_cleanup():
 		db.commit()
 
 		# Attempt to cleanup any empty parent directories
+
 		while (cleanup.find('/',0) > 0):
 			cleanup = cleanup[:cleanup.rfind('/',0)]
 
@@ -610,6 +616,33 @@ def git_repo_cleanup():
 			log_activity('Verbose','Attempted %s' % cmd)
 
 		update_repo_log(row['id'],'Deleted')
+
+	# Clean up deleted projects
+
+	get_deleted_projects = "SELECT id FROM projects WHERE name='(Queued for removal)'"
+	cursor.execute(get_deleted_projects)
+
+	deleted_projects = list(cursor)
+
+	for project in deleted_projects:
+
+		# Remove cached data for projects which were marked for deletion
+
+		clear_annual_cache = ("DELETE FROM project_annual_cache WHERE "
+			"projects_id=%s")
+		cursor.execute(clear_annual_cache, (project['id'], ))
+		db.commit()
+
+		clear_monthly_cache = ("DELETE FROM project_monthly_cache WHERE "
+			"projects_id=%s")
+		cursor.execute(clear_monthly_cache, (project['id'], ))
+		db.commit()
+
+		# Remove any projects which were also marked for deletion
+
+		remove_project = "DELETE FROM projects WHERE id=%s"
+		cursor.execute(remove_project, (project['id'], ))
+		db.commit()
 
 	log_activity('Info','Processing deletions (complete)')
 

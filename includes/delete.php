@@ -46,12 +46,7 @@ function delete_repository ($db,$repo_id) {
 		query_db($db,$query,"Removing uninitialized repo");
 
 	} else {
-		// Clear analysis data, mark for deletion so facade-worker.py removes files
-
-		$clean = "DELETE FROM analysis_data WHERE repos_id = $repo_id";
-
-		query_db($db,$clean,'Deleting analysis data for ' . $repo_id);
-
+		// Mark for deletion so facade-worker.py removes files and data
 
 		$query = "UPDATE repos SET status='Delete'
 			WHERE id=" . $repo_id;
@@ -87,13 +82,12 @@ function delete_project ($db,$project_id) {
 	query_db($db,$remove_excludes,'Removing excludes for project with ID ' .
 		$project_id);
 
-	// Remove the project. If delete fails (e.g., php times out), can try again.
-	$query = "DELETE FROM projects
+	// Mark the project for deletion.
+	$query = "UPDATE projects SET name='(Queued for removal)'
 		WHERE id=" . $project_id;
 
-	query_db($db,$query,"Deleting project with ID " . $project_id);
+	query_db($db,$query,"Preparing to delete project with ID " . $project_id);
 
 }
-
 
 ?>
