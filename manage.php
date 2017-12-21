@@ -151,7 +151,8 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
 	$query = "SELECT name,description,website FROM projects
-		WHERE id=" . $project_id;
+		WHERE name != '(Queued for removal)'
+		AND id=" . $project_id;
 	$result = query_db($db,$query,"Getting name, description, and website");
 
 	$project = $result->fetch_assoc();
@@ -258,7 +259,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
-	$query = "SELECT name FROM projects WHERE id=" . $project_id;
+	$query = "SELECT name FROM projects WHERE name != '(Queued for removal)' AND id=" . $project_id;
 	$result = query_db($db,$query,"Getting project name.");
 
 	$row = $result->fetch_assoc();
@@ -743,7 +744,8 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 } elseif (ISSET($_POST["export_projects_csv"])) {
 
-	$fetch_projects = "SELECT id,name,description,website FROM projects";
+	$fetch_projects = "SELECT id,name,description,website FROM projects WHERE
+		name != '(Queued for removal)'";
 
 	$projects = query_db($db,$fetch_projects,'fetching projects');
 

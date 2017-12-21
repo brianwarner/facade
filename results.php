@@ -103,7 +103,7 @@ if (get_setting($db,'utility_status') != 'Idle') {
 		class="checkbox">&nbsp;</th>
 		</tr>';
 
-	$query = "SELECT id,name FROM projects ORDER BY name ASC";
+	$query = "SELECT id,name FROM projects WHERE name != '(Queued for removal)' ORDER BY name ASC";
 	$result = query_db($db,$query,"Getting project names");
 
 	while($row = $result->fetch_assoc()) {

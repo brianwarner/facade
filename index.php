@@ -29,7 +29,7 @@ include_once "includes/warnings.php";
 
 $report_attribution = get_setting($db,'report_attribution');
 
-$query = "SELECT NULL FROM projects";
+$query = "SELECT NULL FROM projects WHERE name != '(Queued for removal)'";
 $result_projects = query_db($db,$query,'Getting number of projects');
 
 $query = "SELECT NULL FROM repos";

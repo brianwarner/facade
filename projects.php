@@ -210,7 +210,7 @@ if ($_GET["id"]) {
 
 	include_once "includes/warnings.php";
 
-	$query = "SELECT * FROM projects ORDER BY name ASC";
+	$query = "SELECT * FROM projects WHERE name != '(Queued for removal)' ORDER BY name ASC";
 
 	$result = query_db($db,$query,"Get projects");
 

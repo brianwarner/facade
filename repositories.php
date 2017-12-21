@@ -41,7 +41,8 @@ if ($_GET["repo"]) {
 
 	// Check if cache has been invalidated
 
-	$check_cache = "SELECT recache FROM projects WHERE id=" . $name["projects_id"];
+	$check_cache = "SELECT recache FROM projects WHERE name !=
+		'(Queued for removal)' AND id=" . $name["projects_id"];
 	$result = query_db($db,$check_cache,"Checking cache");
 
 	if ($result->fetch_assoc()['recache']) {
@@ -144,7 +145,8 @@ if ($_GET["repo"]) {
 
 	echo '<div class="content-block"><h2>All repositories</h2>';
 
-	$query = "SELECT name,id FROM projects ORDER BY name ASC";
+	$query = "SELECT name,id FROM projects WHERE name != '(Queued for removal)'
+		ORDER BY name ASC";
 	$result = query_db($db,$query,"Select project names.");
 
 	if ($result->num_rows > 0) {

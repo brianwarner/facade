@@ -60,7 +60,7 @@ if (isset($_GET["projects"])) {
 		$projects[] = sanitize_input($db,$project,11);
 	}
 } else {
-	$query = "SELECT id FROM projects";
+	$query = "SELECT id FROM projects WHERE name != '(Queued for removal)'";
 	$result = query_db($db,$query,'Fetching all projects');
 	while ($project = $result->fetch_assoc()) {
 		$projects[] = $project['id'];
@@ -144,7 +144,8 @@ foreach ($projects as $project) {
 			OR (a.author_email LIKE CONCAT('%',e.domain)
 				AND (r.projects_id = e.projects_id
 				OR e.projects_id = 0))
-			WHERE r.projects_id = $project
+			WHERE p.name != '(Queued for removal)' AND
+			r.projects_id = $project
 			AND e.email IS NULL
 			AND e.domain IS NULL" .
 			$date_clause .

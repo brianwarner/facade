@@ -542,8 +542,8 @@ function list_excludes($db,$project_id,$project_name,$type) {
 				$project = ' AND r.projects_id = ' . $exclude['projects_id'];
 
 				// Set the 'Applies to' text for the appropriate project
-				$get_name = "SELECT name FROM projects WHERE id=" .
-					$exclude['projects_id'];
+				$get_name = "SELECT name FROM projects WHERE name != 
+					'(Queued for removal)' AND id=" . $exclude['projects_id'];
 
 				$name_result = query_db($db,$get_name,'getting name for display');
 
