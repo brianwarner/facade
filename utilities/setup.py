@@ -73,7 +73,7 @@ def create_settings(reset=0):
 		"('aliases_processed',current_timestamp(6)),"
 		"('google_analytics','disabled'),"
 		"('update_frequency','24'),"
-		"('database_version','2'),"
+		"('database_version','3'),"
 		"('results_visibility','show')")
 
 	cursor.execute(initialize, (start_date,repo_directory))
