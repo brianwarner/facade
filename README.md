@@ -1,6 +1,3 @@
-# Facade
-## See who is actually doing the work in your projects
-
 Facade is a program that analyzes the contributors to git repos, organized into
 groups called projects, on a commit-by-commit basis.  It is (mostly) managed
 using a web interface, and provides some basic data summaries.  For more
@@ -10,6 +7,9 @@ basic authentication, it's probably best to run it on a private machine.
 To get up and running quickly, check out the 
 <a href="https://github.com/brianwarner/facade/wiki/Getting-started">Getting
 Started</a> guide.
+
+To get a feeling for how Facade works, you can also find a 
+<a href="https://osg.facade-oss.org">live demo</a> with a variety of projects.
 
 Facade is licensed under Apache 2.0.
 
