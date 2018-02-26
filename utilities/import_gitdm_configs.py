@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright 2017 Brian Warner
+# Copyright 2017-2018 Brian Warner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,8 +52,8 @@ def import_aliases(filename):
 				line = line[:line.find('#')]
 
 			if safe:
-				canonical = unicode(line.split()[-1].replace("'","\\'"),"utf8","replace")
-				alias = unicode(line[:line.rfind(canonical)].strip().replace("'","\\'"),"utf8","replace")
+				canonical = line.split()[-1]
+				alias = line[:line.rfind(canonical)].strip()
 
 				insert = ("INSERT INTO aliases (canonical,alias) VALUES "
 					"(%s,%s) "
@@ -144,10 +144,10 @@ def import_emailmap(filename):
 
 			if safe:
 
-				domain = line.split()[0].replace("'","\\'")
+				domain = line.split()[0]
 				# Add the domain/email
 
-				remainder = line[len(domain):].strip().replace("'","\\'").split("<")
+				remainder = line[len(domain):].strip().split("<")
 
 				# Capture date, if it exists
 				if len(remainder) == 2:
@@ -226,7 +226,7 @@ def usage():
 		"	-a <aliases filename\n"
 		"	-e <emailmap filename\n\n"
 		"Sample usage:\n"
-		"	python import_gitdm_configs.py -a <filename> -e <filename>\n\n")
+		"	./import_gitdm_configs.py -a <filename> -e <filename>\n\n")
 
 try:
 	imp.find_module('db')

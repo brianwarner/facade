@@ -1,6 +1,7 @@
-#!/usr/bin/python
-# encoding = utf8
+#!/usr/bin/python3
 
+# Copyright 2016-2018 Brian Warner
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +24,7 @@
 # day should be more than sufficient. Each time it runs, it updates the repo
 # and checks for any parents of HEAD that aren't already accounted for in the
 # repos. It also rebuilds analysis data, checks any changed affiliations and
-# alaiases, and caches data for display.
+# aliases, and caches data for display.
 
 import sys
 import MySQLdb
@@ -37,8 +38,8 @@ try:
 except:
 	sys.exit("Can't find db.py. Have you run setup.py?")
 
-import HTMLParser
-html = HTMLParser.HTMLParser()
+import html.parser
+html = html.parser.HTMLParser()
 
 import subprocess
 import os
@@ -64,7 +65,7 @@ def increment_db(version):
 	cursor.execute(increment_db, (version, ))
 	db.commit()
 
-	print "Database updated to version: %s" % version
+	print("Database updated to version: %s" % version)
 
 def update_db(version):
 
@@ -72,7 +73,7 @@ def update_db(version):
 	# the current schema. After executing the database operations, call
 	# increment_db to bring it up to the version with which it is now compliant.
 
-	print "Attempting database update"
+	print("Attempting database update")
 
 	if version < 0:
 
@@ -103,7 +104,7 @@ def update_db(version):
 
 		increment_db(3)
 
-	print "No further database updates.\n"
+	print("No further database updates.\n")
 
 #### Helpers ####
 
@@ -382,27 +383,27 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 	log_activity('Debug','Analyzing %s' % commit)
 
-	for line in git_log.stdout.read().split(os.linesep):
+	for line in git_log.stdout.read().decode("utf-8",errors="ignore").split(os.linesep):
 		if len(line) > 0:
 
 			if line.find('author_name:') == 0:
-				author_name = unicode(line[13:].replace("'","\\'"),"utf8","replace")
+				author_name = line[13:]
 				continue
 
 			if line.find('author_email:') == 0:
-				author_email = unicode(line[14:].replace("'","\\'"),"utf8","replace")
+				author_email = line[14:]
 				continue
 
 			if line.find('author_date:') == 0:
- 				author_date = line[12:22]
+				author_date = line[12:22]
 				continue
 
 			if line.find('committer_name:') == 0:
-				committer_name = unicode(line[16:].replace("'","\\'"),"utf8","replace")
+				committer_name = line[16:]
 				continue
 
 			if line.find('committer_email:') == 0:
-				committer_email = unicode(line[17:].replace("'","\\'"),"utf8","replace")
+				committer_email = line[17:]
 				continue
 
 			if line.find('committer_date:') == 0:
@@ -422,16 +423,16 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 			if line.find('--- a/') == 0:
 				if filename == '(Deleted) ':
-					filename = unicode(filename + line[6:].replace("'","\\'"),"utf8","replace")
+					filename = filename + line[6:]
 				continue
 
 			if line.find('+++ b/') == 0:
 				if not filename.find('(Deleted) ') == 0:
-					filename = unicode(line[6:].replace("'","\\'"),"utf8","replace")
+					filename = line[6:]
 				continue
 
 			if line.find('rename to ') == 0:
-				filename = unicode(line[10:].replace("'","\\'"),"utf8","replace")
+				filename = line[10:]
 				continue
 
 			if line.find('deleted file ') == 0:
@@ -659,7 +660,7 @@ def git_repo_initialize():
 	new_repos = list(cursor)
 
 	for row in new_repos:
-		print row["git"]
+		print(row["git"])
 		update_repo_log(row['id'],'Cloning')
 
 		git = html.unescape(row["git"])
@@ -914,7 +915,7 @@ def analysis():
 			"--pretty=format:'%%H' --since=%s" % (repo_loc,start_date)],
 			stdout=subprocess.PIPE, shell=True)
 
-		parent_commits = set(parents.stdout.read().split(os.linesep))
+		parent_commits = set(parents.stdout.read().decode("utf-8",errors="ignore").split(os.linesep))
 
 		# If there are no commits in the range, we still get a blank entry in
 		# the set. Remove it, as it messes with the calculations
@@ -1111,7 +1112,7 @@ def fill_empty_affiliations():
 
 	# Now rebuild the affiliation data
 
-	working_author = get_setting('working_author').replace("'","\\'")
+	working_author = get_setting('working_author')
 
 	if working_author != 'done':
 		log_activity('Error','Trimming author data in affiliations: %s' %
@@ -1146,7 +1147,7 @@ def fill_empty_affiliations():
 
 	for null_author in null_authors:
 
-		email = null_author['email'].replace("'","\\'")
+		email = null_author['email']
 
 		store_working_author(email)
 
@@ -1171,7 +1172,7 @@ def fill_empty_affiliations():
 
 	for null_committer in null_committers:
 
-		email = null_committer['email'].replace("'","\\'")
+		email = null_committer['email']
 
 		store_working_author(email)
 
@@ -1461,8 +1462,8 @@ except:
 
 if current_db < upstream_db:
 
-	print ("Current database version: %s\nUpstream database version %s\n" %
-		(current_db, upstream_db))
+	print(("Current database version: %s\nUpstream database version %s\n" %
+		(current_db, upstream_db)))
 
 	update_db(current_db);
 
@@ -1621,7 +1622,7 @@ log_activity('Quiet','facade-worker.py completed')
 
 elapsed_time = time.time() - start_time
 
-print '\nCompleted in %s\n' % datetime.timedelta(seconds=int(elapsed_time))
+print('\nCompleted in %s\n' % datetime.timedelta(seconds=int(elapsed_time)))
 
 cursor.close()
 cursor_people.close()

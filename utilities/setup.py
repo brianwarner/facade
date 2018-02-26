@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright 2016-2017 Brian Warner
+# Copyright 2016-2018 Brian Warner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -612,13 +612,13 @@ def create_auth(reset=0):
 	email = ''
 	hashed = ''
 
-	print "\nSetting administrator credentials.\n"
+	print("\nSetting administrator credentials.\n")
 
 	while not user:
-		user = raw_input(' User: ').strip()
+		user = input(' User: ').strip()
 
 	while not email:
-		email = raw_input(' Email: ').strip()
+		email = input(' Email: ').strip()
 
 	while not hashed:
 		password = ''
@@ -631,9 +631,9 @@ def create_auth(reset=0):
 			conf_password = getpass.getpass(' Confirm password: ').strip()
 
 		if password == conf_password:
-			hashed = bcrypt.hashpw(password,bcrypt.gensalt())
+			hashed = bcrypt.hashpw(password.encode('utf8'),bcrypt.gensalt())
 		else:
-			print "Passwords do not match.\n"
+			print("Passwords do not match.\n")
 
 	query = ("INSERT INTO auth (user,email,password)"
 		"VALUES (%s,%s,%s)")
@@ -659,7 +659,7 @@ print ("========== Facade database setup  ==========\n\n"
 	" (I)nitialize tables only. This will clear any existing data.\n"
 	" (R)eset admin credentials.\n")
 
-action = raw_input('(c/i/r): ').strip()
+action = input('(c/i/r): ').strip()
 
 if action.lower() == 'c':
 
@@ -668,16 +668,16 @@ if action.lower() == 'c':
 		"If you do not do this, the existing files will be used.\n"
 		"Create new setup files?\n")
 
-	confirm_creds = raw_input('yes/no: ').strip().lower()
+	confirm_creds = input('yes/no: ').strip().lower()
 
 	if not confirm_creds:
 		confirm_creds = 'no'
 
 	if confirm_creds == 'yes':
 
-		print "\n===== Facade database user information =====\n"
+		print("\n===== Facade database user information =====\n")
 
-		db_user = raw_input('Facade database username (leave blank for random): ').strip()
+		db_user = input('Facade database username (leave blank for random): ').strip()
 		db_pass = getpass.getpass('Facade database password (leave blank for random): ').strip()
 
 		if not db_user:
@@ -689,19 +689,19 @@ if action.lower() == 'c':
 		print ("\nShould Facade create this user? (requires root, "
 			"not needed if the user already exists)\n")
 
-		create_user = raw_input('yes/no (default yes): ').strip()
+		create_user = input('yes/no (default yes): ').strip()
 
 		if not create_user:
 			create_user = 'yes'
 
-		print "\n===== Database information =====\n"
+		print("\n===== Database information =====\n")
 
-		db_host = raw_input('Database host (default: localhost): ').strip()
+		db_host = input('Database host (default: localhost): ').strip()
 
 		if not db_host:
 			db_host = 'localhost'
 
-		db_name = raw_input('Database name (leave blank for random): ').strip()
+		db_name = input('Database name (leave blank for random): ').strip()
 
 		if not db_name:
 			db_name = 'facade_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
@@ -709,21 +709,21 @@ if action.lower() == 'c':
 		print ("\nShould Facade create the database? (requires root, "
 			"not needed if the database already exists and uses utf8mb4)\n")
 
-		create_db = raw_input('yes/no (default yes): ').strip()
+		create_db = input('yes/no (default yes): ').strip()
 
 		if not create_db:
 			create_db = 'yes'
 
-		print "\nShould Facade use a different database for affiliations and aliases?\n"
+		print("\nShould Facade use a different database for affiliations and aliases?\n")
 
-		people_db = raw_input('yes/no (default no): ').strip()
+		people_db = input('yes/no (default no): ').strip()
 
 		if not people_db:
 			people_db = 'no'
 
 		if people_db.lower() == 'yes':
 
-			db_user_people = raw_input('Affiliations and aliases database username (leave blank for random): ').strip()
+			db_user_people = input('Affiliations and aliases database username (leave blank for random): ').strip()
 			db_pass_people = getpass.getpass('Affiliations and aliases database password (leave blank for random): ').strip()
 
 			if not db_user_people:
@@ -735,19 +735,19 @@ if action.lower() == 'c':
 			print ("\nShould Facade create this user? (requires root, "
 				"not needed if the user already exists)\n")
 
-			create_user_people = raw_input('yes/no (default yes): ').strip()
+			create_user_people = input('yes/no (default yes): ').strip()
 
 			if not create_user_people:
 				create_user_people = 'yes'
 
-			print "\n===== Affiliations and aliases database information =====\n"
+			print("\n===== Affiliations and aliases database information =====\n")
 
-			db_host_people = raw_input('Affiliations and aliases database host (default: localhost): ').strip()
+			db_host_people = input('Affiliations and aliases database host (default: localhost): ').strip()
 
 			if not db_host_people:
 				db_host_people = 'localhost'
 
-			db_name_people = raw_input('Affiliations and aliases database name (leave blank for random): ').strip()
+			db_name_people = input('Affiliations and aliases database name (leave blank for random): ').strip()
 
 			if not db_name_people:
 				db_name_people = 'facade_people_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
@@ -755,14 +755,14 @@ if action.lower() == 'c':
 			print ("\nShould Facade create the affiliations and aliases database? (requires root, "
 				"not needed if the database already exists and uses utf8mb4)\n")
 
-			create_db_people = raw_input('yes/no (default yes): ').strip()
+			create_db_people = input('yes/no (default yes): ').strip()
 
 			if not create_db_people:
 				create_db_people = 'yes'
 
 		else:
 
-			print "\nUsing main Facade database to store affiliations and aliases\n"
+			print("\nUsing main Facade database to store affiliations and aliases\n")
 
 			db_user_people = db_user
 			db_pass_people = db_pass
@@ -785,7 +785,7 @@ if action.lower() == 'c':
 				root_cursor = root_db.cursor(MySQLdb.cursors.DictCursor)
 
 			except:
-				print 'Could not connect to database as root'
+				print('Could not connect to database as root')
 				sys.exit(1)
 
 			if create_db.lower() == 'yes':
@@ -800,7 +800,7 @@ if action.lower() == 'c':
 
 				except:
 
-					print 'Could not create database: %s' % db_name
+					print('Could not create database: %s' % db_name)
 					sys.exit(1)
 
 			if create_db_people.lower() == 'yes':
@@ -814,7 +814,7 @@ if action.lower() == 'c':
 					root_db.commit()
 
 				except:
-					print 'Could not create database: %s' % db_name
+					print('Could not create database: %s' % db_name)
 					sys.exit(1)
 
 			if create_user.lower() == 'yes':
@@ -838,7 +838,7 @@ if action.lower() == 'c':
 					root_db.commit()
 
 				except:
-					print 'Could not create user and grant privileges: %s' % db_user
+					print('Could not create user and grant privileges: %s' % db_user)
 					sys.exit(1)
 
 			if create_user_people.lower() == 'yes':
@@ -862,7 +862,7 @@ if action.lower() == 'c':
 					root_db.commit()
 
 				except:
-					print 'Could not create user and grant privileges: %s' % db_user
+					print('Could not create user and grant privileges: %s' % db_user)
 					sys.exit(1)
 
 			root_cursor.close()
@@ -895,7 +895,7 @@ if action.lower() == 'c':
 		creds_php_file.write(creds_php_template.substitute(db_values))
 		creds_php_file.close()
 
-		print '\nDatabase setup complete\n'
+		print('\nDatabase setup complete\n')
 
 try:
     imp.find_module('db')
@@ -909,13 +909,13 @@ if action.lower() == 'i' or action.lower() == 'c':
 		"This will set up your tables, and will clear any existing data.\n"
 		"Are you sure?\n")
 
-	confirm = raw_input('yes/no: ')
+	confirm = input('yes/no: ')
 
 	if not confirm:
 		confirm = 'no'
 
 	if confirm == "yes":
-		print "\nSetting up database tables.\n"
+		print("\nSetting up database tables.\n")
 
 		create_settings('clear')
 
@@ -951,12 +951,12 @@ if action.lower() == 'i' or action.lower() == 'c':
 				'table will also delete affiliation data for that instance too.\n'
 				'Do you want to clear this data, or keep it?\n')
 
-			clear_affiliations = raw_input('keep/clear (default keep): ').strip().lower()
+			clear_affiliations = input('keep/clear (default keep): ').strip().lower()
 
 			if clear_affiliations == 'clear':
 				create_affiliations('clear')
 			else:
-				print '\nLeaving affiliations data as it is.\n'
+				print('\nLeaving affiliations data as it is.\n')
 		else:
 			create_affiliations('clear')
 
@@ -975,12 +975,12 @@ if action.lower() == 'i' or action.lower() == 'c':
 				'table will also delete alias data for that instance too.\n'
 				'Do you want to clear this data, or keep it?\n')
 
-			clear_aliases = raw_input('keep/clear (default keep): ').strip().lower()
+			clear_aliases = input('keep/clear (default keep): ').strip().lower()
 
 			if clear_aliases == 'clear':
 				create_aliases('clear')
 			else:
-				print '\nLeaving alias data as it is.\n'
+				print('\nLeaving alias data as it is.\n')
 		else:
 			create_aliases('clear')
 
@@ -988,7 +988,7 @@ if action.lower() == 'i' or action.lower() == 'c':
 		create_auth('clear')
 
 	else:
-		print "\nExiting without doing anything.\n"
+		print("\nExiting without doing anything.\n")
 
 elif action.lower() == 'r':
 
@@ -996,15 +996,15 @@ elif action.lower() == 'r':
 		"Ok, so you forgot your password. It happens to the best of us.\n"
 		"Are you sure you want to reset the admin credentials?\n")
 
-	confirm = raw_input('(yes): ')
+	confirm = input('(yes): ')
 
 	if confirm.lower() == "yes":
 
 		create_auth('clear')
 
 	else:
-		print "\nExiting without doing anything.\n"
+		print("\nExiting without doing anything.\n")
 
 else:
 
-	print "\nExiting without doing anything.\n"
+	print("\nExiting without doing anything.\n")

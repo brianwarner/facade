@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright 2017 Brian Warner
+# Copyright 2017-2018 Brian Warner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ detail = 'LoC added (Unique emails)'
 
 #--> Change this to modify the names of each worksheet
 
-sheets = list(reversed(range(int(get_setting('start_date')[:4]),
+sheets = reversed(list(range(int(get_setting('start_date')[:4]),
 	datetime.datetime.now().year + 1)))
 
 #--> Change this to modify the x axis

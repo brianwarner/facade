@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2016-2017 Brian Warner
+# Copyright 2016-2018 Brian Warner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,6 @@
 
 
 sudo apt-get install apache2 mysql-client mysql-server php-cli php-mysql \
-python-mysqldb libapache2-mod-php php-dom php-curl python-bcrypt \
-python-xlsxwriter
+python3 python3-mysqldb libapache2-mod-php php-dom php-curl python3-bcrypt \
+python3-xlsxwriter
 
