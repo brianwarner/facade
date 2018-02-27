@@ -657,9 +657,10 @@ print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
 	" (C)reate database config files and initialize tables. Optionally create database and user.\n"
 	" (I)nitialize tables only. This will clear any existing data.\n"
+	" (P)rint the configuration instructions for setting up Apache.\n"
 	" (R)eset admin credentials.\n")
 
-action = input('(c/i/r): ').strip()
+action = input('(c/i/p/r): ').strip()
 
 if action.lower() == 'c':
 
@@ -989,6 +990,40 @@ if action.lower() == 'i' or action.lower() == 'c':
 
 	else:
 		print("\nExiting without doing anything.\n")
+
+if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
+
+	print ("\n========== Generating Apache2 Configs ==========\n")
+
+	facade_dir = working_dir[:-9]
+
+	print("Step 1: Create a new file in /etc/apache2/sites-available called facade.conf "
+		"with the following contents:\n\n"
+		"# Start copying here\n"
+		"<VirtualHost *:80>\n"
+		"	# Auto-generated site config for Facade\n"
+		"	ServerAdmin webmaster@localhost\n"
+		"	DocumentRoot %s\n"
+		"	ErrorLog ${APACHE_LOG_DIR}/error.log\n"
+		"	CustomLog ${APACHE_LOG_DIR}/access.log combined\n"
+		"</VirtualHost>\n"
+		"# End copying here\n\n" % facade_dir)
+
+	print("Step 2: Add the following lines to /etc/apache2/apache2.conf:\n\n"
+		"# Start copying here\n"
+		"<Directory %s>\n"
+		"	# Auto-generated directory entry for Facade\n"
+		"	Options Indexes FollowSymLinks\n"
+		"	AllowOverride All\n"
+		"	Require all granted\n"
+		"</Directory>\n"
+		"# End copying here\n\n" % facade_dir)
+
+	print("Step 3: Run this in the terminal:\n\n"
+		"  sudo a2dissite 000-default && sudo a2ensite facade && sudo a2enmod "
+		"rewrite && sudo systemctl reload apache2\n\n")
+
+	print("You should now be able to visit http://localhost and see Facade.\n")
 
 elif action.lower() == 'r':
 
