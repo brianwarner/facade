@@ -35,6 +35,9 @@ def create_settings(reset=0):
 
 # Create and populate the default settings table.
 
+	# Only increment this when you've added the support to facade-worker.py
+	database_version = 4
+
 	# default settings
 	start_date = "2014-01-01";
 	working_dir = os.path.dirname(os.path.abspath(__file__))
@@ -73,10 +76,10 @@ def create_settings(reset=0):
 		"('aliases_processed',current_timestamp(6)),"
 		"('google_analytics','disabled'),"
 		"('update_frequency','24'),"
-		"('database_version','3'),"
+		"('database_version','%s'),"
 		"('results_visibility','show')")
 
-	cursor.execute(initialize, (start_date,repo_directory))
+	cursor.execute(initialize, (start_date,repo_directory,database_version))
 	db.commit()
 
 #### Log tables ####
@@ -210,7 +213,33 @@ def create_repos(reset=0):
 		"path VARCHAR(256),"
 		"name VARCHAR(256),"
 		"added TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),"
-		"status VARCHAR(32) NOT NULL,"
+		"status VARCHAR(32) NOT NULL)")
+
+	cursor.execute(create)
+	db.commit()
+
+def create_working_commits(reset=0):
+
+# As the analysis proceeds, the commit currently being analyzed will be stored
+# in the working_commits table.  If Facade begins an analysis and discovers a
+# working commit in the table, it probably means the last run was interrupted
+# and the data needs to be purged from the analysis_data table and recalculated.
+# This was formerly handled as a single column in the repos table, but by doing
+# it this way we can potentially work on multiple commits simultaneously.
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS working_commits"
+
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS working_commits ("
+		"repos_id INT UNSIGNED NOT NULL,"
 		"working_commit VARCHAR(40))")
 
 	cursor.execute(create)

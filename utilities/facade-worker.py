@@ -52,7 +52,7 @@ global log_level
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 3
+upstream_db = 4
 
 #### Database update functions ####
 
@@ -103,6 +103,36 @@ def update_db(version):
 		db.commit
 
 		increment_db(3)
+
+	if version < 4:
+		add_working_commits_table = ("CREATE TABLE IF NOT EXISTS working_commits ("
+			"repos_id INT UNSIGNED NOT NULL,"
+			"working_commit VARCHAR(40))")
+
+		cursor.execute(add_working_commits_table)
+		db.commit
+
+		# Make sure all working commits are processed
+
+		get_working_commits = ("SELECT id,working_commit "
+			"FROM repos WHERE working_commit > ''")
+
+		cursor.execute(get_working_commits)
+
+		working_commits = list(cursor)
+
+		for commit in working_commits:
+			trim_commit(commit['id'],commit['working_commit'])
+
+		# Now it's safe to discard the (now unused) column
+
+		remove_working_commit_column = ("ALTER TABLE repos DROP COLUMN "
+			"working_commit")
+
+		cursor.execute(remove_working_commit_column)
+		db.commit
+
+		increment_db(4)
 
 	print("No further database updates.\n")
 
@@ -214,14 +244,25 @@ def store_working_commit(repo_id,commit):
 
 # Store the working commit.
 
-	store_commit = ("UPDATE repos "
-		"SET working_commit = %s "
-		"WHERE id = %s")
+	store_commit = ("INSERT INTO working_commits "
+		"(repos_id,working_commit) VALUES (%s,%s)")
 
-	cursor.execute(store_commit, (commit, repo_id))
+	cursor.execute(store_commit, (repo_id,commit))
 	db.commit()
 
 	log_activity('Debug','Stored working commit: %s' % commit)
+
+def remove_working_commit(repo_id,commit):
+
+# Remove the working commit.
+
+	remove_commit = ("DELETE FROM working_commits "
+		"WHERE repos_id = %s AND working_commit = %s")
+
+	cursor.execute(remove_commit, (repo_id,commit))
+	db.commit()
+
+	log_activity('Debug','Removed working commit: %s' % commit)
 
 def trim_commit(repo_id,commit):
 
@@ -600,6 +641,12 @@ def git_repo_cleanup():
 
 		cleanup = '%s/%s%s' % (row['projects_id'],row['path'],row['name'])
 
+		# Remove any working commits
+
+		remove_working_commits = "DELETE FROM working_commits WHERE repos_id=%s"
+		cursor.execute(remove_working_commits, (row['id'], ))
+		db.commit()
+
 		# Remove the repo from the logs
 
 		remove_logs = ("DELETE FROM repos_fetch_log WHERE repos_id = %s")
@@ -891,16 +938,17 @@ def analysis():
 
 		# First we check to see if the previous analysis didn't complete
 
-		get_status = ("SELECT working_commit FROM repos WHERE id=%s")
+		get_status = ("SELECT working_commit FROM working_commits WHERE repos_id=%s")
 
 		cursor.execute(get_status, (repo['id'], ))
-		working_commit = cursor.fetchone()['working_commit']
+		working_commits = list(cursor)
+		#cursor.fetchone()['working_commit']
 
 		# If there's a commit still there, the previous run was interrupted and
 		# the commit data may be incomplete. It should be trimmed, just in case.
-		if working_commit:
-			trim_commit(repo['id'],working_commit)
-			store_working_commit(repo['id'],'')
+		for commit in working_commits:
+			trim_commit(repo['id'],commit['working_commit'])
+			remove_working_commit(repo['id'],commit['working_commit'])
 
 		# Start the main analysis
 
@@ -947,7 +995,7 @@ def analysis():
 
 			analyze_commit(repo['id'],repo_loc,commit)
 
-			store_working_commit(repo['id'],'')
+			remove_working_commit(repo['id'],commit)
 
 		update_analysis_log(repo['id'],'Data collection complete')
 
