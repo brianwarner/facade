@@ -955,6 +955,7 @@ if action.lower() == 'i' or action.lower() == 'c':
 
 		create_projects('clear')
 		create_repos('clear')
+		create_working_commits('clear')
 
 		create_excludes('clear')
 		create_special_tags('clear')
