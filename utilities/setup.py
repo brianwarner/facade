@@ -711,10 +711,10 @@ if action.lower() == 'c':
 		db_pass = getpass.getpass('Facade database password (leave blank for random): ').strip()
 
 		if not db_user:
-			db_user = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+			db_user = ''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 		if not db_pass:
-			db_pass = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+			db_pass = ''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 		print ("\nShould Facade create this user? (requires root, "
 			"not needed if the user already exists)\n")
@@ -734,7 +734,7 @@ if action.lower() == 'c':
 		db_name = input('Database name (leave blank for random): ').strip()
 
 		if not db_name:
-			db_name = 'facade_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
+			db_name = 'facade_'+''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 		print ("\nShould Facade create the database? (requires root, "
 			"not needed if the database already exists and uses utf8mb4)\n")
@@ -757,10 +757,10 @@ if action.lower() == 'c':
 			db_pass_people = getpass.getpass('Affiliations and aliases database password (leave blank for random): ').strip()
 
 			if not db_user_people:
-				db_user_people = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+				db_user_people = ''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 			if not db_pass_people:
-				db_pass_people = ''.join((random.choice(string.letters+string.digits)) for x in range(16))
+				db_pass_people = ''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 			print ("\nShould Facade create this user? (requires root, "
 				"not needed if the user already exists)\n")
@@ -780,7 +780,7 @@ if action.lower() == 'c':
 			db_name_people = input('Affiliations and aliases database name (leave blank for random): ').strip()
 
 			if not db_name_people:
-				db_name_people = 'facade_people_'+''.join((random.choice(string.letters+string.digits)) for x in range(16))
+				db_name_people = 'facade_people_'+''.join((random.choice(string.ascii_letters+string.digits)) for x in range(16))
 
 			print ("\nShould Facade create the affiliations and aliases database? (requires root, "
 				"not needed if the database already exists and uses utf8mb4)\n")
