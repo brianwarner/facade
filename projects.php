@@ -114,7 +114,11 @@ if ($_GET["id"]) {
 		// Show all if requested, otherwise limit for readability
 		if ($_GET["detail"]) {
 
-			$detail = sanitize_input($db,$_GET["detail"],16);
+			if ($affiliation != 'All') {
+				$detail = 'email';
+			} else {
+				$detail = sanitize_input($db,$_GET["detail"],16);
+			}
 
 			echo '<div class="content-block">
 			<h2>All contributions</h2>';
