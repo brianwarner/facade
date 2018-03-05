@@ -877,6 +877,20 @@ def force_repo_updates():
 
 	log_activity('Info','Forcing repos to update (complete)')
 
+def force_repo_analysis():
+
+# Set the status of all non-new repos to "Analyze".
+
+	update_status('Forcing all non-new repos to be analyzed')
+	log_activity('Info','Forcing repos to be analyzed')
+
+	set_to_analyze = ("UPDATE repos SET status='Analyze' WHERE status "
+		"NOT LIKE 'New%' AND STATUS!='Delete'")
+	cursor.execute(set_to_analyze)
+	db.commit()
+
+	log_activity('Info','Forcing repos to be analyzed (complete)')
+
 def git_repo_updates():
 
 # Update existing repos
@@ -1529,13 +1543,14 @@ check_updates = 0
 force_updates = 0
 run_analysis = 0
 nuke_stored_affiliations = 0
-fix_affiliations = 0 #
+fix_affiliations = 0
 force_invalidate_caches = 0
 rebuild_caches = 0
 force_invalidate_caches = 0
 create_xlsx_summary_files = 0
+multithreaded = 1
 
-opts,args = getopt.getopt(sys.argv[1:],'hdpcuUanfIrx')
+opts,args = getopt.getopt(sys.argv[1:],'hdpcuUaAmnfIrx')
 for opt in opts:
 	if opt[0] == '-h':
 		print("\nfacade-worker.py does everything by default except invalidating caches\n"
@@ -1548,6 +1563,7 @@ for opt in opts:
 				"	-U	Force all repos to be marked for updating\n"
 				"	-p	Run 'git pull' on repos\n"
 				"	-a	Analyze git repos\n"
+				"	-A	Force all repos to be analyzed\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
 				"	-f	Fill empty affiliations\n"
 				"	-I	Invalidate caches\n"
@@ -1583,6 +1599,12 @@ for opt in opts:
 		run_analysis = 1
 		limited_run = 1
 		log_activity('Info','Option set: running analysis.')
+
+	elif opt[0] == '-A':
+		force_analysis = 1
+		run_analysis = 1
+		limited_run = 1
+		log_activity('Info','Option set: forcing analysis.')
 
 	elif opt[0] == '-n':
 		nuke_stored_affiliations = 1
@@ -1644,6 +1666,9 @@ if force_updates:
 
 if not limited_run or (limited_run and pull_repos):
 	git_repo_updates()
+
+if force_analysis:
+	force_repo_analysis()
 
 if not limited_run or (limited_run and run_analysis):
 	analysis()
