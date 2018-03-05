@@ -157,9 +157,14 @@ def update_status(status):
 
 def log_activity(level,status):
 
-# Log an activity based upon urgency and user's preference
+# Log an activity based upon urgency and user's preference.  If the log level is
+# "Debug", then just print it and don't save it in the database.
 
 	log_options = ('Error','Quiet','Info','Verbose','Debug')
+
+	if log_level == 'Debug' and level == 'Debug':
+		sys.stderr.write("* %s\n" % status)
+		return
 
 	if log_options.index(level) <= log_options.index(log_level):
 		query = ("INSERT INTO utility_log (level,status) VALUES (%s,%s)")
