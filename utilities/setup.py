@@ -695,7 +695,7 @@ action = input('(c/i/p/r): ').strip()
 if action.lower() == 'c':
 
 	print ("========== Creating database credential files ==========\n\n"
-		"This will overwrite any existing db.py and creds.php files.\n"
+		"This will overwrite any existing db.cfg and creds.php files.\n"
 		"If you do not do this, the existing files will be used.\n"
 		"Create new setup files?\n")
 
@@ -937,11 +937,43 @@ if action.lower() == 'c':
 
 		print('\nDatabase setup complete\n')
 
+
 try:
-    imp.find_module('db')
-    from db import db,db_people,cursor,cursor_people
+	config = configparser.ConfigParser()
+	config.read('db.cfg')
+
+	# Read in the people connection info
+
+	db_user = config['main_database']['user']
+	db_pass = config['main_database']['pass']
+	db_name = config['main_database']['name']
+	db_host = config['main_database']['host']
+
+	db = MySQLdb.connect(
+		host = db_host,
+		user = db_user,
+		passwd = db_pass,
+		db = db_name,
+		charset = 'utf8mb4')
+
+	cursor = db.cursor(MySQLdb.cursors.DictCursor)
+
+	db_user_people = config['people_database']['user']
+	db_pass_people = config['people_database']['pass']
+	db_name_people = config['people_database']['name']
+	db_host_people = config['people_database']['host']
+
+	db_people = MySQLdb.connect(
+		host = db_host_people,
+		user = db_user_people,
+		passwd = db_pass_people,
+		db = db_name_people,
+		charset = 'utf8mb4')
+
+	cursor_people = db_people.cursor(MySQLdb.cursors.DictCursor)
+
 except:
-    sys.exit("Can't find db.py.")
+    sys.exit("Can't find db.cfg.")
 
 if action.lower() == 'i' or action.lower() == 'c':
 
