@@ -31,21 +31,12 @@ import MySQLdb
 import imp
 import time
 import datetime
-
-try:
-	imp.find_module('db')
-	from db import db,cursor,db_people,cursor_people
-except:
-	sys.exit("Can't find db.py. Have you run setup.py?")
-
 import html.parser
-html = html.parser.HTMLParser()
-
 import subprocess
 import os
 import getopt
-
 import xlsxwriter
+import configparser
 
 global log_level
 
@@ -136,7 +127,50 @@ def update_db(version):
 
 	print("No further database updates.\n")
 
-#### Helpers ####
+def migrate_database_config():
+
+# Since we're changing the way we store database credentials, we need a way to
+# transparently migrate anybody who was using the old file. Someday after a long
+# while this can disappear.
+
+	try:
+		# If the old database config was found, write a new config
+		imp.find_module('db')
+
+		db_config = configparser.ConfigParser()
+
+		from db import db_user,db_pass,db_name,db_host
+		from db import db_user_people,db_pass_people,db_name_people,db_host_people
+
+		db_config.add_section('main_database')
+		db_config.set('main_database','user',db_user)
+		db_config.set('main_database','pass',db_pass)
+		db_config.set('main_database','name',db_name)
+		db_config.set('main_database','host',db_host)
+
+		db_config.add_section('people_database')
+		db_config.set('people_database','user',db_user_people)
+		db_config.set('people_database','pass',db_pass_people)
+		db_config.set('people_database','name',db_name_people)
+		db_config.set('people_database','host',db_host_people)
+
+		with open('db.cfg','w') as db_file:
+			db_config.write(db_file)
+
+		print("Migrated old style config file to new.")
+	except:
+		# If nothing is found, the user probably hasn't run setup yet.
+		sys.exit("Can't find database config. Have you run setup.py?")
+
+	try:
+		os.remove('db.py')
+		os.remove('db.pyc')
+		print("Removed unneeded config files")
+	except:
+		print("Attempted to remove unneeded config files")
+
+	return db_user,db_pass,db_name,db_host,db_user_people,db_pass_people,db_name_people,db_host_people
+
 
 def get_setting(setting):
 
@@ -1516,6 +1550,51 @@ def rebuild_unknown_affiliation_and_web_caches():
 	log_activity('Info','Caching unknown affiliations and web data for display (complete)')
 
 ### The real program starts here ###
+
+# Set up the database
+
+try:
+	config = configparser.ConfigParser()
+	config.read('db.cfg')
+
+	# Read in the general connection info
+
+	db_user = config['main_database']['user']
+	db_pass = config['main_database']['pass']
+	db_name = config['main_database']['name']
+	db_host = config['main_database']['host']
+
+	# Read in the people connection info
+
+	db_user_people = config['people_database']['user']
+	db_pass_people = config['people_database']['pass']
+	db_name_people = config['people_database']['name']
+	db_host_people = config['people_database']['host']
+
+except:
+	# If the config import fails, check if there's an older style db.py
+
+	db_user,db_pass,db_name,db_host,db_user_people,db_pass_people,db_name_people,db_host_people = migrate_database_config()
+
+# Open a general-purpose connection
+db = MySQLdb.connect(
+	host = db_host,
+	user = db_user,
+	passwd = db_pass,
+	db = db_name,
+	charset = 'utf8mb4')
+
+cursor = db.cursor(MySQLdb.cursors.DictCursor)
+
+# Open a connection for the people database
+db_people = MySQLdb.connect(
+	host = db_host_people,
+	user = db_user_people,
+	passwd = db_pass_people,
+	db = db_name_people,
+	charset = 'utf8mb4')
+
+cursor_people = db_people.cursor(MySQLdb.cursors.DictCursor)
 
 # Figure out how much we're going to log
 log_level = get_setting('log_level')

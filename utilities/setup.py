@@ -28,6 +28,7 @@ from string import Template
 import string
 import random
 import warnings
+import configparser
 
 #### Settings table ####
 
@@ -898,6 +899,23 @@ if action.lower() == 'c':
 			root_cursor.close()
 			root_db.close()
 
+		db_config = configparser.RawConfigParser()
+
+		db_config.add_section('main_database')
+		db_config.set('main_database','user',db_user)
+		db_config.set('main_database','pass',db_pass)
+		db_config.set('main_database','name',db_name)
+		db_config.set('main_database','host',db_host)
+
+		db_config.add_section('people_database')
+		db_config.set('people_database','user',db_user_people)
+		db_config.set('people_database','pass',db_pass_people)
+		db_config.set('people_database','name',db_name_people)
+		db_config.set('people_database','host',db_host_people)
+
+		with open('db.cfg','w') as db_file:
+			db_config.write(db_file)
+
 		db_values = {'db_user': db_user,
 			'db_pass': db_pass,
 			'db_name': db_name,
@@ -908,16 +926,8 @@ if action.lower() == 'c':
 			'db_host_people': db_host_people}
 
 
-		db_py_template_loc = os.path.join(working_dir,'db.py.template')
-		db_py_loc = os.path.join(working_dir,'db.py')
 		creds_php_template_loc = os.path.join(working_dir,'../includes/creds.php.template')
 		creds_php_loc = os.path.join(working_dir,'../includes/creds.php')
-
-		db_py_template = string.Template(open(db_py_template_loc).read())
-
-		db_py_file = open(db_py_loc,'w')
-		db_py_file.write(db_py_template.substitute(db_values))
-		db_py_file.close()
 
 		creds_php_template = string.Template(open(creds_php_template_loc).read())
 
