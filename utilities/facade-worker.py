@@ -40,6 +40,8 @@ import configparser
 
 global log_level
 
+html = html.parser.HTMLParser()
+
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
@@ -172,6 +174,8 @@ def migrate_database_config():
 	return db_user,db_pass,db_name,db_host,db_user_people,db_pass_people,db_name_people,db_host_people
 
 
+#### Global helper functions ####
+
 def get_setting(setting):
 
 # Get a setting from the database
@@ -215,93 +219,6 @@ def update_repo_log(repos_id,status):
 
 	cursor.execute(log_message, (repos_id, status))
 	db.commit()
-
-def update_analysis_log(repos_id,status):
-
-# Log a repo's analysis status
-
-	log_message = ("INSERT INTO analysis_log (repos_id,status) "
-		"VALUES (%s,%s)")
-
-	cursor.execute(log_message, (repos_id,status))
-	db.commit()
-
-def check_swapped_emails(name,email):
-
-# Sometimes people mix up their name and email in their git settings
-
-	if name.find('@') >=0 and email.find('@') == -1:
-		log_activity('Debug','Found swapped email/name: %s/%s' % (email,name))
-		return email,name
-	else:
-		return name,email
-
-def strip_extra_amp(email):
-
-# Some repos have multiple ampersands, which really messes up domain pattern
-# matching. This extra info is not used, so we discard it.
-
-	if email.count('@') > 1:
-		log_activity('Debug','Found extra @: %s' % email)
-		return email[:email.find('@',email.find('@')+1)]
-	else:
-		return email
-
-def discover_alias(email):
-
-# Match aliases with their canonical email
-
-	fetch_canonical = ("SELECT canonical "
-		"FROM aliases "
-		"WHERE alias=%s "
-		"AND active = TRUE")
-
-	cursor_people.execute(fetch_canonical, (email, ))
-	db_people.commit()
-
-	canonical = list(cursor_people)
-
-	if canonical:
-		for email in canonical:
-			return email['canonical']
-	else:
-		return email
-
-def update_affiliation(email_type,email,affiliation,start_date):
-
-	update = ("UPDATE analysis_data "
-		"SET %s_affiliation = %%s "
-		"WHERE %s_email = %%s "
-		"AND %s_affiliation IS NULL "
-		"AND %s_date >= %%s" %
-		(email_type, email_type, email_type, email_type))
-
-	cursor.execute(update, (affiliation, email, start_date))
-	db.commit()
-
-def store_working_commit(repo_id,commit):
-
-# Store the working commit.
-
-	store_commit = ("INSERT INTO working_commits "
-		"(repos_id,working_commit) VALUES (%s,%s)")
-
-	cursor.execute(store_commit, (repo_id,commit))
-	db.commit()
-
-	log_activity('Debug','Stored working commit: %s' % commit)
-
-def remove_working_commit(repo_id,commit):
-
-# Remove the working commit.
-
-	remove_commit = ("DELETE FROM working_commits "
-		"WHERE repos_id = %s AND working_commit = %s")
-
-	cursor.execute(remove_commit, (repo_id,commit))
-	db.commit()
-
-	log_activity('Debug','Removed working commit: %s' % commit)
 
 def trim_commit(repo_id,commit):
 
@@ -353,96 +270,88 @@ def trim_author(email):
 
 	log_activity('Debug','Trimmed working author: %s' % email)
 
-def discover_null_affiliations(attribution,email):
-
-# Try a bunch of ways to match emails to attributions in the database. First it
-# trys to match exactly. If that doesn't work, it tries to match by domain. If
-# domain doesn't work, it strips subdomains from the email and tries again.
-
-	# First we see if there's an exact match. This will also catch malformed or
-	# intentionally mangled emails (e.g. "developer at domain.com") that have
-	# been added as an affiliation rather than an alias.
-
-	find_exact_match = ("SELECT affiliation,start_date "
-		"FROM affiliations "
-		"WHERE domain = %s "
-		"AND active = TRUE "
-		"ORDER BY start_date DESC")
-
-	cursor_people.execute(find_exact_match, (email, ))
-	db_people.commit
-
-	matches = list(cursor_people)
-
-	if not matches and email.find('@') < 0:
-
-		# It's not a properly formatted email, leave it NULL and log it.
-
-		log_activity('Info','Unmatchable email: %s' % email)
-
-		return
-
-	if not matches:
-
-		# Now we go for a domain-level match. Try for an exact match.
-
-		domain = email[email.find('@')+1:]
-
-		find_exact_domain = ("SELECT affiliation,start_date "
-			"FROM affiliations "
-			"WHERE domain= %s "
-			"AND active = TRUE "
-			"ORDER BY start_date DESC")
-
-		cursor_people.execute(find_exact_domain, (domain, ))
-		db_people.commit()
-
-		matches = list(cursor_people)
-
-	if not matches:
-
-		# Then try stripping any subdomains.
-
-		find_domain = ("SELECT affiliation,start_date "
-			"FROM affiliations "
-			"WHERE domain = %s "
-			"AND active = TRUE "
-			"ORDER BY start_date DESC")
-
-		cursor_people.execute(find_domain, (domain[domain.rfind('.',0,domain.rfind('.',0))+1:], ))
-		db_people.commit()
-
-		matches = list(cursor_people)
-
-	if not matches:
-
-		# One last check to see if it's an unmatched academic domain.
-
-		if domain[-4:] in '.edu':
-			matches.append({'affiliation':'(Academic)','start_date':'1970-01-01'})
-
-	# Done looking. Now we process any matches that were found.
-
-	if matches:
-
-		log_activity('Debug','Found domain match for %s' % email)
-
-		for match in matches:
-                        update = ("UPDATE analysis_data "
-                                "SET %s_affiliation = %%s "
-                                "WHERE %s_email = %%s "
-                                "AND %s_affiliation IS NULL "
-                                "AND %s_date >= %%s" %
-                                (attribution, attribution, attribution, attribution)
-			)
-                        cursor.execute(update, (match['affiliation'], email, match['start_date']))
-                        db.commit()
-
 def analyze_commit(repo_id,repo_loc,commit):
 
 # This function analyzes a given commit, counting the additions, removals, and
 # whitespace changes. It collects all of the metadata about the commit, and
-# stashes it in the database.
+# stashes it in the database.  A new database connection is opened each time in
+# case we are running in multithreaded mode, since MySQL cursors are not
+# currently threadsafe.
+
+### Local helper functions ###
+
+	def check_swapped_emails(name,email):
+
+	# Sometimes people mix up their name and email in their git settings
+
+		if name.find('@') >= 0 and email.find('@') == -1:
+			log_activity('Debug','Found swapped email/name: %s/%s' % (email,name))
+			return email,name
+		else:
+			return name,email
+
+	def strip_extra_amp(email):
+
+	# Some repos have multiple ampersands, which really messes up domain pattern
+	# matching. This extra info is not used, so we discard it.
+
+		if email.count('@') > 1:
+			log_activity('Debug','Found extra @: %s' % email)
+			return email[:email.find('@',email.find('@')+1)]
+		else:
+			return email
+
+	def discover_alias(email):
+
+	# Match aliases with their canonical email
+		fetch_canonical = ("SELECT canonical "
+			"FROM aliases "
+			"WHERE alias=%s "
+			"AND active = TRUE")
+
+		cursor_people_local.execute(fetch_canonical, (email, ))
+		db_people_local.commit()
+
+		canonical = list(cursor_people_local)
+
+		if canonical:
+			for email in canonical:
+				return email['canonical']
+		else:
+			return email
+
+	def store_commit(repos_id,commit,filename,
+		author_name,author_email,author_date,
+		committer_name,committer_email,committer_date,
+		added,removed, whitespace):
+
+	# Fix some common issues in git commit logs and store data.
+
+		# Sometimes git is misconfigured and name/email get swapped
+		author_name, author_email = check_swapped_emails(author_name,author_email)
+		committer_name,committer_email = check_swapped_emails(committer_name,committer_email)
+
+		# Some systems append extra info after a second @
+		author_email = strip_extra_amp(author_email)
+		committer_email = strip_extra_amp(committer_email)
+
+		store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
+			"author_name,author_raw_email,author_email,author_date,"
+			"committer_name,committer_raw_email,committer_email,committer_date,"
+			"added,removed,whitespace) "
+			"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)")
+
+		cursor_local.execute(store, (
+			repos_id,commit,filename,
+			author_name,author_email,discover_alias(author_email),author_date,
+			committer_name,committer_email,discover_alias(committer_email),committer_date,
+			added,removed,whitespace))
+
+		db_local.commit()
+
+		log_activity('Debug','Stored commit: %s' % commit)
+
+### The real function starts here ###
 
 	header = True
 	filename = ''
@@ -450,6 +359,28 @@ def analyze_commit(repo_id,repo_loc,commit):
 	added = 0
 	removed = 0
 	whitespace = 0
+
+	# Set up new local database connections
+
+	db_local = MySQLdb.connect(
+		host = db_host,
+		user = db_user,
+		passwd = db_pass,
+		db = db_name,
+		charset = 'utf8mb4')
+
+	cursor_local = db_local.cursor(MySQLdb.cursors.DictCursor)
+
+	db_people_local = MySQLdb.connect(
+		host = db_host_people,
+		user = db_user_people,
+		passwd = db_pass_people,
+		db = db_name_people,
+		charset = 'utf8mb4')
+
+	cursor_people_local = db_people_local.cursor(MySQLdb.cursors.DictCursor)
+
+	# Read the git log
 
 	git_log = subprocess.Popen(["git --git-dir %s log -p -M %s -n1 "
 		"--pretty=format:'"
@@ -460,8 +391,13 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 	# Stash the commit we're going to analyze so we can back it out if something
 	# goes wrong later.
+	store_working_commit = ("INSERT INTO working_commits "
+		"(repos_id,working_commit) VALUES (%s,%s)")
 
-	log_activity('Debug','Analyzing %s' % commit)
+	cursor_local.execute(store_working_commit, (repo_id,commit))
+	db_local.commit()
+
+	log_activity('Debug','Stored working commit and analyzing : %s' % commit)
 
 	for line in git_log.stdout.read().decode("utf-8",errors="ignore").split(os.linesep):
 		if len(line) > 0:
@@ -530,6 +466,7 @@ def analyze_commit(repo_id,repo_loc,commit):
 				# information contained in it.
 
 				if not header:
+
 					store_commit(repo_id,commit,filename,
 						author_name,author_email,author_date,
 						committer_name,committer_email,committer_date,
@@ -594,34 +531,19 @@ def analyze_commit(repo_id,repo_loc,commit):
 		committer_name,committer_email,committer_date,
 		added,removed,whitespace)
 
-def store_commit(repos_id,commit,filename,
-	author_name,author_email,author_date,
-	committer_name,committer_email,committer_date,
-	added,removed, whitespace):
+	# Remove the working commit.
+	remove_commit = ("DELETE FROM working_commits "
+		"WHERE repos_id = %s AND working_commit = %s")
+	cursor_local.execute(remove_commit, (repo_id,commit))
+	db_local.commit()
 
-# Fix some common issues in git commit logs and store data
+	log_activity('Debug','Completed and removed working commit: %s' % commit)
 
-	# Sometimes git is misconfigured and name/email get swapped
-	author_name, author_email = check_swapped_emails(author_name,author_email)
-	committer_name,committer_email = check_swapped_emails(committer_name,committer_email)
-
-	# Some systems append extra info after a second @
-	author_email = strip_extra_amp(author_email)
-	committer_email = strip_extra_amp(committer_email)
-	store = ("INSERT INTO analysis_data (repos_id,commit,filename,"
-		"author_name,author_raw_email,author_email,author_date,"
-		"committer_name,committer_raw_email,committer_email,committer_date,"
-		"added,removed,whitespace) "
-		"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)")
-
-	cursor.execute(store, (
-		repos_id,commit,filename,
-		author_name,author_email,discover_alias(author_email),author_date,
-		committer_name,committer_email,discover_alias(committer_email),committer_date,
-		added,removed,whitespace))
-	db.commit()
-
-	log_activity('Debug','Stored commit: %s' % commit)
+	# Clean up the database
+	cursor_local.close()
+	cursor_people_local.close()
+	db_local.close()
+	db_people_local.close()
 
 #### Facade main functions ####
 
@@ -975,6 +897,20 @@ def analysis():
 # is interrupted (possibly leading to partial data in the database for the
 # commit being analyzed at the time) we can recover.
 
+### Local helper functions ###
+
+	def update_analysis_log(repos_id,status):
+
+	# Log a repo's analysis status
+
+		log_message = ("INSERT INTO analysis_log (repos_id,status) "
+			"VALUES (%s,%s)")
+
+		cursor.execute(log_message, (repos_id,status))
+		db.commit()
+
+### The real function starts here ###
+
 	update_status('Running analysis')
 	log_activity('Info','Beginning analysis')
 
@@ -1001,7 +937,14 @@ def analysis():
 		# the commit data may be incomplete. It should be trimmed, just in case.
 		for commit in working_commits:
 			trim_commit(repo['id'],commit['working_commit'])
-			remove_working_commit(repo['id'],commit['working_commit'])
+
+			# Remove the working commit.
+			remove_commit = ("DELETE FROM working_commits "
+				"WHERE repos_id = %s AND working_commit = %s")
+			cursor.execute(remove_commit, (repo['id'],commit['working_commit']))
+			db.commit()
+
+			log_activity('Debug','Removed working commit: %s' % commit['working_commit'])
 
 		# Start the main analysis
 
@@ -1042,13 +985,22 @@ def analysis():
 		log_activity('Debug','Commits missing from repo %s: %s' %
 			(repo['id'],len(missing_commits)))
 
-		for commit in missing_commits:
+		if multithreaded:
 
-			store_working_commit(repo['id'],commit)
+			from multiprocessing import Pool
 
-			analyze_commit(repo['id'],repo_loc,commit)
+			pool = Pool()
 
-			remove_working_commit(repo['id'],commit)
+			for commit in missing_commits:
+
+				result =pool.apply_async(analyze_commit,(repo['id'],repo_loc,commit))
+
+			pool.close()
+			pool.join()
+
+		else:
+			for commit in missing_commits:
+				analyze_commit(repo['id'],repo_loc,commit)
 
 		update_analysis_log(repo['id'],'Data collection complete')
 
@@ -1100,6 +1052,127 @@ def fill_empty_affiliations():
 # When a record is added, it has no affiliation data. Also, when an affiliation
 # mapping is changed via the UI, affiliation data will be set to NULL. This
 # function finds any records with NULL affiliation data and fills them.
+
+### Local helper functions ###
+
+	def update_affiliation(email_type,email,affiliation,start_date):
+
+		update = ("UPDATE analysis_data "
+			"SET %s_affiliation = %%s "
+			"WHERE %s_email = %%s "
+			"AND %s_affiliation IS NULL "
+			"AND %s_date >= %%s" %
+			(email_type, email_type, email_type, email_type))
+
+		cursor.execute(update, (affiliation, email, start_date))
+		db.commit()
+
+	def discover_null_affiliations(attribution,email):
+
+	# Try a bunch of ways to match emails to attributions in the database. First it
+	# tries to match exactly. If that doesn't work, it tries to match by domain. If
+	# domain doesn't work, it strips subdomains from the email and tries again.
+
+		# First we see if there's an exact match. This will also catch malformed or
+		# intentionally mangled emails (e.g. "developer at domain.com") that have
+		# been added as an affiliation rather than an alias.
+
+		find_exact_match = ("SELECT affiliation,start_date "
+			"FROM affiliations "
+			"WHERE domain = %s "
+			"AND active = TRUE "
+			"ORDER BY start_date DESC")
+
+		cursor_people.execute(find_exact_match, (email, ))
+		db_people.commit
+
+		matches = list(cursor_people)
+
+		if not matches and email.find('@') < 0:
+
+			# It's not a properly formatted email, leave it NULL and log it.
+
+			log_activity('Info','Unmatchable email: %s' % email)
+
+			return
+
+		if not matches:
+
+			# Now we go for a domain-level match. Try for an exact match.
+
+			domain = email[email.find('@')+1:]
+
+			find_exact_domain = ("SELECT affiliation,start_date "
+				"FROM affiliations "
+				"WHERE domain= %s "
+				"AND active = TRUE "
+				"ORDER BY start_date DESC")
+
+			cursor_people.execute(find_exact_domain, (domain, ))
+			db_people.commit()
+
+			matches = list(cursor_people)
+
+		if not matches:
+
+			# Then try stripping any subdomains.
+
+			find_domain = ("SELECT affiliation,start_date "
+				"FROM affiliations "
+				"WHERE domain = %s "
+				"AND active = TRUE "
+				"ORDER BY start_date DESC")
+
+			cursor_people.execute(find_domain, (domain[domain.rfind('.',0,domain.rfind('.',0))+1:], ))
+			db_people.commit()
+
+			matches = list(cursor_people)
+
+		if not matches:
+
+			# One last check to see if it's an unmatched academic domain.
+
+			if domain[-4:] in '.edu':
+				matches.append({'affiliation':'(Academic)','start_date':'1970-01-01'})
+
+		# Done looking. Now we process any matches that were found.
+
+		if matches:
+
+			log_activity('Debug','Found domain match for %s' % email)
+
+			for match in matches:
+				update = ("UPDATE analysis_data "
+					"SET %s_affiliation = %%s "
+					"WHERE %s_email = %%s "
+					"AND %s_affiliation IS NULL "
+					"AND %s_date >= %%s" %
+					(attribution, attribution, attribution, attribution))
+
+				cursor.execute(update, (match['affiliation'], email, match['start_date']))
+				db.commit()
+
+	def discover_alias(email):
+
+	# Match aliases with their canonical email
+
+		fetch_canonical = ("SELECT canonical "
+			"FROM aliases "
+			"WHERE alias=%s "
+			"AND active = TRUE")
+
+		cursor_people.execute(fetch_canonical, (email, ))
+		db_people.commit()
+
+		canonical = list(cursor_people)
+
+		if canonical:
+			for email in canonical:
+				return email['canonical']
+		else:
+			return email
+
+### The real function starts here ###
 
 	update_status('Filling empty affiliations')
 	log_activity('Info','Filling empty affiliations')
@@ -1200,7 +1273,7 @@ def fill_empty_affiliations():
 			"SET committer_email = %s "
 			"WHERE committer_raw_email = %s")
 
-		cursor.execute(reset_committer, (discover_alias(changed_alias['alias']),changed_alias['alias']))
+		cursor.execute(reset_committer,	(discover_alias(changed_alias['alias']),changed_alias['alias']))
 		db.commit
 
 	# Update the last fetched date, so we know where to start next time.
@@ -1621,6 +1694,7 @@ clone_repos = 0
 check_updates = 0
 force_updates = 0
 run_analysis = 0
+force_analysis = 0
 nuke_stored_affiliations = 0
 fix_affiliations = 0
 force_invalidate_caches = 0
@@ -1643,6 +1717,7 @@ for opt in opts:
 				"	-p	Run 'git pull' on repos\n"
 				"	-a	Analyze git repos\n"
 				"	-A	Force all repos to be analyzed\n"
+				"	-m	Disable multithreaded mode (but why?)\n"
 				"	-n	Nuke stored affiliations (if mappings modified by hand)\n"
 				"	-f	Fill empty affiliations\n"
 				"	-I	Invalidate caches\n"
@@ -1684,6 +1759,10 @@ for opt in opts:
 		run_analysis = 1
 		limited_run = 1
 		log_activity('Info','Option set: forcing analysis.')
+
+	elif opt[0] == '-m':
+		multithreaded = 0
+		log_activity('Info','Option set: disabling multithreading.')
 
 	elif opt[0] == '-n':
 		nuke_stored_affiliations = 1
