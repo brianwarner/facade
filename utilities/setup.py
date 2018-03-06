@@ -37,7 +37,7 @@ def create_settings(reset=0):
 # Create and populate the default settings table.
 
 	# Only increment this when you've added the support to facade-worker.py
-	database_version = 4
+	database_version = 5
 
 	# default settings
 	start_date = "2014-01-01";
@@ -468,6 +468,38 @@ def create_web_caches(reset=0):
 # easily add monthly LoC and patch data and get meaningful annual stats,
 # contributors can't be added across months to get to total annual number.
 
+	# Weekly caches by project
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS project_weekly_cache"
+
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS project_weekly_cache ("
+		"projects_id INT UNSIGNED NOT NULL,"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
+		"week TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX `projects_id,year,affiliation` (projects_id,year,affiliation),"
+		"INDEX `projects_id,year,email` (projects_id,year,email),"
+		"INDEX `projects_id,affiliation` (projects_id,affiliation),"
+		"INDEX `projects_id,email` (projects_id,email))")
+
+	cursor.execute(create)
+	db.commit()
+
 	# Monthly caches by project
 
 	if reset:
@@ -525,6 +557,38 @@ def create_web_caches(reset=0):
 		"patches BIGINT UNSIGNED NOT NULL,"
 		"INDEX `projects_id,affiliation` (projects_id,affiliation),"
 		"INDEX `projects_id,email` (projects_id,email))")
+
+	cursor.execute(create)
+	db.commit()
+
+	# Weekly caches by repo
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS repo_weekly_cache"
+
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS repo_weekly_cache ("
+		"repos_id INT UNSIGNED NOT NULL,"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
+		"week TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX `repos_id,year,affiliation` (repos_id,year,affiliation),"
+		"INDEX `repos_id,year,email` (repos_id,year,email),"
+		"INDEX `repos_id,affiliation` (repos_id,affiliation),"
+		"INDEX `repos_id,email` (repos_id,email))")
 
 	cursor.execute(create)
 	db.commit()

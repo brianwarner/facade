@@ -50,7 +50,7 @@ html = html.parser.HTMLParser()
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 4
+upstream_db = 5
 
 #### Database update functions ####
 
@@ -131,6 +131,49 @@ def update_db(version):
 		db.commit
 
 		increment_db(4)
+
+	if version < 5:
+
+		add_weekly_project_cache = ("CREATE TABLE IF NOT EXISTS project_weekly_cache ("
+			"projects_id INT UNSIGNED NOT NULL,"
+			"email VARCHAR(128) NOT NULL,"
+			"affiliation VARCHAR(128),"
+			"week TINYINT UNSIGNED NOT NULL,"
+			"year SMALLINT UNSIGNED NOT NULL,"
+			"added BIGINT UNSIGNED NOT NULL,"
+			"removed BIGINT UNSIGNED NOT NULL,"
+			"whitespace BIGINT UNSIGNED NOT NULL,"
+			"files BIGINT UNSIGNED NOT NULL,"
+			"patches BIGINT UNSIGNED NOT NULL,"
+			"INDEX `projects_id,year,affiliation` (projects_id,year,affiliation),"
+			"INDEX `projects_id,year,email` (projects_id,year,email),"
+			"INDEX `projects_id,affiliation` (projects_id,affiliation),"
+			"INDEX `projects_id,email` (projects_id,email))")
+
+		cursor.execute(add_weekly_project_cache)
+		db.commit
+
+
+		add_weekly_repo_cache = ("CREATE TABLE IF NOT EXISTS repo_weekly_cache ("
+			"repos_id INT UNSIGNED NOT NULL,"
+			"email VARCHAR(128) NOT NULL,"
+			"affiliation VARCHAR(128),"
+			"week TINYINT UNSIGNED NOT NULL,"
+			"year SMALLINT UNSIGNED NOT NULL,"
+			"added BIGINT UNSIGNED NOT NULL,"
+			"removed BIGINT UNSIGNED NOT NULL,"
+			"whitespace BIGINT UNSIGNED NOT NULL,"
+			"files BIGINT UNSIGNED NOT NULL,"
+			"patches BIGINT UNSIGNED NOT NULL,"
+			"INDEX `repos_id,year,affiliation` (repos_id,year,affiliation),"
+			"INDEX `repos_id,year,email` (repos_id,year,email),"
+			"INDEX `repos_id,affiliation` (repos_id,affiliation),"
+			"INDEX `repos_id,email` (repos_id,email))")
+
+		cursor.execute(add_weekly_repo_cache)
+		db.commit
+
+		increment_db(5)
 
 	print("No further database updates.\n")
 
@@ -1517,6 +1560,41 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 	log_activity('Verbose','Caching projects')
 
+	cache_projects_by_week = ("INSERT INTO project_weekly_cache "
+		"SELECT r.projects_id AS projects_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"WEEK(a.%s_date) AS week, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
+					"OR e.projects_id = 0)) "
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
+		"GROUP BY week, "
+		"year, "
+		"affiliation, "
+		"a.%s_email,"
+		"projects_id"
+		% (report_attribution,report_attribution,
+		report_date,report_date,report_attribution))
+
+	cursor.execute(cache_projects_by_week)
+	db.commit()
+
 	cache_projects_by_month = ("INSERT INTO project_monthly_cache "
 		"SELECT r.projects_id AS projects_id, "
 		"a.%s_email AS email, "
@@ -1588,6 +1666,41 @@ def rebuild_unknown_affiliation_and_web_caches():
 	# Start caching by repo
 
 	log_activity('Verbose','Caching repos')
+
+	cache_repos_by_week = ("INSERT INTO repo_weekly_cache "
+		"SELECT a.repos_id AS repos_id, "
+		"a.%s_email AS email, "
+		"a.%s_affiliation AS affiliation, "
+		"WEEK(a.%s_date) AS week, "
+		"YEAR(a.%s_date) AS year, "
+		"SUM(a.added) AS added, "
+		"SUM(a.removed) AS removed, "
+		"SUM(a.whitespace) AS whitespace, "
+		"COUNT(DISTINCT a.filename) AS files, "
+		"COUNT(DISTINCT a.commit) AS patches "
+		"FROM analysis_data a "
+		"JOIN repos r ON r.id = a.repos_id "
+		"JOIN projects p ON p.id = r.projects_id "
+		"LEFT JOIN exclude e ON "
+			"(a.author_email = e.email "
+				"AND (e.projects_id = r.projects_id "
+					"OR e.projects_id = 0)) "
+			"OR (a.author_email LIKE CONCAT('%%',e.domain) "
+				"AND (e.projects_id = r.projects_id "
+				"OR e.projects_id = 0)) "
+		"WHERE e.email IS NULL "
+		"AND e.domain IS NULL "
+		"AND p.recache = TRUE "
+		"GROUP BY week, "
+		"year, "
+		"affiliation, "
+		"a.%s_email,"
+		"repos_id"
+		% (report_attribution,report_attribution,
+		report_date,report_date,report_attribution))
+
+	cursor.execute(cache_repos_by_week)
+	db.commit()
 
 	cache_repos_by_month = ("INSERT INTO repo_monthly_cache "
 		"SELECT a.repos_id AS repos_id, "
