@@ -27,6 +27,7 @@ import os
 import warnings
 import getopt
 import datetime
+import configparser
 
 def import_aliases(filename):
 
@@ -228,14 +229,29 @@ def usage():
 		"Sample usage:\n"
 		"	./import_gitdm_configs.py -a <filename> -e <filename>\n\n")
 
-try:
-	imp.find_module('db')
-	from db import db_people,cursor_people
-except:
-	sys.exit("Can't find db.py. Have you created it?")
+### The real program starts here ###
 
-if not os.path.isfile('db.py'):
-	sys.exit("It appears you haven't configured db.py yet. Please do this.")
+try:
+	config = configparser.ConfigParser()
+	config.read('db.cfg')
+
+	# Read in the people connection info
+
+	db_user_people = config['people_database']['user']
+	db_pass_people = config['people_database']['pass']
+	db_name_people = config['people_database']['name']
+	db_host_people = config['people_database']['host']
+
+	db_people = MySQLdb.connect(
+		host = db_host_people,
+		user = db_user_people,
+		passwd = db_pass_people,
+		db = db_name_people,
+		charset = 'utf8mb4')
+
+	cursor_people = db_people.cursor(MySQLdb.cursors.DictCursor)
+except:
+	sys.exit("It appears you haven't run setup.py yet. Please do this.")
 
 try:
 	opts,args = getopt.getopt(sys.argv[1:],'a:e:h')

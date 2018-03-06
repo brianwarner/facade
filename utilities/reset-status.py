@@ -24,7 +24,31 @@
 # otherwise you'll thrash your machine.
 
 import MySQLdb
-from db import db,cursor
+import configparser
+
+try:
+	config = configparser.ConfigParser()
+	config.read('db.cfg')
+
+	# Read in the people connection info
+
+	db_user = config['main_database']['user']
+	db_pass = config['main_database']['pass']
+	db_name = config['main_database']['name']
+	db_host = config['main_database']['host']
+
+	db = MySQLdb.connect(
+		host = db_host,
+		user = db_user,
+		passwd = db_pass,
+		db = db_name,
+		charset = 'utf8mb4')
+
+	cursor = db.cursor(MySQLdb.cursors.DictCursor)
+
+except:
+	sys.exit("It appears you haven't run setup.py yet. Please do this.")
+
 
 query = "UPDATE settings SET value='Idle' WHERE setting='utility_status'"
 cursor.execute(query)
