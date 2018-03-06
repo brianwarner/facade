@@ -27,7 +27,7 @@
 # aliases, and caches data for display.
 
 import sys
-import MySQLdb
+import platform
 import imp
 import time
 import datetime
@@ -37,6 +37,11 @@ import os
 import getopt
 import xlsxwriter
 import configparser
+
+if platform.python_implementation() == 'PyPy':
+	import pymysql
+else:
+	import MySQLdb
 
 global log_level
 
@@ -173,8 +178,40 @@ def migrate_database_config():
 
 	return db_user,db_pass,db_name,db_host,db_user_people,db_pass_people,db_name_people,db_host_people
 
-
 #### Global helper functions ####
+
+def database_connection(db_host,db_user,db_pass,db_name):
+
+# Return a database connection based upon which interpreter we're using. CPython
+# can use any database connection, although MySQLdb is preferred over pymysql
+# for performance reasons. However, PyPy can't use MySQLdb at this point,
+# instead requiring a pure python MySQL client. This function returns a database
+# connection that should provide maximum performance depending upon the
+# interpreter in use.
+
+	if platform.python_implementation() == 'PyPy':
+
+		db = pymysql.connect(
+			host = db_host,
+			user = db_user,
+			passwd = db_pass,
+			db = db_name,
+			charset = 'utf8mb4')
+
+		cursor = db.cursor(pymysql.cursors.DictCursor)
+
+	else:
+
+		db = MySQLdb.connect(
+			host = db_host,
+			user = db_user,
+			passwd = db_pass,
+			db = db_name,
+			charset = 'utf8mb4')
+
+		cursor = db.cursor(MySQLdb.cursors.DictCursor)
+
+	return db,cursor
 
 def get_setting(setting):
 
@@ -360,25 +397,29 @@ def analyze_commit(repo_id,repo_loc,commit):
 	removed = 0
 	whitespace = 0
 
-	# Set up new local database connections
+	# Set up new threadsafe database connections if multithreading. Otherwise
+	# use the gloabl database connections so we don't incur a performance
+	# penalty.
 
-	db_local = MySQLdb.connect(
-		host = db_host,
-		user = db_user,
-		passwd = db_pass,
-		db = db_name,
-		charset = 'utf8mb4')
+	if multithreaded:
+		db_local,cursor_local = database_connection(
+			db_host,
+			db_user,
+			db_pass,
+			db_name)
 
-	cursor_local = db_local.cursor(MySQLdb.cursors.DictCursor)
+		db_people_local,cursor_people_local = database_connection(
+			db_host_people,
+			db_user_people,
+			db_pass_people,
+			db_name_people)
 
-	db_people_local = MySQLdb.connect(
-		host = db_host_people,
-		user = db_user_people,
-		passwd = db_pass_people,
-		db = db_name_people,
-		charset = 'utf8mb4')
+	else:
+		db_local = db
+		cursor_local = cursor
 
-	cursor_people_local = db_people_local.cursor(MySQLdb.cursors.DictCursor)
+		db_people_local = db_people
+		cursor_people_local = cursor_people
 
 	# Read the git log
 
@@ -539,11 +580,13 @@ def analyze_commit(repo_id,repo_loc,commit):
 
 	log_activity('Debug','Completed and removed working commit: %s' % commit)
 
-	# Clean up the database
-	cursor_local.close()
-	cursor_people_local.close()
-	db_local.close()
-	db_people_local.close()
+	# If multithreading, clean up the local database
+
+	if multithreaded:
+		cursor_local.close()
+		cursor_people_local.close()
+		db_local.close()
+		db_people_local.close()
 
 #### Facade main functions ####
 
@@ -1650,24 +1693,20 @@ except:
 	db_user,db_pass,db_name,db_host,db_user_people,db_pass_people,db_name_people,db_host_people = migrate_database_config()
 
 # Open a general-purpose connection
-db = MySQLdb.connect(
-	host = db_host,
-	user = db_user,
-	passwd = db_pass,
-	db = db_name,
-	charset = 'utf8mb4')
 
-cursor = db.cursor(MySQLdb.cursors.DictCursor)
+db,cursor = database_connection(
+	db_host,
+	db_user,
+	db_pass,
+	db_name)
 
 # Open a connection for the people database
-db_people = MySQLdb.connect(
-	host = db_host_people,
-	user = db_user_people,
-	passwd = db_pass_people,
-	db = db_name_people,
-	charset = 'utf8mb4')
 
-cursor_people = db_people.cursor(MySQLdb.cursors.DictCursor)
+db_people,cursor_people = database_connection(
+	db_host_people,
+	db_user_people,
+	db_pass_people,
+	db_name_people)
 
 # Figure out how much we're going to log
 log_level = get_setting('log_level')
