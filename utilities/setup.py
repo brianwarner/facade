@@ -990,8 +990,8 @@ if action.lower() == 'c':
 			'db_host_people': db_host_people}
 
 
-		creds_php_template_loc = os.path.join(working_dir,'../includes/creds.php.template')
-		creds_php_loc = os.path.join(working_dir,'../includes/creds.php')
+		creds_php_template_loc = os.path.join(working_dir,'../web/includes/creds.php.template')
+		creds_php_loc = os.path.join(working_dir,'../web/includes/creds.php')
 
 		creds_php_template = string.Template(open(creds_php_template_loc).read())
 
@@ -1131,7 +1131,7 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 
 	print ("\n========== Generating Apache2 Configs ==========\n")
 
-	facade_dir = working_dir[:-9]
+	facade_dir = "%sweb/" % working_dir[:-9]
 
 	print("Step 1: Create a new file in /etc/apache2/sites-available called facade.conf "
 		"with the following contents:\n\n"
