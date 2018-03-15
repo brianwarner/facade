@@ -41,8 +41,7 @@ def create_settings(reset=0):
 
 	# default settings
 	start_date = "2014-01-01";
-	working_dir = os.path.dirname(os.path.abspath(__file__))
-	repo_directory = os.path.join(working_dir,'../git-repos/')
+	repo_directory = os.path.join(base_dir,'git-repos/')
 
 	if reset:
 
@@ -745,7 +744,7 @@ def create_auth(reset=0):
 
 # First make sure the database files have been setup
 
-working_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(os.path.abspath(__file__))[:-9]
 
 print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
@@ -990,8 +989,8 @@ if action.lower() == 'c':
 			'db_host_people': db_host_people}
 
 
-		creds_php_template_loc = os.path.join(working_dir,'../web/includes/creds.php.template')
-		creds_php_loc = os.path.join(working_dir,'../web/includes/creds.php')
+		creds_php_template_loc = os.path.join(base_dir,'web/includes/creds.php.template')
+		creds_php_loc = os.path.join(base_dir,'web/includes/creds.php')
 
 		creds_php_template = string.Template(open(creds_php_template_loc).read())
 
@@ -1131,8 +1130,6 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 
 	print ("\n========== Generating Apache2 Configs ==========\n")
 
-	facade_dir = "%sweb/" % working_dir[:-9]
-
 	print("Step 1: Create a new file in /etc/apache2/sites-available called facade.conf "
 		"with the following contents:\n\n"
 		"# Start copying here\n"
@@ -1143,7 +1140,7 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 		"	ErrorLog ${APACHE_LOG_DIR}/error.log\n"
 		"	CustomLog ${APACHE_LOG_DIR}/access.log combined\n"
 		"</VirtualHost>\n"
-		"# End copying here\n\n" % facade_dir)
+		"# End copying here\n\n" % os.path.join(base_dir,'web/'))
 
 	print("Step 2: Add the following lines to /etc/apache2/apache2.conf:\n\n"
 		"# Start copying here\n"
@@ -1153,7 +1150,7 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 		"	AllowOverride All\n"
 		"	Require all granted\n"
 		"</Directory>\n"
-		"# End copying here\n\n" % facade_dir)
+		"# End copying here\n\n" % os.path.join(base_dir,'web/'))
 
 	print("Step 3: Run this in the terminal:\n\n"
 		"  sudo a2dissite 000-default && sudo a2ensite facade && sudo a2enmod "
