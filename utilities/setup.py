@@ -37,12 +37,11 @@ def create_settings(reset=0):
 # Create and populate the default settings table.
 
 	# Only increment this when you've added the support to facade-worker.py
-	database_version = 4
+	database_version = 5
 
 	# default settings
 	start_date = "2014-01-01";
-	working_dir = os.path.dirname(os.path.abspath(__file__))
-	repo_directory = os.path.join(working_dir,'../git-repos/')
+	repo_directory = os.path.join(base_dir,'git-repos/')
 
 	if reset:
 
@@ -468,6 +467,38 @@ def create_web_caches(reset=0):
 # easily add monthly LoC and patch data and get meaningful annual stats,
 # contributors can't be added across months to get to total annual number.
 
+	# Weekly caches by project
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS project_weekly_cache"
+
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS project_weekly_cache ("
+		"projects_id INT UNSIGNED NOT NULL,"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
+		"week TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX `projects_id,year,affiliation` (projects_id,year,affiliation),"
+		"INDEX `projects_id,year,email` (projects_id,year,email),"
+		"INDEX `projects_id,affiliation` (projects_id,affiliation),"
+		"INDEX `projects_id,email` (projects_id,email))")
+
+	cursor.execute(create)
+	db.commit()
+
 	# Monthly caches by project
 
 	if reset:
@@ -525,6 +556,38 @@ def create_web_caches(reset=0):
 		"patches BIGINT UNSIGNED NOT NULL,"
 		"INDEX `projects_id,affiliation` (projects_id,affiliation),"
 		"INDEX `projects_id,email` (projects_id,email))")
+
+	cursor.execute(create)
+	db.commit()
+
+	# Weekly caches by repo
+
+	if reset:
+		clear = "DROP TABLE IF EXISTS repo_weekly_cache"
+
+		# Suppress warnings about tables not existing
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+
+			cursor.execute(clear)
+			db.commit()
+
+	create = ("CREATE TABLE IF NOT EXISTS repo_weekly_cache ("
+		"repos_id INT UNSIGNED NOT NULL,"
+		"email VARCHAR(128) NOT NULL,"
+		"affiliation VARCHAR(128),"
+		"week TINYINT UNSIGNED NOT NULL,"
+		"year SMALLINT UNSIGNED NOT NULL,"
+		"added BIGINT UNSIGNED NOT NULL,"
+		"removed BIGINT UNSIGNED NOT NULL,"
+		"whitespace BIGINT UNSIGNED NOT NULL,"
+		"files BIGINT UNSIGNED NOT NULL,"
+		"patches BIGINT UNSIGNED NOT NULL,"
+		"INDEX `repos_id,year,affiliation` (repos_id,year,affiliation),"
+		"INDEX `repos_id,year,email` (repos_id,year,email),"
+		"INDEX `repos_id,affiliation` (repos_id,affiliation),"
+		"INDEX `repos_id,email` (repos_id,email))")
 
 	cursor.execute(create)
 	db.commit()
@@ -681,7 +744,7 @@ def create_auth(reset=0):
 
 # First make sure the database files have been setup
 
-working_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(os.path.abspath(__file__))[:-9]
 
 print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
@@ -926,8 +989,8 @@ if action.lower() == 'c':
 			'db_host_people': db_host_people}
 
 
-		creds_php_template_loc = os.path.join(working_dir,'../includes/creds.php.template')
-		creds_php_loc = os.path.join(working_dir,'../includes/creds.php')
+		creds_php_template_loc = os.path.join(base_dir,'web/includes/creds.php.template')
+		creds_php_loc = os.path.join(base_dir,'web/includes/creds.php')
 
 		creds_php_template = string.Template(open(creds_php_template_loc).read())
 
@@ -1067,8 +1130,6 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 
 	print ("\n========== Generating Apache2 Configs ==========\n")
 
-	facade_dir = working_dir[:-9]
-
 	print("Step 1: Create a new file in /etc/apache2/sites-available called facade.conf "
 		"with the following contents:\n\n"
 		"# Start copying here\n"
@@ -1079,7 +1140,7 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 		"	ErrorLog ${APACHE_LOG_DIR}/error.log\n"
 		"	CustomLog ${APACHE_LOG_DIR}/access.log combined\n"
 		"</VirtualHost>\n"
-		"# End copying here\n\n" % facade_dir)
+		"# End copying here\n\n" % os.path.join(base_dir,'web/'))
 
 	print("Step 2: Add the following lines to /etc/apache2/apache2.conf:\n\n"
 		"# Start copying here\n"
@@ -1089,7 +1150,7 @@ if action.lower() == 'i' or action.lower() == 'c' or action.lower() == 'p':
 		"	AllowOverride All\n"
 		"	Require all granted\n"
 		"</Directory>\n"
-		"# End copying here\n\n" % facade_dir)
+		"# End copying here\n\n" % os.path.join(base_dir,'web/'))
 
 	print("Step 3: Run this in the terminal:\n\n"
 		"  sudo a2dissite 000-default && sudo a2ensite facade && sudo a2enmod "
