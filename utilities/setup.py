@@ -742,13 +742,13 @@ def create_auth(reset=0):
 
 # ==== The real program starts here ==== #
 
-# First make sure the database files have been setup
+# First make sure the database file has been setup
 
 base_dir = os.path.dirname(os.path.abspath(__file__))[:-9]
 
 print ("========== Facade database setup  ==========\n\n"
 	"What do you want to do?\n"
-	" (C)reate database config files and initialize tables. Optionally create database and user.\n"
+	" (C)reate database config file and initialize tables. Optionally create database and user.\n"
 	" (I)nitialize tables only. This will clear any existing data.\n"
 	" (P)rint the configuration instructions for setting up Apache.\n"
 	" (R)eset admin credentials.\n")
@@ -757,10 +757,10 @@ action = input('(c/i/p/r): ').strip()
 
 if action.lower() == 'c':
 
-	print ("========== Creating database credential files ==========\n\n"
-		"This will overwrite any existing db.cfg and creds.php files.\n"
-		"If you do not do this, the existing files will be used.\n"
-		"Create new setup files?\n")
+	print ("========== Creating database credentials file ==========\n\n"
+		"This will overwrite any existing db.cfg file.\n"
+		"If you do not do this, the existing file will be used.\n"
+		"Create new setup file?\n")
 
 	confirm_creds = input('yes/no: ').strip().lower()
 
@@ -987,16 +987,6 @@ if action.lower() == 'c':
 			'db_pass_people': db_pass_people,
 			'db_name_people': db_name_people,
 			'db_host_people': db_host_people}
-
-
-		creds_php_template_loc = os.path.join(base_dir,'web/includes/creds.php.template')
-		creds_php_loc = os.path.join(base_dir,'web/includes/creds.php')
-
-		creds_php_template = string.Template(open(creds_php_template_loc).read())
-
-		creds_php_file = open(creds_php_loc,'w')
-		creds_php_file.write(creds_php_template.substitute(db_values))
-		creds_php_file.close()
 
 		print('\nDatabase setup complete\n')
 
