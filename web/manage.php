@@ -643,7 +643,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 		$set_inactive = "UPDATE aliases SET active = FALSE WHERE id=" . $id;
 
-		query_db($db_people,$set_inactive);
+		query_db($db_people,$set_inactive,'Disabling alias');
 
 	}
 
@@ -737,7 +737,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 		$set_inactive = "UPDATE affiliations SET active = FALSE WHERE id=" . $id;
 
-		query_db($db_people,$set_inactive);
+		query_db($db_people,$set_inactive,'Disabling affiliation');
 	}
 
 	header("Location: people");
