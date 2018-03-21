@@ -112,7 +112,7 @@ function cached_results_as_summary_table($db,$scope,$id,$type,$max_results,$year
 			} elseif ($stat == 'whitespace') {
 				echo '<h3>Whitespace changes by ';
             } elseif ($stat == 'patches') {
-                echo '<h3>Patched landed by ';
+                echo '<h3>Patches landed by ';
             } elseif ($stat == 'files') {
                 echo '<h3>Files changed by ';
             } else {
