@@ -953,10 +953,40 @@ def git_repo_updates():
 		log_activity('Verbose','Attempting to update %s' % row['git'])
 		update_repo_log(row['id'],'Updating')
 
-		cmd = ("git -C %s%s/%s%s pull"
-			% (repo_base_directory,row['projects_id'],row['path'],row['name']))
+		attempt = 0
 
-		return_code = subprocess.Popen([cmd],shell=True).wait()
+		# Try two times. If it fails the first time, reset and clean the git repo,
+		# as somebody may have done a rebase. No work is being done in the local
+		# repo, so there shouldn't be legit local changes to worry about.
+
+		while attempt < 2:
+
+			cmd = ("git -C %s%s/%s%s pull"
+				% (repo_base_directory,row['projects_id'],row['path'],row['name']))
+
+			return_code = subprocess.Popen([cmd],shell=True).wait()
+
+			# If the attempt succeeded, then don't try any further fixes. If
+			# the attempt to fix things failed, give up and try next time.
+			if return_code == 0 or attempt == 1:
+				break
+
+			elif attempt == 0:
+
+				log_activity('Verbose','git pull failed, attempting reset and '
+					'clean for %s' % row['git'])
+
+				cmd_reset = ("git -C %s%s/%s%s reset --hard origin/master"
+					% (repo_base_directory,row['projects_id'],row['path'],row['name']))
+
+				return_code_reset = subprocess.Popen([cmd_reset],shell=True).wait()
+
+				cmd_clean = ("git -C %s%s/%s%s clean -df"
+					% (repo_base_directory,row['projects_id'],row['path'],row['name']))
+
+				return_code_clean = subprocess.Popen([cmd_clean],shell=True).wait()
+
+			attempt += 1
 
 		if return_code == 0:
 
@@ -966,6 +996,7 @@ def git_repo_updates():
 
 			update_repo_log(row['id'],'Up-to-date')
 			log_activity('Verbose','Updated %s' % row["git"])
+
 		else:
 			update_repo_log(row['id'],'Failed (%s)' % return_code)
 			log_activity('Error','Could not update %s' % row["git"])
