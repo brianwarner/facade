@@ -1815,7 +1815,7 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 try:
 	config = configparser.ConfigParser()
-	config.read('db.cfg')
+	config.read(os.path.join(os.path.dirname(__file__),'db.cfg'))
 
 	# Read in the general connection info
 
