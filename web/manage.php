@@ -1069,7 +1069,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 } elseif (ISSET($_POST["export_settings_csv"])) {
 
-	$fetch_settings = "SELECT setting,value FROM settings";
+	$fetch_settings = "SELECT setting,value FROM settings ORDER BY id ASC";
 
 	$settings = query_db($db,$fetch_settings,'fetching settings');
 
@@ -1119,6 +1119,10 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 				query_db($db,$insert,'Importing settings');
 
+				// Add a 10 ms delay to ensure sequential settings have distinguishable
+				// timestamps.
+
+				usleep(10000);
 			}
 		}
 	}
