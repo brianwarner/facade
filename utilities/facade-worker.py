@@ -50,7 +50,7 @@ html = html.parser.HTMLParser()
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 5
+upstream_db = 6
 
 #### Database update functions ####
 
@@ -153,7 +153,6 @@ def update_db(version):
 		cursor.execute(add_weekly_project_cache)
 		db.commit
 
-
 		add_weekly_repo_cache = ("CREATE TABLE IF NOT EXISTS repo_weekly_cache ("
 			"repos_id INT UNSIGNED NOT NULL,"
 			"email VARCHAR(128) NOT NULL,"
@@ -174,6 +173,25 @@ def update_db(version):
 		db.commit
 
 		increment_db(5)
+
+	if version < 6:
+
+		# As originally written, the UNIQUE wasn't working because it allowed
+		# multiple NULL values in end_date.
+
+		drop_special_tags_constraint = ("ALTER TABLE special_tags "
+			"DROP INDEX `email,start_date,end_date,tag`")
+
+		cursor.execute(drop_special_tags_constraint)
+		db.commit
+
+		add_unique_in_special_tags = ("ALTER TABLE special_tags "
+			"ADD UNIQUE `email,start_date,tag` (email,start_date,tag)")
+
+		cursor.execute(add_unique_in_special_tags)
+		db.commit
+
+		increment_db(6)
 
 	print("No further database updates.\n")
 

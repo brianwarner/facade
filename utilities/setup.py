@@ -37,7 +37,7 @@ def create_settings(reset=0):
 # Create and populate the default settings table.
 
 	# Only increment this when you've added the support to facade-worker.py
-	database_version = 5
+	database_version = 6
 
 	# default settings
 	start_date = "2014-01-01";
@@ -379,7 +379,7 @@ def create_special_tags(reset=0):
 		"start_date DATE NOT NULL,"
 		"end_date DATE,"
 		"tag VARCHAR(64) NOT NULL,"
-		"UNIQUE `email,start_date,end_date,tag` (email,start_date,end_date,tag))")
+		"UNIQUE `email,start_date,tag` (email,start_date,tag))")
 
 	cursor.execute(create)
 	db.commit()
