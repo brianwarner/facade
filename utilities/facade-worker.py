@@ -679,14 +679,26 @@ def git_repo_cleanup():
 		remove_analysis_data = "DELETE FROM analysis_data WHERE repos_id=%s"
 		cursor.execute(remove_analysis_data, (row['id'], ))
 
+		optimize_table = "OPTIMIZE TABLE analysis_data"
+		cursor.execute(optimize_table)
+		db.commit()
+
 		# Remove cached repo data
 
 		remove_repo_monthly_cache = "DELETE FROM repo_monthly_cache WHERE repos_id=%s"
 		cursor.execute(remove_repo_monthly_cache, (row['id'], ))
 		db.commit()
 
+		optimize_table = "OPTIMIZE TABLE repo_monthly_cache"
+		cursor.execute(optimize_table)
+		db.commit()
+
 		remove_repo_annual_cache = "DELETE FROM repo_annual_cache WHERE repos_id=%s"
 		cursor.execute(remove_repo_annual_cache, (row['id'], ))
+		db.commit()
+
+		optimize_table = "OPTIMIZE TABLE repo_annual_cache"
+		cursor.execute(optimize_table)
 		db.commit()
 
 		# Set project to be recached
@@ -719,6 +731,10 @@ def git_repo_cleanup():
 		cursor.execute(remove_logs, (row['id'], ))
 		db.commit()
 
+		optimize_table = "OPTIMIZE TABLE repos_fetch_log"
+		cursor.execute(optimize_table)
+		db.commit()
+
 		# Attempt to cleanup any empty parent directories
 
 		while (cleanup.find('/',0) > 0):
@@ -746,9 +762,17 @@ def git_repo_cleanup():
 		cursor.execute(clear_annual_cache, (project['id'], ))
 		db.commit()
 
+		optimize_table = "OPTIMIZE TABLE project_annual_cache"
+		cursor.execute(optimize_table)
+		db.commit()
+
 		clear_monthly_cache = ("DELETE FROM project_monthly_cache WHERE "
 			"projects_id=%s")
 		cursor.execute(clear_monthly_cache, (project['id'], ))
+		db.commit()
+
+		optimize_table = "OPTIMIZE TABLE project_monthly_cache"
+		cursor.execute(optimize_table)
 		db.commit()
 
 		# Remove any projects which were also marked for deletion
