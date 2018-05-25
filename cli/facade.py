@@ -67,7 +67,7 @@ def delete_repo(git_repo,db,cursor):
 	# cursor: A database cursor
 
 	get_status = "SELECT status FROM repos WHERE id = %s"
-	cursor.execute(get_status,git_repo)
+	cursor.execute(get_status,(git_repo, ))
 	status = cursor.fetchone()
 
 	if status == 'New':
