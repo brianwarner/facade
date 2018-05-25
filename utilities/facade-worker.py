@@ -685,6 +685,14 @@ def git_repo_cleanup():
 
 		# Remove cached repo data
 
+		remove_repo_weekly_cache = "DELETE FROM repo_weekly_cache WHERE repos_id=%s"
+		cursor.execute(remove_repo_weekly_cache, (row['id'], ))
+		db.commit()
+
+		optimize_table = "OPTIMIZE TABLE repo_weekly_cache"
+		cursor.execute(optimize_table)
+		db.commit()
+
 		remove_repo_monthly_cache = "DELETE FROM repo_monthly_cache WHERE repos_id=%s"
 		cursor.execute(remove_repo_monthly_cache, (row['id'], ))
 		db.commit()
@@ -701,7 +709,7 @@ def git_repo_cleanup():
 		cursor.execute(optimize_table)
 		db.commit()
 
-		# Set project to be recached
+		# Set project to be recached if just removing a repo
 
 		set_project_recache = ("UPDATE projects SET recache=TRUE "
 			"WHERE id=%s")
@@ -772,6 +780,24 @@ def git_repo_cleanup():
 		db.commit()
 
 		optimize_table = "OPTIMIZE TABLE project_monthly_cache"
+		cursor.execute(optimize_table)
+		db.commit()
+
+		clear_weekly_cache = ("DELETE FROM project_weekly_cache WHERE "
+			"projects_id=%s")
+		cursor.execute(clear_weekly_cache, (project['id'], ))
+		db.commit()
+
+		optimize_table = "OPTIMIZE TABLE project_weekly_cache"
+		cursor.execute(optimize_table)
+		db.commit()
+
+		clear_unknown_cache = ("DELETE FROM unknown_cache WHERE "
+			"projects_id=%s")
+		cursor.execute(clear_unknown_cache, (project['id'], ))
+		db.commit()
+
+		optimize_table = "OPTIMIZE TABLE project_weekly_cache"
 		cursor.execute(optimize_table)
 		db.commit()
 
@@ -1559,6 +1585,12 @@ def rebuild_unknown_affiliation_and_web_caches():
 
 	# Clear stale caches
 
+	clear_project_weekly_cache = ("DELETE c.* FROM project_weekly_cache c "
+		"JOIN projects p ON c.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_project_weekly_cache)
+	db.commit()
+
 	clear_project_monthly_cache = ("DELETE c.* FROM project_monthly_cache c "
 		"JOIN projects p ON c.projects_id = p.id WHERE "
 		"p.recache=TRUE")
@@ -1569,6 +1601,13 @@ def rebuild_unknown_affiliation_and_web_caches():
 		"JOIN projects p ON c.projects_id = p.id WHERE "
 		"p.recache=TRUE")
 	cursor.execute(clear_project_annual_cache)
+	db.commit()
+
+	clear_repo_weekly_cache = ("DELETE c.* FROM repo_weekly_cache c "
+		"JOIN repos r ON c.repos_id = r.id "
+		"JOIN projects p ON r.projects_id = p.id WHERE "
+		"p.recache=TRUE")
+	cursor.execute(clear_repo_weekly_cache)
 	db.commit()
 
 	clear_repo_monthly_cache = ("DELETE c.* FROM repo_monthly_cache c "
