@@ -1850,8 +1850,11 @@ def _export():
 	# Export the raw analysis data to an Excel file.
 
 	outfile = ''
+	filters = []
 
 	print("Export the raw analysis data as an Excel file.\n")
+
+	# First we need a filename
 
 	while outfile == '':
 		outfile = os.path.expanduser(input('Filename or (c)ancel: ')).strip()
@@ -1863,6 +1866,114 @@ def _export():
 		print("\nINVALID: No filename given.\n")
 		return
 
+	if not outfile.endswith('.xlsx'):
+		outfile += '.xlsx'
+
+	# Next check if we should limit the results by date. This is useful when the
+	# output would overrun the maximum length of an Excel file.
+
+	start_date = input("Include contributions after: (YYYY-MM-DD or blank for all): ").strip()
+	start_clause = ''
+
+	if (len(start_date) == 10 and
+		re.match('([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))',start_date)):
+
+		report_date = get_setting('report_date',db,cursor)
+		start_clause = (" AND %s_date > '%s' " %
+			(get_setting('report_date',db,cursor), start_date))
+
+		filters.append('Start date: %s' % start_date)
+
+	# Next see if we need to limit to a list of affiliations
+
+	affiliations_list = input("Include affiliations: (separated by ';' or blank for all) ").strip()
+	affiliations_clause = ''
+
+	if affiliations_list:
+		affiliations = affiliations_list.split(';')
+		report_attribution = get_setting('report_attribution',db,cursor)
+
+		for affiliation in affiliations:
+
+			if affiliation.strip():
+
+				if not affiliations_clause:
+
+					affiliations_clause = (" AND (%s_affiliation = '%s'"
+						% (report_attribution, affiliation.strip()))
+
+					filters.append('Affiliations: %s' % affiliation.strip())
+
+				else:
+					affiliations_clause += (" OR %s_affiliation = '%s'"
+						% (report_attribution, affiliation.strip()))
+
+					filters[-1] += ', %s' % affiliation.strip()
+
+	if affiliations_clause:
+		affiliations_clause += (') ')
+
+	# Determine if export should be limited to certain projects
+
+	project_action = ''
+	project_clause = ''
+
+	while project_action not in ['y','n']:
+
+		project_action = input("Limit to certain projects: (y/n) ").strip().lower()
+
+	if project_action == 'y':
+
+		get_projects = ("SELECT id,name FROM projects "
+			"WHERE name != '(Queued for removal)'")
+
+		cursor.execute(get_projects)
+		projects = list(cursor)
+
+		if cursor.rowcount > 0:
+
+			project_ids = []
+
+			project_table = texttable.Texttable()
+
+			project_table.set_cols_align(['l','l'])
+			project_table.set_cols_width([5,85])
+			project_table.header(['ID','Project'])
+
+			for project in projects:
+				project_table.add_row([project['id'],project['name']])
+				project_ids.append(str(project['id']))
+
+			print("\n" + project_table.draw() + "\n")
+			project_table.reset()
+
+		selected_ids = input("Include IDs: (separated by ',' or blank for all) ").strip()
+
+		if selected_ids:
+
+			for selected_id in selected_ids.split(','):
+
+				if selected_id.strip() in project_ids:
+
+					if not project_clause:
+						project_clause = " AND (p.id = %s" % selected_id.strip()
+
+						get_name = "SELECT name FROM projects WHERE id = %s"
+						cursor.execute(get_name, (selected_id.strip(), ))
+
+						filters.append('Projects: %s' % cursor.fetchone()['name'])
+
+					else:
+						project_clause += " OR p.id = %s" % selected_id.strip()
+
+						get_name = "SELECT name FROM projects WHERE id = %s"
+						cursor.execute(get_name, (selected_id.strip(), ))
+
+						filters[-1] += ', %s' % cursor.fetchone()['name']
+
+		if project_clause:
+			project_clause += ')'
+
 	workbook = xlsxwriter.Workbook(outfile)
 	bold = workbook.add_format({'bold': True})
 
@@ -1873,7 +1984,14 @@ def _export():
 	worksheet.write(0,20,'Report generated on %s by Facade' %
 		datetime.date.today().strftime('%Y-%m-%d'),bold)
 	worksheet.write(1,20,'https://github.com/brianwarner/facade')
-	worksheet.write(2,20,'Format: All data')
+
+	if filters:
+		filter_detail = '; '.join(filters)
+
+	else:
+		filter_detail = 'All projects, all dates'
+
+	worksheet.write(2,20, filter_detail)
 
 	# Set the headers
 
@@ -1918,6 +2036,7 @@ def _export():
 		more_data = True
 
 		while (more_data):
+
 			get_results = ("SELECT p.name AS 'Project Name', "
 				"r.path AS 'Repo Path', "
 				"r.name AS 'Repo Name', "
@@ -1949,10 +2068,12 @@ def _export():
 				"r.projects_id = %s "
 				"AND e.email IS NULL "
 				"AND e.domain IS NULL "
+				+ start_clause + affiliations_clause + project_clause +
 				"ORDER BY a.committer_date ASC "
 				"LIMIT %s,%s")
 
-			cursor.execute(get_results, (project['id'], min_record, num_records))
+			cursor.execute(get_results, (project['id'],
+				min_record, num_records))
 
 			results = list(cursor)
 
@@ -1983,10 +2104,19 @@ def _export():
 
 				row += 1
 
+
 			if cursor.rowcount < num_records:
 				more_data = False
 
+			min_record = min_record + num_records
+
 	workbook.close()
+
+	if row > 1048575:
+
+		print('\nWARNING: Exceeded maximum size for an Excel sheet. You probably\n'
+			'need to export individual projects, use a more recent start date,\n'
+			'limit the number of affiliations, or only export certain projects.\n')
 
 def _configuration():
 
