@@ -19,5 +19,5 @@
 
 sudo apt-get install apache2 mysql-client mysql-server php-cli php-mysql \
 python3 python3-mysqldb libapache2-mod-php php-dom php-curl python3-bcrypt \
-python3-xlsxwriter
+python3-xlsxwriter python3-texttable
 
