@@ -15,7 +15,7 @@ Facade is licensed under Apache 2.0.
 
 ### Some tips and tricks
 
-Facade is known to work on Linux Mint 18, with Apache 2.4.18, Python 3, PHP
+Facade is known to work on Ubuntu 17.10+ or Debian Stretch, with Apache 2.4.18, Python 3, PHP
 7.0.18, and mysql 5.7.17. For best results, try these versions (or higher).
 
 Facade works by cloning a git repo, calculating the parents of HEAD (bounded by
