@@ -54,7 +54,13 @@ if ($result->num_rows > 0 ) {
 			<td>' . $row["tag"] . '</td>
 			<td>' . $row["email"] . '</td>
 			<td>' . $row["start_date"] . '</td>
-			<td>' . $row["end_date"] . '<span class="button"><form
+			<td>';
+
+		if ($row["end_date"] <> '9999-12-31') {
+			echo $row["end_date"];
+		}
+
+		echo '<span class="button"><form
 			action="manage" method="post">
 			<input type="hidden" name="id" value="' . $row["id"] . '">
 			<input type="submit" value="delete" name="delete_tag">

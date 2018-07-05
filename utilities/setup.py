@@ -37,7 +37,7 @@ def create_settings(reset=0):
 # Create and populate the default settings table.
 
 	# Only increment this when you've added the support to facade-worker.py
-	database_version = 6
+	database_version = 7
 
 	# default settings
 	start_date = "2014-01-01";

@@ -50,7 +50,7 @@ html = html.parser.HTMLParser()
 # Important: Do not modify the database number unless you've also added an
 # update clause to update_db!
 
-upstream_db = 6
+upstream_db = 7
 
 #### Database update functions ####
 
@@ -192,6 +192,21 @@ def update_db(version):
 		db.commit
 
 		increment_db(6)
+
+	if version < 7:
+
+		# Using NULL for en unbounded nd_date in special_tags ended up being
+		# difficult when doing certain types of reports. The logic is much
+		# cleaner if we just use an end_date that is ridiculously far into the
+		# future.
+
+		remove_null_end_dates_in_special_tags = ("UPDATE special_tags "
+			"SET end_date = '9999-12-31' WHERE end_date IS NULL")
+
+		cursor.execute(remove_null_end_dates_in_special_tags)
+		db.commit
+
+		increment_db(7)
 
 	print("No further database updates.\n")
 
