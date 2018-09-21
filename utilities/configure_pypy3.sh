@@ -61,5 +61,5 @@ fi
 PYPY_PATH=$(dirname $(realpath $(which pypy3)))
 
 $PYPY_PATH/pypy3 -m ensurepip
-$PYPY_PATH/pip3 install pymysql bcrypt xlsxwriter
+$PYPY_PATH/pip3 install pymysql bcrypt xlsxwriter texttable
 

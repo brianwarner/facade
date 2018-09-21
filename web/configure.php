@@ -197,7 +197,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 	} elseif ($_POST["edit"]) {
 
-		$value = sanitize_input($db,$_POST["value"],32);
+		$value = sanitize_input($db,$_POST["value"],128);
 
 		if ($setting == "log_level") {
 			$value = sanitize_input($db,$_POST["log_level_radio"],10);

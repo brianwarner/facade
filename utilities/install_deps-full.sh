@@ -16,8 +16,21 @@
 #
 # SPDX-License-Identifier:	Apache-2.0
 
+echo "
+This script will install the necessary dependencies to run Facade in either
+headless mode or using the web UI.  It will install Apache and the required PHP
+packages.  You can use either the web UI or the CLI to configure Facade and
+export analysis data.
+
+Installing any missing dependencies...
+"
 
 sudo apt-get install apache2 mysql-client mysql-server php-cli php-mysql \
 python3 python3-mysqldb libapache2-mod-php php-dom php-curl python3-bcrypt \
-python3-xlsxwriter
+python3-xlsxwriter python3-texttable
+
+echo "
+If everything went well, your next step is to run setup:
+ $ ./setup.py
+"
 

@@ -96,7 +96,6 @@ if (isset($_GET["affiliations"])) {
 	$affiliations_clause = '';
 }
 
-
 // Get ready for export
 $header=TRUE;
 header('Content-Type: text/csv; charset=UTF-8');
@@ -163,32 +162,22 @@ foreach ($projects as $project) {
 			isset($_GET["with-tags"])) {
 				foreach ($tags as $tag) {
 
-					// Find tags that with a start_date before this row
+					// Find tags that match this row
 					$query = "SELECT id,end_date FROM special_tags
 						WHERE email = '" . str_replace("'","\'",$row[$tag_author]) . "'
 						AND start_date <= '" . $row[$tag_date] . "'
+						AND end_date >= '" . $row[$tag_date] . "'
 						AND tag='" . $tag . "'";
 
 					$tags_result = query_db($db, $query, 'Getting tags');
 
-					// Add any tags with an end_date after this row, or no end_date.
-					$add_tag = FALSE;
-					while ($tags_row = $tags_result->fetch_assoc()) {
-						if ($tags_row["end_date"] >= $row[$tag_date] ||
-						$tags_row["end_date"] == NULL) {
-							$add_tag = TRUE;
-
-						}
-					}
-
 					// Add matched tag to output, or a blank to preserve ordering.
 					// Escape single quotes in tags.
-					if ($add_tag) {
+					if ($tags_result->num_rows) {
 						$row['Tag: ' . str_replace("\'","'",$tag)] = str_replace("\'","'",$tag);
 					} else {
 						$row['Tag: ' . str_replace("\'","'",$tag)] = '';
 					}
-
 				}
 			}
 
