@@ -4,22 +4,27 @@ using a web interface, and provides some basic data summaries.  For more
 advanced analysis, you can export the contributor data as a CSV.  While there is
 basic authentication, it's probably best to run it on a private machine.
 
-To get up and running quickly, check out the 
+To get up and running quickly, check out the
 <a href="https://github.com/brianwarner/facade/wiki/Getting-started">Getting
 Started</a> guide.
 
-To get a feeling for how Facade works, you can also find a 
+To get a feeling for how Facade works, you can also find a
 <a href="https://osg.facade-oss.org">live demo</a> with a variety of projects.
 
 Facade is licensed under Apache 2.0.
 
+### Web Server Configuration Notes
+The default configuration uses the Apache web server. If you want to use nginx, there are two steps that are slightly different:
+1. [install your nginx server](./nginx-facade.md)
+2. [configure nginx server blocks (like virtual hosts in apache)](nginx-facade-server-blocks.md)
+3. There is also an nginx dependency installation script located in the utilities folder.
+> install_deps-nginx.sh
+
+
 ### Some tips and tricks
 
-System requirements:
- * Ubuntu 16.10+ or Debian Stretch+
- * Python 3
- * PHP 7.0.18+
- * mysql 5.7.17+
+Facade is known to work on Linux Mint 18, with Apache 2.4.18, Python 3, PHP
+7.0.18, and mysql 5.7.17. For best results, try these versions (or higher).
 
 Facade works by cloning a git repo, calculating the parents of HEAD (bounded by
 the start date), and scraping each patch for statistics. It calculates lines
