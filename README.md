@@ -16,7 +16,7 @@ Facade is licensed under Apache 2.0.
 ### Some tips and tricks
 
 System requirements:
- * Ubuntu 16.10+ or Debian Stretch+
+ * Ubuntu 17.10+ or Debian Stretch+
  * Python 3
  * PHP 7.0.18+
  * mysql 5.7.17+
