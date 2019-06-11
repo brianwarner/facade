@@ -327,6 +327,7 @@ function unknown_results_as_table ($db,$project_id = NULL) {
 
 				echo '<span class="button"><form action="manage" method="post" class="short">
 					<input type=hidden name="domain" value="' . $row["domain"] . '">
+					<input type=hidden name="project_id" value="' . $project_id . '">
 					<input type=submit value="add an affiliation" name="confirmnew_affiliation">
 					</form></span>';
 			}
