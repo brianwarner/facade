@@ -1,0 +1,268 @@
+/*
+* Copyright 2016-2017 Brian Warner
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* SPDX-License-Identifier:	Apache-2.0
+*/
+
+#page-wrapper {
+	margin: 0 auto;
+	width: 1280px;
+	border: 1px solid grey;
+	padding: 10px 5px;
+	color: #333;
+}
+
+.error {
+	color: red;
+	border: 1px solid red;
+	padding: 10px 20px;
+}
+
+.info {
+	color: brown;
+	border: 1px solid brown;
+	padding: 10px 20px;
+}
+
+a:link, a:visited {
+	color: #111;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+#header-wrapper {
+
+}
+
+#header {
+	padding: 20px 0;
+	width: 100%;
+}
+
+.menu {
+	width: 1280px;
+	background-color: #EDEDED;
+	border-top: 2px solid grey;
+	border-bottom: 2px solid grey;
+}
+
+.menu a {
+	padding: 0px 10px;
+	margin-left: 10px;
+}
+
+.logout {
+	float: right;
+}
+
+#site-title {
+	font-size: 280%;
+	font-weight: bold;
+}
+
+#site-subtitle {
+	font-size: 130%;
+}
+
+#content-wrapper {
+	border-top: 1px solid grey;
+	border-bottom: 1px solid grey;
+	min-height: 200px;
+	margin: 20px 0;
+}
+
+#content-title {
+	padding: 10px;
+}
+
+#content {
+
+	padding: 10px;
+}
+
+.content-highlight {
+	text-align: center;
+	font-size: 130%;
+}
+
+.content-block {
+	padding: 20px 0px;
+}
+
+.sub-block {
+	padding-bottom: 20px;
+}
+
+form.short {
+	margin-bottom: 0px;
+}
+
+.text input {
+	width: 470px;
+}
+
+.date input {
+	width: 75px;
+}
+
+.email input {
+	width: 320px;
+}
+
+input.checkbox,input.select {
+	margin-right: 25px;
+}
+
+input.custom-input {
+	width: 230px;
+	margin-left: 5px;
+}
+
+input.hidden {
+	visibility: hidden;
+}
+
+select.select-85 {
+	width: 85px;
+}
+
+select.select-150 {
+	width: 150px;
+}
+
+.detail {
+	position: relative;
+	display: inline-block;
+}
+
+.detail-text {
+	visibility: hidden;
+	white-space: nowrap;
+	background-color: #DDD;
+	padding: 5px 10px;
+	border-radius: 4px;
+	position: absolute;
+	bottom: 140%;
+	left: 20px;
+	z-index: 1;
+}
+
+.detail-text::after {
+    content: " ";
+    position: absolute;
+    top: 100%;
+    left: 25px;
+    margin-left: -8px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: #DDD transparent transparent transparent;
+}
+
+.detail:hover .detail-text {
+	visibility: visible;
+}
+
+table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+tr.disabled {
+	font-color: gray;
+}
+
+th {
+	padding: 10px 5px;
+	text-size: 110%;
+	text-align: left;
+	vertical-align: bottom;
+}
+
+td {
+	vertical-align: top;
+	border-top: 1px solid grey;
+	padding: 5px 5px;
+}
+
+th.half, td.half {
+	width: 50%;
+}
+
+th.quarter, td.quarter {
+	width: 25%;
+}
+
+th.eighth, td.eighth {
+	width: 12.5%;
+}
+
+td.total {
+	font-weight: bold;
+}
+
+td.grand-total {
+	font-weight: bold;
+	font-style: italic;
+}
+
+td.linked a {
+	display: block;
+}
+
+th.results-entity, td.results-entity {
+	width: 300px;
+}
+
+th.results-period {
+	width: 75px;
+}
+
+th.results-total {
+	min-width: 75px;
+}
+.button {
+	float: right;
+}
+
+#stat-selector {
+	font-size: 100%;
+}
+
+#stat-selector span.item {
+	padding-right: 20px;
+}
+
+#stat-selector span.active {
+	text-decoration: underline;
+}
+
+.scroll-list {
+	overflow: auto;
+	max-height: 300px;
+}
+
+#footer-wrapper {
+
+}
+
+#footer {
+	font-size: 80%;
+	margin-top: 10px;
+	text-align: center;
+}
+
+
+
+

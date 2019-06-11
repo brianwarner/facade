@@ -1,56 +1,112 @@
-# Facade
-## See who is actually doing the work in your projects
+Facade is a program that analyzes the contributors to git repos, organized into
+groups called projects, on a commit-by-commit basis.  It is (mostly) managed
+using a web interface, and provides some basic data summaries.  For more
+advanced analysis, you can export the contributor data as a CSV.  While there is
+basic authentication, it's probably best to run it on a private machine.
 
-Facade is a program that uses gitdm to analyze the contributors to git repos, organized into groups called projects, on an ongoing daily basis.  It is (mostly) managed using a web interface, and provides some basic data summaries.  For more advanced analysis, you can export the contributor data as a CSV.  As of now there's absolutely zero authentication, so it's probably best to run it on a very private machine.
+To get up and running quickly, check out the 
+<a href="https://github.com/brianwarner/facade/wiki/Getting-started">Getting
+Started</a> guide.
 
-Facade is licensed under GPL v2.
+To get a feeling for how Facade works, you can also find a 
+<a href="https://osg.facade-oss.org">live demo</a> with a variety of projects.
 
-### Server setup:
-
-1. Install Apache, PHP, Python, and Mysql. On Ubuntu 16.04, you can use install_deps.sh
-2. Make sure mod_php and mod_rewrite are enabled.
-3. Change Overrides None to Overrides All in your site configuration.
-4. Move the Facade files to your webroot.
-
-### Mysql setup:
-
-1. Create a database, a user, and grant all privileges.
-2. Copy includes/db.php.default to includes/db.php, add credentials.
-3. Run 'php create-tables.php'
-4. Copy utilities/database.py.default to utilities/database.py, add credentials.
-
-At this point, you should be able to access facade's web interface.
-
-### Git repo setup:
-
-1. Choose a volume with plenty of storage.
-2. Ensure it has r/w permissions for the user account that will run the facade-worker.py script.
-3. In the web interface, go to Configure and update 'Location of git repos'.
-
-### Gitdm setup:
-
-1. Clone gitdm from git://git.lwn.net/gitdm.git
-2. Move it to wherever you want to keep it on the system.
-3. In the web interface, go to Configure and update 'Location of gitdm'.
-
-### Worker script setup:
-
-1. Set up a cron job to run utilities/facade-worker.py daily.  It can run more or less often, and will generally Do The Right Thing. Cron user must have write access to git repo directory.
+Facade is licensed under Apache 2.0.
 
 ### Some tips and tricks
 
-Remember that by default, the gitdm analysis goes from the start date up to yesterday, and only for repos that are marked as up-to-date.  If a repo fails to pull, gitdm won't run because there's no new data.  If at some point in the future the repo does pull successfully, the missing dates will be filled in automatically.
+System requirements:
+ * Ubuntu 17.10+ or Debian Stretch+
+ * Python 3
+ * PHP 7.0.18+
+ * mysql 5.7.17+
 
-facade-worker.py will not run if it thinks a previous instanace is still running.  The only times this is actually likely would be during the initial clone and building of data for large repos (like the kernel) or if you have a cron job running facade-worker.py too often.  If for some reason facade-worker.py fails, you will need to run reset-status.py before it will run again.
+Facade works by cloning a git repo, calculating the parents of HEAD (bounded by
+the start date), and scraping each patch for statistics. It calculates lines
+added and removed, whitespace changes, patch counts, and unique contributors
+over a given period of time. Each time facade-worker.py runs, it recalculates
+the parents and trims any commits that have disappeared (for example, if the
+start date changes or something was reverted) or that were introduced (new
+commits or a freshly-merged branch).
 
-If facade-worker.py is taking forever to run, you should verify that your start date isn't too early.  Setting this appropriately forward can eliminate a lot of unnecessary calculations.  Facade will trim any database data that falls outside the date range, which is set in Configuration.
+facade-worker.py will not run if it thinks a previous instance is still running.
+This could happen when you're doing the initial clone and building of data for
+large repos (like the kernel) or if you have a cron job running facade-worker.py
+too frequently.  If for some reason facade-worker.py fails and exits early, you
+will need to run reset-status.py before it will run again.
 
-If you discover a bunch of (Unknown) affiliations, don't panic. This probably means you are checking a repo with domains that aren't in the stock gitdm domain mappings.  You can update the config files in gitdm and Facade will detect the changes the next time facade-worker runs.  It will also search for any historical (Unknown) affiliations that are now known, and fix them.
+Facade is designed to be run frequently as a cron job. This helps ensure that
+when you add or change something, it analyzes it quickly. You will set the
+interval between repo updates, and it will skip any repos which have been
+recently updated. This is to respect the owners of the repos you're analyzing.
+The most frequent option is to run every 4 hours, though 24 hours is
+recommended.
 
-The main reason for tags is to be able to isolate a specific subset of data for a group of people, for example, your department at work.  Because people and their email addresses come and go, you just tell Facade the dates between which a certain email should be tagged, and it'll show up in the output.
+The command line options for facade-worker.py are documented, and you can run
+the various parts of the analysis separately. Use the -h flag to find out what
+your options are.
 
-Last but not least, this is entirely dependent upon Jon Corbet and Greg KH's most excellent gitdm.  This would't be possible without their work, which is greatly appreciated.
+If facade-worker.py is taking forever to run, you should verify that your start
+date isn't too early.  Setting this appropriately forward can eliminate a lot of
+unnecessary calculations.
 
-I hope this is helpful to you.  Apologies in advance for inconsistent coding styles or cumbersome logic.  Contributions and fixes are welcomed!
+If you discover a bunch of (Unknown) affiliations, don't panic. This probably
+means you are analyzing a repo with domains that aren't in the stock domain
+mappings.  You have a few options here:
+
+1. The easiest way is to enter the affiliation data on the People page. This
+causes Facade to rebuild affiliation data for anyone who matches the domain or
+email address.
+
+2. The more complicated but faster way is to import config files from gitdm
+using the import_gitdm_configs.py script in utilities/
+
+After you do one of the two, you MUST run facade-worker.py at least once for the
+changes to be reflected in the web UI.
+
+If you think your affiliation data isn't right, you can always nuke it (yes
+really).  Facade looks for any results where the author or committer affiliation
+is NULL, and then fills those.  This can trigger very, very long analysis jobs
+though, so use it wisely.  Running facade-worker.py -n will do this for you.
+
+If you think your analysis data is corrupt, you can also nuke it (yes really).
+Facade will just detect that there is no stored commit data, so it'll rebuild
+everything from scratch.  You can do this by deleting all the rows from the
+analysis_data table in the database.  The next run will rebuild all of it.
+
+The main reason for tags is to be able to isolate a specific subset of data for
+a group of people, for example, your department at work.  Because people and
+their email addresses come and go, you just tell Facade the dates between which
+a certain email should be tagged, and it'll show up in the output.
+
+Finally, you can choose whether you want statistics on the web UI organized by
+author or committer email, and by author or committer date. The default is
+author email and committer date, but you can change it up on the configuration
+page. You'll need to run facade-worker.py at least once to see the changes.
+
+### I think I found a problem
+
+It's entirely possible. The most likely symptom is that facade-worker.py appears
+to run forever. If this happens, you'll need to run utilities/reset-status.py. I
+also recommend you set logging to "Debug" and run facade-worker.py at least once
+from the terminal. This will give you a lot more info about what went wrong.
+
+Here are a few known situations where Facade doesn't do so well:
+
+1. A git repo requires authentication. facade-worker.py will just wait for a
+username and password. I have not yet found a workaround to bypass this, besides
+running the script manually.
+
+2. A git pull results in a merge. Again, facade-worker.py will just wait for you
+to enter a merge commit message. I have not found a fix for this yet either.
+
+3. Wonky characters and mangled fields in the commit message. Every time I think
+I've handled all possible forms of brokenness, someone shows up with an
+apostrophe in their email address or some weird unicode character as their @, or
+whatever. Please file an issue when you find an unhandled corner case, so I can
+address it.
+
+I hope this is helpful to you.  Apologies in advance for inconsistent coding
+styles or cumbersome logic.  Contributions and fixes are welcomed!
 
 Brian

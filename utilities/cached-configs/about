@@ -1,3 +1,0 @@
-These files are kept to determine whether there have been changes to the original.
-Removing them will simply force facade-worker to recheck the database, which adds
-some time but has no other consequence.

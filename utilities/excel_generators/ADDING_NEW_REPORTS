@@ -1,0 +1,16 @@
+
+The scripts in this directory are used to automatically generate Excel files.
+They are intended to provide a focused view of the data, such as tables with
+combined statistics (e.g., projects across the X axis, affiliations down the Y
+axis, LoC added with number of contributors in parenthesis as the data, with one
+year on each spreadsheet. These files are stashed in the files/ directory for
+download.
+
+To create a new summary file with custom data, copy example.py and modify the
+SQL statements. You'll know you have it right when you run the new generator
+script directly and it drops a correct Excel file in the files/ directory.
+
+To automatically regenerate the Excel file each time facade-worker.py runs,
+first ensure that your file runs without errors. Then change its name to:
+	"generate-<your file name>.py"
+
