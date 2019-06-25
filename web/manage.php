@@ -584,6 +584,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 		</div> <!-- .sub-block -->
 		<div class="sub-block">
 		<form action="manage" id="newalias" method="post">
+		<input type="hidden" name="project_id" value="' . $project_id . '" />
 		<table>
 		<tr>
 		<td class="quarter"><label for="alias">This email: </label></td>
@@ -607,6 +608,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	$alias = sanitize_input($db,$_POST['alias'],64);
 	$canonical = sanitize_input($db,$_POST['canonical'],64);
+	$project_id = sanitize_input($db,$_POST["project_id"],11);
 
 	if ($alias && $canonical) {
 
@@ -620,7 +622,15 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	}
 
-	header("Location: people");
+	if ($project_id) {
+
+		header('Location: projects?id=' . $project_id);
+
+	} else {
+
+	header('Location: people');
+
+	}
 
 } elseif (ISSET($_POST["delete_alias"])) {
 
@@ -658,6 +668,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 		</div> <!-- .sub-block -->
 		<div class="sub-block">
 		<form action="manage" id="newaffiliation" method="post">
+		<input type="hidden" value="' . $project_id . '" name="project_id" />
 		<table>
 		<tr>
 		<td class="quarter"><label for="domain">This email or domain: </label></td>
@@ -675,7 +686,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 		<tr>
 		<td class="quarter">But only after this date (optional):</td>
 		<td class="quarter"><span class="text"><input type="text"
-		name="start_date"></span></td>
+		name="start_date" placeholder="format: YYYY-MM-DD"></span></td>
 		<td>&nbsp;</td>
 		</tr>
 		</table>
@@ -692,6 +703,7 @@ if (ISSET($_POST["confirmnew_repo"])) {
 	$domain = sanitize_input($db,$_POST['domain'],64);
 	$affiliation = sanitize_input($db,$_POST['affiliation'],64);
 	$start_date = sanitize_input($db,$_POST['start_date'],10);
+	$project_id = sanitize_input($db,$_POST['project_id'],11);
 
 	if ($domain && $affiliation) {
 
@@ -714,7 +726,16 @@ if (ISSET($_POST["confirmnew_repo"])) {
 
 	}
 
-	header("Location: people");
+	if ($project_id) {
+
+		header("Location: projects?id=" . $project_id);
+
+	} else {
+
+		header("Location: people");
+
+	}
+
 
 } elseif (ISSET($_POST["delete_affiliation"])) {
 
