@@ -9,7 +9,7 @@ To get up and running quickly, check out the
 Started</a> guide.
 
 To get a feeling for how Facade works, you can also find a 
-<a href="https://osg.facade-oss.org">live demo</a> with a variety of projects.
+<a href="https://live.facade-oss.org">live demo</a> with a variety of projects.
 
 Facade is licensed under Apache 2.0.
 
